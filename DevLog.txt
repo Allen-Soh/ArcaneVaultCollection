@@ -44,4 +44,14 @@
 - Navbar Layout to not show when not logged in
 - Account Registration
 
-===== DEV LOG ( / /2026)=====
+===== DEV LOG (6/7/2026)=====
+[Done]
+- Removed Session keys but left Constants SessionKeys.cs
+- Removed Session Authentication from RPs
+- Removed Login Page from RPs
+
+[To Do]
+- Login and Logout functionality
+- Login Page
+- Capability to perform authentication
+- Navbar Display Login/Logout based on authentication
