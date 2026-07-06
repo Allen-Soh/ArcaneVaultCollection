@@ -1,0 +1,16 @@
+===== DEV LOG (24/6/2026)=====
+
+[Done]
+- Created ArcaneDbContext.cs
+- Created ArcaneDbSeeder.cs
+- Created ArcaneVaultUser.cs
+- Created ArcaneVaultUserRoles.cs
+- Created CollectionItem.cs
+- Created CollectionItemCategory.cs
+
+[To Do]
+- Setting up Controllers
+- Register API
+- Razor Pages
+
+===== DEV LOG (DD/M/2026)=====

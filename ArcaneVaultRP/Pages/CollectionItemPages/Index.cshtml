@@ -1,0 +1,58 @@
+@page
+@model ArcaneVaultRP.Pages.CollectionItemPages.IndexModel
+@{
+    ViewData["Title"] = "Collection Items";
+}
+
+<h1>Collection Items</h1>
+
+<!-- Search bar -->
+<form method="get">
+    <div class="form-group d-flex mb-3">
+        <input type="text" asp-for="SearchString" class="form-control me-2" placeholder="Search by any field..." />
+        <button type="submit" class="btn btn-primary me-2">Search</button>
+        <a asp-page="./Index" class="btn btn-secondary">Clear</a>
+    </div>
+</form>
+
+<p>
+    <a asp-page="Create" class="btn btn-success">Create New</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item ID</th>
+            <th>Item Name</th>
+            <th>Is Deleted</th>
+            <th>Starting Quantity</th>
+            <th>Ending Quantity</th>
+            <th>User Name</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.CollectionItem)
+        {
+            <tr>
+                <td>@item.ItemId</td>
+                <td>@item.ItemName</td>
+                <td>@item.IsDeleted</td>
+                <td>@item.StartingQuantity</td>
+                <td>@item.EndingQuantity</td>
+                <td>@item.UserName</td>
+                <td>
+                    <a asp-page="./Edit"
+                       asp-route-itemid="@item.ItemId"
+                       class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-page="./Details"
+                       asp-route-itemid="@item.ItemId"
+                       class="btn btn-info btn-sm">Details</a>
+                    <a asp-page="./Delete"
+                       asp-route-itemid="@item.ItemId"
+                       class="btn btn-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

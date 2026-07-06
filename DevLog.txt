@@ -1,0 +1,47 @@
+===== DEV LOG (24/6/2026)=====
+
+[Done]
+- Created ArcaneDbContext.cs
+- Created ArcaneDbSeeder.cs
+- Created ArcaneVaultUser.cs
+- Created ArcaneVaultUserRoles.cs
+- Created CollectionItem.cs
+- Created CollectionItemCategory.cs
+
+[To Do]
+- Setting up Controllers
+- Register API
+- Razor Pages
+
+===== DEV LOG (25/6/2026)=====
+
+[Done]
+- Created ArcaneVaultUsersController.cs
+- Created CollectionItemsController.cs
+- Created CollectionItemCategoriesController.cs
+- Created ArcaneVaultUserRolesController.cs
+- Created CategoriesController.cs
+- Added API httpClient to ArcaneVaultRP Program.cs
+
+[To Do]
+- Create CRUD pages
+- Inject API httpClient into Razor Pages
+
+===== DEV LOG (5/7/2026)=====
+
+[Done]
+- Added Models to RP
+- Renamed Classes from Plural to Singular (Should probably check code to see if renaming was done correctly)
+- Created CRUD pages for CollectionItemCategory and CollectionItem
+- Added Session Storage to ArcaneVaultRP Program.cs, CollectionItem and Category Scaffold
+- Added HttpClient to ArcaneVaultRP CollectionItem and Category Scaffolds
+- Added Search functionality to CollectionItem Index Page
+- Added Login and Logout functionality to ArcaneVaultRP
+- Added Authorization to ArcaneVaultRP CategoryPages
+
+[To Do]
+- Add toggle of Category list item to show only if it is a Staff
+- Navbar Layout to not show when not logged in
+- Account Registration
+
+===== DEV LOG ( / /2026)=====
