@@ -55,3 +55,13 @@
 - Login Page
 - Capability to perform authentication
 - Navbar Display Login/Logout based on authentication
+
+===== DEV LOG (7/7/2026)=====
+[Done]
+- Added Login and Logout functionality to ArcaneVaultRP
+- Added Authentication to ArcaneVaultRP
+- Added Login Page to ArcaneVaultRP
+- Added Navbar Display Login/Logout based on authentication to ArcaneVaultRP
+
+[To Do]
+- Account Creation that validates information

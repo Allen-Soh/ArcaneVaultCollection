@@ -7,6 +7,7 @@ namespace ArcaneVaultRP.Pages
     {
         public void OnGet()
         {
+            
         }
     }
 }

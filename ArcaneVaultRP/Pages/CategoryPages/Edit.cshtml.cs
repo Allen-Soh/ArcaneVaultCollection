@@ -18,6 +18,10 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? categorycode)
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
         {
@@ -30,7 +34,7 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var category = await httpClient.GetFromJsonAsync<Category>($"Categories/{categorycode}");
+        var category = await httpClient.GetFromJsonAsync<Category>($"Category/{categorycode}");
 
         if (category is null)
         {
@@ -50,7 +54,7 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.PutAsJsonAsync($"Categories/{Category.CategoryCode}", Category);
+        var response = await httpClient.PutAsJsonAsync($"Category/{Category.CategoryCode}", Category);
 
         if (response.IsSuccessStatusCode)
         {

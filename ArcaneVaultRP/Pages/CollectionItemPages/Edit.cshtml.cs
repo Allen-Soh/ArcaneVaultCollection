@@ -18,6 +18,10 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? itemid)
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         if (itemid is null)
         {
@@ -25,7 +29,7 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItems/{itemid}");
+        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItem/{itemid}");
 
         if (collectionitem is null)
         {
@@ -44,7 +48,7 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.PutAsJsonAsync($"CollectionItems/{CollectionItem.ItemId}", CollectionItem);
+        var response = await httpClient.PutAsJsonAsync($"CollectionItem/{CollectionItem.ItemId}", CollectionItem);
 
         if (response.IsSuccessStatusCode)
         {

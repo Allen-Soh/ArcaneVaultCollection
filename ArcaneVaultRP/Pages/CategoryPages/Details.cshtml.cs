@@ -17,6 +17,10 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? categorycode)
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
         {
@@ -29,7 +33,7 @@ public class DetailsModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var category = await httpClient.GetFromJsonAsync<Category>($"Categories/{categorycode}");
+        var category = await httpClient.GetFromJsonAsync<Category>($"Category/{categorycode}");
 
         if (category is null)
         {

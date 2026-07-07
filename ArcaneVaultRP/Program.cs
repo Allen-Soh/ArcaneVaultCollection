@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 namespace ArcaneVaultRP
 {
     public class Program
@@ -36,7 +38,6 @@ namespace ArcaneVaultRP
             app.UseRouting();
 
             app.UseSession();
-
             app.UseAuthorization();
 
             app.MapStaticAssets();

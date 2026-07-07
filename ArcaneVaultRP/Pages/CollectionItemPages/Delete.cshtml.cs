@@ -18,6 +18,10 @@ public class DeleteModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? itemid)
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         if (itemid is null)
         {
@@ -25,7 +29,7 @@ public class DeleteModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItems/{itemid}");
+        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItem/{itemid}");
 
         if (collectionitem is null)
         {
@@ -44,7 +48,7 @@ public class DeleteModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.DeleteAsync($"CollectionItems/{itemid}");
+        var response = await httpClient.DeleteAsync($"CollectionItem/{itemid}");
 
         if (response.IsSuccessStatusCode)
         {

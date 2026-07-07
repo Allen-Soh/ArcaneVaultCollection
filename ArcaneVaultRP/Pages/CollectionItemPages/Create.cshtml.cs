@@ -15,6 +15,10 @@ public class CreateModel : PageModel
 
     public IActionResult OnGet()
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
         return Page();
     }
 
@@ -29,7 +33,7 @@ public class CreateModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.PostAsJsonAsync("CollectionItems", CollectionItem);
+        var response = await httpClient.PostAsJsonAsync("CollectionItem", CollectionItem);
 
         if (response.IsSuccessStatusCode)
         {

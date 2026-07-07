@@ -17,6 +17,10 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? itemid)
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         if (itemid is null)
         {
@@ -24,7 +28,7 @@ public class DetailsModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItems/{itemid}");
+        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItem/{itemid}");
 
         if (collectionitem is null)
         {

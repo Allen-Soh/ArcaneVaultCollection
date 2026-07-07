@@ -20,6 +20,10 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+        {
+            return RedirectToPage("/Login");
+        }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
         var collectionItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem") ?? new List<CollectionItem>();
