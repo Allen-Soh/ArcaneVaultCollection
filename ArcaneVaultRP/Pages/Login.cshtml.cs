@@ -68,6 +68,7 @@ namespace ArcaneVaultRP.Pages
             // Find matching user — username match and not deleted
             var user = users.FirstOrDefault(u =>
                 u.UserName == Input.Username &&
+                u.Password == Input.Password &&
                 !u.IsDeleted);
 
             if (user == null)

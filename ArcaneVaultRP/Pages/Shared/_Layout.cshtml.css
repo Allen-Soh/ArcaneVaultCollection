@@ -40,6 +40,10 @@ button.accept-policy {
     line-height: inherit;
 }
 
+.alert:empty {
+    display: none;
+}
+
 .footer {
     position: absolute;
     bottom: 0;

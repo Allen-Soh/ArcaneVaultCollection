@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ArcaneVaultAPI.Data;
+using ArcaneVaultAPI.DataTransferObject;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -43,6 +44,8 @@ public class ArcaneVaultUserController : ControllerBase
             return BadRequest();
         }
 
+        arcanevaultuser.Role = null;
+
         _context.Entry(arcanevaultuser).State = EntityState.Modified;
 
         try
@@ -67,8 +70,17 @@ public class ArcaneVaultUserController : ControllerBase
     // POST: api/ArcaneVaultUser
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
-    public async Task<ActionResult<ArcaneVaultUser>> PostArcaneVaultUser(ArcaneVaultUser arcanevaultuser)
+    public async Task<ActionResult<ArcaneVaultUser>> PostArcaneVaultUser(ArcaneVaultUserDTO dto)
     {
+        var arcanevaultuser = new ArcaneVaultUser
+        {
+            UserName = dto.UserName,
+            Email = dto.Email,
+            IsDeleted = dto.IsDeleted,
+            RoleId = dto.RoleId,
+            Password = dto.Password
+        };
+
         _context.ArcaneVaultUsers.Add(arcanevaultuser);
         await _context.SaveChangesAsync();
 

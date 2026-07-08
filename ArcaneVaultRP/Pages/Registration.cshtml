@@ -1,0 +1,108 @@
+﻿@page
+@model ArcaneVaultRP.Pages.RegistrationModel
+@{
+    ViewData["Title"] = "Registration";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+
+                    <h2 class="card-title text-center fw-bold mb-4">Register</h2>
+
+                    <!-- Validation summary — shows model-level errors -->
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <form method="post">
+
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label asp-for="Input.Username" class="form-label fw-semibold">Username</label>
+                            <input asp-for="Input.Username" class="form-control" placeholder="Enter your username" />
+                            <span asp-validation-for="Input.Username" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label asp-for="Input.Email" class="form-label fw-semibold">Email</label>
+                            <input asp-for="Input.Email" class="form-control" placeholder="Enter your email" />
+                            <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label asp-for="Input.Password" class="form-label fw-semibold">Password</label>
+                            <div class="input-group">
+                                <input asp-for="Input.Password" class="form-control" placeholder="Enter your password" id="Input_Password" />
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="bi bi-eye" id="eyeIcon"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="mb-4">
+                            <label asp-for="Input.ConfirmPassword" class="form-label fw-semibold">Confirm Password</label>
+                            <div class="input-group">
+                                <input asp-for="Input.ConfirmPassword" class="form-control" placeholder="Re-enter your password" id="Input_ConfirmPassword" />
+                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                    <i class="bi bi-eye" id="eyeIconConfirm"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                        </div>
+
+                    </form>
+
+                    <!-- Login link -->
+                    <div class="text-center">
+                        <span class="text-muted">Already have an account?</span>
+                        <a asp-page="/Login" class="text-decoration-none fw-semibold ms-1">Login here</a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Password toggle
+        document.getElementById("togglePassword").addEventListener("click", function () {
+            const input = document.getElementById("Input_Password");
+            const icon = document.getElementById("eyeIcon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("bi-eye", "bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("bi-eye-slash", "bi-eye");
+            }
+        });
+
+        // Confirm password toggle
+        document.getElementById("toggleConfirmPassword").addEventListener("click", function () {
+            const input = document.getElementById("Input_ConfirmPassword");
+            const icon = document.getElementById("eyeIconConfirm");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("bi-eye", "bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("bi-eye-slash", "bi-eye");
+            }
+        });
+    </script>
+}
