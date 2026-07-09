@@ -1,6 +1,7 @@
-using ArcaneVaultRP.Models;
+using ArcaneVaultAPI.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
 
 namespace ArcaneVaultRP.Pages.CollectionItemPages;
 
@@ -16,7 +17,13 @@ public class IndexModel : PageModel
     public IList<CollectionItem> CollectionItem { get; set; } = default!;
 
     [BindProperty(SupportsGet = true)]
-    public string? SearchString { get; set; }
+    public string? SearchItemName { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? SearchStartingQuantity { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? SearchCurrentQuantity { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -25,28 +32,36 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
         }
 
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
+
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
         var collectionItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem") ?? new List<CollectionItem>();
 
-        if (!string.IsNullOrEmpty(SearchString))
-        {
-            SearchString = SearchString.Trim();
+        collectionItems = collectionItems
+            .Where(c => c.UserName == loggedInUser.UserName)
+            .ToList();
 
-            if (SearchString.Length > 100)
-            {
-                SearchString = SearchString.Substring(0, 100);
-            }
+        if (!string.IsNullOrEmpty(SearchItemName))
+        {
+            SearchItemName = SearchItemName.Trim();
+            if (SearchItemName.Length > 100)
+                SearchItemName = SearchItemName.Substring(0, 100);
+
+            collectionItems = collectionItems
+                .Where(c => c.ItemName != null &&
+                       c.ItemName.Contains(SearchItemName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
 
-        if (!string.IsNullOrEmpty(SearchString))
+        if (SearchStartingQuantity.HasValue)
         {
-            collectionItems = collectionItems.Where(c =>
-                (c.ItemName != null && c.ItemName.Contains(SearchString, StringComparison.OrdinalIgnoreCase)) ||
-                (c.UserName != null && c.UserName.Contains(SearchString, StringComparison.OrdinalIgnoreCase)) ||
-                c.ItemId.ToString().Contains(SearchString) ||
-                c.StartingQuantity.ToString().Contains(SearchString) ||
-                c.EndingQuantity.ToString().Contains(SearchString)
-            ).ToList();
+            collectionItems = collectionItems.Where(c => c.StartingQuantity == SearchStartingQuantity.Value).ToList();
+        }
+
+        if (SearchCurrentQuantity.HasValue)
+        {
+            collectionItems = collectionItems.Where(c => c.CurrentQuantity == SearchCurrentQuantity.Value).ToList();
         }
 
         CollectionItem = collectionItems;

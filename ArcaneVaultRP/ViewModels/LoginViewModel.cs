@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Model;
 
 namespace ArcaneVaultRP.ViewModels
 {

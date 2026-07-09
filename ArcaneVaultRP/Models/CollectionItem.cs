@@ -1,6 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ArcaneVaultRP.Models
 {
@@ -11,7 +9,7 @@ namespace ArcaneVaultRP.Models
         public string ItemName { get; set; }
         public bool IsDeleted { get; set; }
         public int StartingQuantity { get; set; }
-        public int EndingQuantity { get; set; }
+        public int CurrentQuantity { get; set; }
         public string UserName { get; set; }
     }
 }

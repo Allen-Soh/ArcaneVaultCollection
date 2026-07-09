@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-
-namespace ArcaneVaultAPI.DataTransferObject
+﻿namespace ArcaneVaultAPI.DataTransferObject
 {
     public class ArcaneVaultUserDTO
     {
@@ -10,5 +7,15 @@ namespace ArcaneVaultAPI.DataTransferObject
         public bool IsDeleted { get; set; }
         public int RoleId { get; set; }
         public string Password { get; set; }
+    }
+
+    public class CollectionItemDTO
+    {
+        public int ItemId { get; set; }
+        public string ItemName { get; set; }
+        public bool IsDeleted { get; set; }
+        public int StartingQuantity { get; set; }
+        public int CurrentQuantity { get; set; }
+        public string UserName { get; set; }
     }
 }

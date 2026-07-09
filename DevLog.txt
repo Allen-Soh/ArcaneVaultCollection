@@ -75,3 +75,14 @@
 [To Do]
 - Implement LINQ query to existing code
 - Make search bar more specific for which fields to search in CollectionItemPages
+
+===== DEV LOG (9/7/2026)=====
+[Done]
+- Made search bar more specific for which fields to search in CollectionItemPages
+- Added DTO classes for CollectionItem
+- Fixed Edit and Create pages for CollectionItem to use DTO classes
+
+[To Do]
+- Implement ADO.NET and LINQ Method query to existing code
+- Adding a specified search bar for CategoryPages
+- Fix Edit and Create pages for Category to use DTO classes

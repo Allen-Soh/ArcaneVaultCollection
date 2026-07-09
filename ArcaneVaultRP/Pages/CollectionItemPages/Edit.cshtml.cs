@@ -1,6 +1,7 @@
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
 
 namespace ArcaneVaultRP.Pages.CollectionItemPages;
 
@@ -42,13 +43,30 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        ModelState.Remove("CollectionItem_UserName");
+
         if (!ModelState.IsValid)
         {
             return Page();
         }
 
+        // Get logged in user from session
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultAPI.Data.ArcaneVaultUser>(userJson);
+
+        // Build DTO — only update ItemName and CurrentQuantity
+        var dto = new CollectionItem
+        {
+            ItemId = CollectionItem.ItemId,
+            ItemName = CollectionItem.ItemName,
+            IsDeleted = CollectionItem.IsDeleted,
+            StartingQuantity = CollectionItem.StartingQuantity,
+            CurrentQuantity = CollectionItem.CurrentQuantity,
+            UserName = CollectionItem.UserName,
+        };
+
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.PutAsJsonAsync($"CollectionItem/{CollectionItem.ItemId}", CollectionItem);
+        var response = await httpClient.PutAsJsonAsync($"CollectionItem/{CollectionItem.ItemId}", dto);
 
         if (response.IsSuccessStatusCode)
         {
@@ -56,7 +74,9 @@ public class EditModel : PageModel
         }
         else
         {
-            ModelState.AddModelError(string.Empty, "An error occurred while updating the collection item.");
+            //ModelState.AddModelError(string.Empty, "An error occurred while updating the collection item.");
+            var errorContent = await response.Content.ReadAsStringAsync();
+            ModelState.AddModelError(string.Empty, $"Error {response.StatusCode}: {errorContent}");
             return Page();
         }
     }

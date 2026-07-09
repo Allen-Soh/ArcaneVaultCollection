@@ -11,6 +11,7 @@ namespace ArcaneVaultAPI.Data
         public bool IsDeleted { get; set; }
         public int StartingQuantity { get; set; }
         public int CurrentQuantity { get; set; }
+        public string UserName { get; set; }
 
         [ForeignKey("UserName")]
         public ArcaneVaultUser User { get; set; }

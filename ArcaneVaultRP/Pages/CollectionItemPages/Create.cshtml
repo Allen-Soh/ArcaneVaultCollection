@@ -2,53 +2,77 @@
 @model ArcaneVaultRP.Pages.CollectionItemPages.CreateModel
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Collection Item";
 }
 
-<h1>Create</h1>
-
-<h4>CollectionItem</h4>
+<h1>Add Collection Item</h1>
 <hr />
+
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="CollectionItem.ItemName" class="control-label"></label>
-                <input asp-for="CollectionItem.ItemName" class="form-control" />
-                <span asp-validation-for="CollectionItem.ItemName" class="text-danger"></span>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <!-- Item Name -->
+            <div class="mb-3">
+                <label asp-for="CollectionItem.ItemName" class="form-label fw-semibold">Item Name</label>
+                <input asp-for="CollectionItem.ItemName" class="form-control" placeholder="Enter item name" />
+                <span asp-validation-for="CollectionItem.ItemName" class="text-danger small"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="CollectionItem.IsDeleted" class="control-label"></label>
-                <input asp-for="CollectionItem.IsDeleted" class="form-check-input" />
-                <span asp-validation-for="CollectionItem.IsDeleted" class="text-danger"></span>
+
+            <!-- Item Quantity with +/- buttons -->
+            <!-- Item Quantity with +/- buttons -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold" for="CollectionItem_StartingQuantity">Item Quantity</label>
+                <div class="input-group">
+                    <button type="button" class="btn btn-outline-secondary" id="decreaseBtn">-</button>
+                    <input asp-for="CollectionItem.StartingQuantity"
+                           class="form-control text-center"
+                           id="CollectionItem_StartingQuantity"
+                           min="0"
+                           placeholder="0" />
+                    <button type="button" class="btn btn-outline-secondary" id="increaseBtn">+</button>
+                </div>
+                <span asp-validation-for="CollectionItem.StartingQuantity" class="text-danger small"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="CollectionItem.StartingQuantity" class="control-label"></label>
-                <input asp-for="CollectionItem.StartingQuantity" class="form-control" />
-                <span asp-validation-for="CollectionItem.StartingQuantity" class="text-danger"></span>
+
+            <div class="mt-4">
+                <input type="submit" value="Create" class="btn btn-primary me-2" />
+                <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
             </div>
-            <div class="form-group">
-                <label asp-for="CollectionItem.EndingQuantity" class="control-label"></label>
-                <input asp-for="CollectionItem.EndingQuantity" class="form-control" />
-                <span asp-validation-for="CollectionItem.EndingQuantity" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CollectionItem.UserName" class="control-label"></label>
-                <input asp-for="CollectionItem.UserName" class="form-control" />
-                <span asp-validation-for="CollectionItem.UserName" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
+
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-page="./Index">Back to List</a>
-</div>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        const quantityInput = document.getElementById("CollectionItem_StartingQuantity");
+        const increaseBtn = document.getElementById("increaseBtn");
+        const decreaseBtn = document.getElementById("decreaseBtn");
+
+        // Ensure value starts at 0
+        if (quantityInput.value === "") {
+            quantityInput.value = 0;
+        }
+
+        increaseBtn.addEventListener("click", function () {
+            quantityInput.value = parseInt(quantityInput.value || 0) + 1;
+        });
+
+        decreaseBtn.addEventListener("click", function () {
+            const current = parseInt(quantityInput.value || 0);
+            if (current > 0) {
+                quantityInput.value = current - 1;
+            }
+        });
+
+        // Prevent non-integer input
+        quantityInput.addEventListener("input", function () {
+            this.value = this.value.replace(/[^0-9]/g, "");
+            if (this.value === "") this.value = 0;
+        });
+    </script>
 }
