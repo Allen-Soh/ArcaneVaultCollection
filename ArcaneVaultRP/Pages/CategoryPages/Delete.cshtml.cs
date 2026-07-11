@@ -1,6 +1,6 @@
+using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using ArcaneVaultRP.Models;
 
 namespace ArcaneVaultRP.Pages.CategoryPages;
 
@@ -22,7 +22,6 @@ public class DeleteModel : PageModel
         {
             return RedirectToPage("/Login");
         }
-
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
         {
             return RedirectToPage("/Index");
@@ -34,29 +33,27 @@ public class DeleteModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var category = await httpClient.GetFromJsonAsync<Category>($"Category/{categorycode}");
+
+        // LINQ — find category by code
+        var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                            ?? new List<Category>();
+
+        var category = allCategories
+            .FirstOrDefault(c => c.CategoryCode == categorycode);
 
         if (category is null)
         {
             return NotFound();
         }
-        else
-        {
-            Category = category;
-        }
 
+        Category = category;
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string? categorycode)
+    public async Task<IActionResult> OnPostAsync()
     {
-        if (categorycode is null)
-        {
-            return NotFound();
-        }
-
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var response = await httpClient.DeleteAsync($"Category/{categorycode}");
+        var response = await httpClient.DeleteAsync($"Category/{Category.CategoryCode}");
 
         if (response.IsSuccessStatusCode)
         {

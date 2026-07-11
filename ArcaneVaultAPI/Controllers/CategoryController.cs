@@ -1,29 +1,65 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
 
 [Route("api/[controller]")]
 [ApiController]
 public class CategoryController : ControllerBase
 {
-    private readonly ArcaneDbContext _context;
-    public CategoryController(ArcaneDbContext context)
-    {
-        _context = context;
-    }
+    private readonly string _connectionString = "Data Source=ArcaneVault.db";
 
     // GET: api/Category
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Category>>> GetCategory()
+    public ActionResult<IEnumerable<Category>> GetCategory()
     {
-        return await _context.Categories.ToListAsync();
+        var categories = new List<Category>();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "SELECT CategoryCode, CategoryName FROM Categories",
+            connection);
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            categories.Add(new Category
+            {
+                CategoryCode = reader["CategoryCode"].ToString(),
+                CategoryName = reader["CategoryName"].ToString()
+            });
+        }
+
+        // LINQ — order by CategoryName
+        var result = categories.OrderBy(c => c.CategoryName).ToList();
+
+        return result;
     }
 
     // GET: api/Category/5
     [HttpGet("{categorycode}")]
-    public async Task<ActionResult<Category>> GetCategory(string categorycode)
+    public ActionResult<Category> GetCategory(string categorycode)
     {
-        var category = await _context.Categories.FindAsync(categorycode);
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "SELECT CategoryCode, CategoryName FROM Categories WHERE CategoryCode = @CategoryCode",
+            connection);
+        command.Parameters.AddWithValue("@CategoryCode", categorycode);
+
+        using var reader = command.ExecuteReader();
+
+        Category? category = null;
+        while (reader.Read())
+        {
+            category = new Category
+            {
+                CategoryCode = reader["CategoryCode"].ToString(),
+                CategoryName = reader["CategoryName"].ToString()
+            };
+        }
 
         if (category == null)
         {
@@ -34,65 +70,87 @@ public class CategoryController : ControllerBase
     }
 
     // PUT: api/Category/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{categorycode}")]
-    public async Task<IActionResult> PutCategory(string? categorycode, Category category)
+    public IActionResult PutCategory(string? categorycode, Category category)
     {
         if (categorycode != category.CategoryCode)
         {
             return BadRequest();
         }
 
-        _context.Entry(category).State = EntityState.Modified;
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
 
-        try
+        // Check if exists
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM Categories WHERE CategoryCode = @CategoryCode",
+            connection);
+        checkCommand.Parameters.AddWithValue("@CategoryCode", categorycode);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
+
+        if (count == 0)
         {
-            await _context.SaveChangesAsync();
+            return NotFound();
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!CategoryExists(categorycode))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
+
+        var command = new SqliteCommand(
+            @"UPDATE Categories 
+              SET CategoryName = @CategoryName 
+              WHERE CategoryCode = @CategoryCode",
+            connection);
+
+        command.Parameters.AddWithValue("@CategoryCode", category.CategoryCode);
+        command.Parameters.AddWithValue("@CategoryName", category.CategoryName);
+
+        command.ExecuteNonQuery();
 
         return NoContent();
     }
 
     // POST: api/Category
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
-    public async Task<ActionResult<Category>> PostCategory(Category category)
+    public ActionResult<Category> PostCategory(Category category)
     {
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "INSERT INTO Categories (CategoryCode, CategoryName) VALUES (@CategoryCode, @CategoryName)",
+            connection);
+
+        command.Parameters.AddWithValue("@CategoryCode", category.CategoryCode);
+        command.Parameters.AddWithValue("@CategoryName", category.CategoryName);
+
+        command.ExecuteNonQuery();
 
         return CreatedAtAction("GetCategory", new { categorycode = category.CategoryCode }, category);
     }
 
     // DELETE: api/Category/5
     [HttpDelete("{categorycode}")]
-    public async Task<IActionResult> DeleteCategory(string? categorycode)
+    public IActionResult DeleteCategory(string? categorycode)
     {
-        var category = await _context.Categories.FindAsync(categorycode);
-        if (category == null)
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Check if exists
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM Categories WHERE CategoryCode = @CategoryCode",
+            connection);
+        checkCommand.Parameters.AddWithValue("@CategoryCode", categorycode);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
+
+        if (count == 0)
         {
             return NotFound();
         }
 
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
+        var command = new SqliteCommand(
+            "DELETE FROM Categories WHERE CategoryCode = @CategoryCode",
+            connection);
+        command.Parameters.AddWithValue("@CategoryCode", categorycode);
+        command.ExecuteNonQuery();
 
         return NoContent();
-    }
-
-    private bool CategoryExists(string? categorycode)
-    {
-        return _context.Categories.Any(e => e.CategoryCode == categorycode);
     }
 }

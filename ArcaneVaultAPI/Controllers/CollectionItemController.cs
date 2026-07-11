@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
 
@@ -7,114 +7,186 @@ using ArcaneVaultAPI.DataTransferObject;
 [ApiController]
 public class CollectionItemController : ControllerBase
 {
-    private readonly ArcaneDbContext _context;
-    public CollectionItemController(ArcaneDbContext context)
-    {
-        _context = context;
-    }
+    private readonly string _connectionString = "Data Source=ArcaneVault.db";
 
     // GET: api/CollectionItem
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CollectionItem>>> GetCollectionItem()
+    public ActionResult<IEnumerable<CollectionItem>> GetCollectionItem()
     {
-        return await _context.CollectionItems.ToListAsync();
-    }
+        var items = new List<CollectionItem>();
 
-    // GET: api/CollectionItem/5
-    [HttpGet("{itemid}")]
-    public async Task<ActionResult<CollectionItem>> GetCollectionItem(int itemid)
-    {
-        var collectionitem = await _context.CollectionItems.FindAsync(itemid);
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
 
-        if (collectionitem == null)
+        var command = new SqliteCommand(
+            "SELECT ItemId, ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName FROM CollectionItems",
+            connection);
+
+        using var reader = command.ExecuteReader();
+
+        // LINQ method syntax — project reader rows into CollectionItem objects
+        while (reader.Read())
         {
-            return NotFound();
+            items.Add(new CollectionItem
+            {
+                ItemId = Convert.ToInt32(reader["ItemId"]),
+                ItemName = reader["ItemName"].ToString(),
+                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
+                StartingQuantity = Convert.ToInt32(reader["StartingQuantity"]),
+                CurrentQuantity = Convert.ToInt32(reader["CurrentQuantity"]),
+                UserName = reader["UserName"].ToString()
+            });
         }
 
-        return collectionitem;
+        // LINQ — order by ItemName
+        var result = items.OrderBy(c => c.ItemName).ToList();
+
+        return result;
+    }
+
+    // GET: api/CollectionItem/withcategory
+    [HttpGet("withcategory")]
+    public ActionResult<IEnumerable<object>> GetCollectionItemWithCategory()
+    {
+        var items = new List<object>();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT ci.ItemId, ci.ItemName, ci.IsDeleted, ci.StartingQuantity, 
+                 ci.CurrentQuantity, ci.UserName,
+                 cic.CategoryCode, c.CategoryName
+          FROM CollectionItems ci
+          LEFT JOIN CollectionItemCategories cic ON ci.ItemId = cic.ItemId
+          LEFT JOIN Categories c ON cic.CategoryCode = c.CategoryCode",
+            connection);
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            items.Add(new
+            {
+                ItemId = Convert.ToInt32(reader["ItemId"]),
+                ItemName = reader["ItemName"].ToString(),
+                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
+                StartingQuantity = Convert.ToInt32(reader["StartingQuantity"]),
+                CurrentQuantity = Convert.ToInt32(reader["CurrentQuantity"]),
+                UserName = reader["UserName"].ToString(),
+                CategoryCode = reader["CategoryCode"] == DBNull.Value ? null : reader["CategoryCode"].ToString(),
+                CategoryName = reader["CategoryName"] == DBNull.Value ? null : reader["CategoryName"].ToString()
+            });
+        }
+
+        return Ok(items);
     }
 
     // PUT: api/CollectionItem/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{itemid}")]
-    public async Task<IActionResult> PutCollectionItem(int? itemid, CollectionItemDTO dto)
+    public IActionResult PutCollectionItem(int? itemid, CollectionItemDTO dto)
     {
         if (itemid != dto.ItemId)
         {
             return BadRequest();
         }
 
-        var collectionItem = new CollectionItem
-        {
-            ItemId = dto.ItemId,
-            ItemName = dto.ItemName,
-            IsDeleted = dto.IsDeleted,
-            StartingQuantity = dto.StartingQuantity,
-            CurrentQuantity = dto.CurrentQuantity,
-            UserName = dto.UserName,
-            User = null
-        };
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
 
-        _context.Entry(collectionItem).State = EntityState.Modified;
+        // Check if exists using LINQ-style check
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM CollectionItems WHERE ItemId = @ItemId",
+            connection);
+        checkCommand.Parameters.AddWithValue("@ItemId", itemid);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
 
-        try
+        if (count == 0)
         {
-            await _context.SaveChangesAsync();
+            return NotFound();
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!CollectionItemExists(itemid))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
+
+        var command = new SqliteCommand(
+            @"UPDATE CollectionItems 
+              SET ItemName = @ItemName, 
+                  IsDeleted = @IsDeleted, 
+                  StartingQuantity = @StartingQuantity, 
+                  CurrentQuantity = @CurrentQuantity, 
+                  UserName = @UserName 
+              WHERE ItemId = @ItemId",
+            connection);
+
+        command.Parameters.AddWithValue("@ItemId", dto.ItemId);
+        command.Parameters.AddWithValue("@ItemName", dto.ItemName);
+        command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
+        command.Parameters.AddWithValue("@StartingQuantity", dto.StartingQuantity);
+        command.Parameters.AddWithValue("@CurrentQuantity", dto.CurrentQuantity);
+        command.Parameters.AddWithValue("@UserName", dto.UserName);
+
+        command.ExecuteNonQuery();
 
         return NoContent();
     }
 
     // POST: api/CollectionItem
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
-    public async Task<ActionResult<CollectionItem>> PostCollectionItem(CollectionItemDTO dto)
+    public ActionResult<CollectionItem> PostCollectionItem(CollectionItemDTO dto)
     {
-        var collectionItem = new CollectionItem
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"INSERT INTO CollectionItems (ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName) 
+              VALUES (@ItemName, @IsDeleted, @StartingQuantity, @CurrentQuantity, @UserName);
+              SELECT last_insert_rowid();",
+            connection);
+
+        command.Parameters.AddWithValue("@ItemName", dto.ItemName);
+        command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
+        command.Parameters.AddWithValue("@StartingQuantity", dto.StartingQuantity);
+        command.Parameters.AddWithValue("@CurrentQuantity", dto.CurrentQuantity);
+        command.Parameters.AddWithValue("@UserName", dto.UserName);
+
+        // Get the auto-generated ItemId
+        var newId = Convert.ToInt32(command.ExecuteScalar());
+
+        var newItem = new CollectionItem
         {
+            ItemId = newId,
             ItemName = dto.ItemName,
             IsDeleted = dto.IsDeleted,
             StartingQuantity = dto.StartingQuantity,
             CurrentQuantity = dto.CurrentQuantity,
-            UserName = dto.UserName,
-            User = null
+            UserName = dto.UserName
         };
 
-        _context.CollectionItems.Add(collectionItem);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetCollectionItem", new { itemid = collectionItem.ItemId }, collectionItem);
+        return CreatedAtAction("GetCollectionItem", new { itemid = newId }, newItem);
     }
 
     // DELETE: api/CollectionItem/5
     [HttpDelete("{itemid}")]
-    public async Task<IActionResult> DeleteCollectionItem(int? itemid)
+    public IActionResult DeleteCollectionItem(int? itemid)
     {
-        var collectionitem = await _context.CollectionItems.FindAsync(itemid);
-        if (collectionitem == null)
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Check exists first
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM CollectionItems WHERE ItemId = @ItemId",
+            connection);
+        checkCommand.Parameters.AddWithValue("@ItemId", itemid);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
+
+        if (count == 0)
         {
             return NotFound();
         }
 
-        _context.CollectionItems.Remove(collectionitem);
-        await _context.SaveChangesAsync();
+        var command = new SqliteCommand(
+            "DELETE FROM CollectionItems WHERE ItemId = @ItemId",
+            connection);
+        command.Parameters.AddWithValue("@ItemId", itemid);
+        command.ExecuteNonQuery();
 
         return NoContent();
-    }
-
-    private bool CollectionItemExists(int? itemid)
-    {
-        return _context.CollectionItems.Any(e => e.ItemId == itemid);
     }
 }

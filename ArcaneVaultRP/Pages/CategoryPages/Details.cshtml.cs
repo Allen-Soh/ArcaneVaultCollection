@@ -21,7 +21,6 @@ public class DetailsModel : PageModel
         {
             return RedirectToPage("/Login");
         }
-
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
         {
             return RedirectToPage("/Index");
@@ -33,7 +32,13 @@ public class DetailsModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var category = await httpClient.GetFromJsonAsync<Category>($"Category/{categorycode}");
+
+        // LINQ — find category by code
+        var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                            ?? new List<Category>();
+
+        var category = allCategories
+            .FirstOrDefault(c => c.CategoryCode == categorycode);
 
         if (category is null)
         {

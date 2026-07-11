@@ -1,6 +1,7 @@
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
 
 namespace ArcaneVaultRP.Pages.CollectionItemPages;
 
@@ -15,6 +16,7 @@ public class DeleteModel : PageModel
 
     [BindProperty]
     public CollectionItem CollectionItem { get; set; } = default!;
+    public Category? ItemCategory { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int? itemid)
     {
@@ -28,8 +30,17 @@ public class DeleteModel : PageModel
             return NotFound();
         }
 
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
+
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var collectionitem = await httpClient.GetFromJsonAsync<CollectionItem>($"CollectionItem/{itemid}");
+
+        // LINQ — find item and verify ownership
+        var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")
+                       ?? new List<CollectionItem>();
+
+        var collectionitem = allItems
+            .FirstOrDefault(c => c.ItemId == itemid && c.UserName == loggedInUser.UserName);
 
         if (collectionitem is null)
         {
@@ -37,6 +48,26 @@ public class DeleteModel : PageModel
         }
 
         CollectionItem = collectionitem;
+
+        // Get category for this item
+        var allItemCategories = await httpClient
+            .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItemCategory")
+            ?? new List<CollectionItemCategory>();
+
+        // LINQ — find category link for this item
+        var itemCategory = allItemCategories
+            .FirstOrDefault(c => c.ItemId == itemid);
+
+        if (itemCategory != null)
+        {
+            var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                                ?? new List<Category>();
+
+            // LINQ — find category by code
+            ItemCategory = allCategories
+                .FirstOrDefault(c => c.CategoryCode == itemCategory.CategoryCode);
+        }
+
         return Page();
     }
 
@@ -48,6 +79,22 @@ public class DeleteModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Step 1 — Delete CollectionItemCategory link first
+        var allItemCategories = await httpClient
+            .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItemCategory")
+            ?? new List<CollectionItemCategory>();
+
+        // LINQ — find category link for this item
+        var itemCategory = allItemCategories
+            .FirstOrDefault(c => c.ItemId == itemid);
+
+        if (itemCategory != null)
+        {
+            await httpClient.DeleteAsync($"CollectionItemCategory/{itemid}/{itemCategory.CategoryCode}");
+        }
+
+        // Step 2 — Delete CollectionItem
         var response = await httpClient.DeleteAsync($"CollectionItem/{itemid}");
 
         if (response.IsSuccessStatusCode)

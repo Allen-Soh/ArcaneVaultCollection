@@ -6,34 +6,47 @@
 
 <h1>Collection Items</h1>
 
-<form method="get">
+<form method="get" id="searchForm">
     <div class="row g-2 mb-3">
+
+        <!-- Item Name smart search -->
         <div class="col-md-4">
             <label class="form-label fw-semibold">Item Name</label>
             <input type="text"
-                   name="SearchIN"
+                   name="SearchItemName"
+                   id="searchItemName"
+                   value="@Model.SearchItemName"
                    class="form-control"
-                   placeholder="Search by item name..." />
+                   placeholder="Search by item name..."
+                   autocomplete="off" />
+            <div id="itemNameSuggestions" class="list-group position-absolute z-3" style="width:100%;max-height:200px;overflow-y:auto;"></div>
         </div>
 
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">Starting Quantity</label>
-            <input type="number"
-                   name="SearchSQ"
+        <!-- Category smart search dropdown -->
+        <div class="col-md-4 position-relative">
+            <label class="form-label fw-semibold">Category</label>
+            <input type="text"
+                   name="SearchCategory"
+                   id="searchCategory"
+                   value="@Model.SearchCategory"
                    class="form-control"
-                   min="0"
-                   placeholder="e.g. 5" />
+                   placeholder="Search by category name or code..."
+                   autocomplete="off" />
+            <div id="categorySuggestions" class="list-group position-absolute z-3" style="width:100%;max-height:200px;overflow-y:auto;"></div>
         </div>
 
-        <div class="col-md-3">
+        <!-- Current Quantity -->
+        <div class="col-md-2">
             <label class="form-label fw-semibold">Current Quantity</label>
             <input type="number"
-                   name="SearchCQ"
+                   name="SearchCurrentQuantity"
+                   value="@Model.SearchCurrentQuantity"
                    class="form-control"
                    min="0"
                    placeholder="e.g. 3" />
         </div>
 
+        <!-- Buttons -->
         <div class="col-md-2 d-flex align-items-end gap-2">
             <button type="submit" class="btn btn-primary">Search</button>
             <a asp-page="./Index" class="btn btn-secondary">Clear</a>
@@ -49,23 +62,23 @@
 <table class="table">
     <thead>
         <tr>
-            <th>Item ID</th>
             <th>Item Name</th>
-            <th>Starting Quantity</th>
+            <th>Category</th>
             <th>Current Quantity</th>
-            <th>User Name</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var item in Model.CollectionItem)
         {
+            var categoryDisplay = item.CategoryName != null
+                ? Model.Truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
+                : "No Category";
+
             <tr>
-                <td>@item.ItemId</td>
-                <td>@item.ItemName</td>
-                <td>@item.StartingQuantity</td>
+                <td>@Model.Truncate(item.ItemName)</td>
+                <td>@categoryDisplay</td>
                 <td>@item.CurrentQuantity</td>
-                <td>@item.UserName</td>
                 <td>
                     <a asp-page="./Edit"
                        asp-route-itemid="@item.ItemId"
@@ -81,3 +94,85 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        // Category data from server for smart search
+        const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
+
+        // Item names from server for smart search
+        const itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CollectionItem.Select(c => c.ItemName).Distinct()));
+
+        // Helper — truncate to 15 chars
+        function truncate(text) {
+            if (!text) return '';
+            return text.length <= 15 ? text : text.substring(0, 15) + '...';
+        }
+
+        // Smart search for Item Name
+        const searchItemName = document.getElementById('searchItemName');
+        const itemNameSuggestions = document.getElementById('itemNameSuggestions');
+
+        searchItemName.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            itemNameSuggestions.innerHTML = '';
+
+            if (query.length === 0) return;
+
+            const matches = itemNames
+                .filter(name => name && name.toLowerCase().includes(query))
+                .slice(0, 5);
+
+            matches.forEach(name => {
+                const item = document.createElement('a');
+                item.href = '#';
+                item.className = 'list-group-item list-group-item-action';
+                item.textContent = truncate(name);
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    searchItemName.value = name;
+                    itemNameSuggestions.innerHTML = '';
+                    document.getElementById('searchForm').submit();
+                });
+                itemNameSuggestions.appendChild(item);
+            });
+        });
+
+        // Smart search for Category
+        const searchCategory = document.getElementById('searchCategory');
+        const categorySuggestions = document.getElementById('categorySuggestions');
+
+        searchCategory.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            categorySuggestions.innerHTML = '';
+
+            if (query.length === 0) return;
+
+            const matches = categories
+                .filter(c =>
+                    c.categoryName.toLowerCase().includes(query) ||
+                    c.categoryCode.toLowerCase().includes(query))
+                .slice(0, 5);
+
+            matches.forEach(cat => {
+                const item = document.createElement('a');
+                item.href = '#';
+                item.className = 'list-group-item list-group-item-action';
+                item.textContent = truncate(cat.categoryName) + ' (' + cat.categoryCode + ')';
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    searchCategory.value = cat.categoryName;
+                    categorySuggestions.innerHTML = '';
+                    document.getElementById('searchForm').submit();
+                });
+                categorySuggestions.appendChild(item);
+            });
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!searchCategory.contains(e.target)) categorySuggestions.innerHTML = '';
+            if (!searchItemName.contains(e.target)) itemNameSuggestions.innerHTML = '';
+        });
+    </script>
+}

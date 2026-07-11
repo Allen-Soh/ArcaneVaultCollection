@@ -1,4 +1,4 @@
-using ArcaneVaultAPI.Data;
+using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
@@ -14,13 +14,14 @@ public class IndexModel : PageModel
         _httpClientFactory = httpClientFactory;
     }
 
-    public IList<CollectionItem> CollectionItem { get; set; } = default!;
+    public IList<CollectionItemCategory> CollectionItem { get; set; } = default!;
+    public IList<Category> Categories { get; set; } = default!;
 
     [BindProperty(SupportsGet = true)]
     public string? SearchItemName { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int? SearchStartingQuantity { get; set; }
+    public string? SearchCategory { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int? SearchCurrentQuantity { get; set; }
@@ -36,12 +37,22 @@ public class IndexModel : PageModel
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var collectionItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem") ?? new List<CollectionItem>();
 
+        // Get all items with category info
+        var collectionItems = await httpClient
+            .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItem/withcategory")
+            ?? new List<CollectionItemCategory>();
+
+        // Get all categories for dropdown
+        Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                     ?? new List<Category>();
+
+        // LINQ — filter by logged in user
         collectionItems = collectionItems
             .Where(c => c.UserName == loggedInUser.UserName)
             .ToList();
 
+        // LINQ — smart search by Item Name
         if (!string.IsNullOrEmpty(SearchItemName))
         {
             SearchItemName = SearchItemName.Trim();
@@ -54,17 +65,39 @@ public class IndexModel : PageModel
                 .ToList();
         }
 
-        if (SearchStartingQuantity.HasValue)
+        // LINQ — smart search by Category (name or code)
+        if (!string.IsNullOrEmpty(SearchCategory))
         {
-            collectionItems = collectionItems.Where(c => c.StartingQuantity == SearchStartingQuantity.Value).ToList();
+            SearchCategory = SearchCategory.Trim();
+
+            collectionItems = collectionItems
+                .Where(c =>
+                    (c.CategoryName != null && c.CategoryName.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)) ||
+                    (c.CategoryCode != null && c.CategoryCode.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
         }
 
+        // LINQ — filter by Current Quantity
         if (SearchCurrentQuantity.HasValue)
         {
-            collectionItems = collectionItems.Where(c => c.CurrentQuantity == SearchCurrentQuantity.Value).ToList();
+            collectionItems = collectionItems
+                .Where(c => c.CurrentQuantity == SearchCurrentQuantity.Value)
+                .ToList();
         }
+
+        // LINQ — sort by ItemName ascending
+        collectionItems = collectionItems
+            .OrderBy(c => c.ItemName)
+            .ToList();
 
         CollectionItem = collectionItems;
         return Page();
+    }
+
+    // Helper — truncate text to 15 chars with ...
+    public string Truncate(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        return text.Length <= 15 ? text : text.Substring(0, 15) + "...";
     }
 }

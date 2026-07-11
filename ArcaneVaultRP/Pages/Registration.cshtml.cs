@@ -67,9 +67,18 @@ namespace ArcaneVaultRP.Pages
                     ModelState.AddModelError(string.Empty, "Email has already been registered.");
                     return Page();
                 }
+
+                var duplicateUsername = existingUsers.Any(u =>
+                    u.UserName.Equals(Input.Username, StringComparison.OrdinalIgnoreCase));
+
+                if (duplicateUsername)
+                {
+                    ModelState.AddModelError(string.Empty, "Username has already been taken.");
+                    return Page();
+                }
             }
 
-            var newUser = new ArcaneVaultUser
+            var newUser = new ArcaneVaultUserDTO
             {
                 UserName = Input.Username,
                 Email = Input.Email,

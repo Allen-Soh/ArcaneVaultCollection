@@ -86,3 +86,14 @@
 - Implement ADO.NET and LINQ Method query to existing code
 - Adding a specified search bar for CategoryPages
 - Fix Edit and Create pages for Category to use DTO classes
+- Implement CollectionItemCategory selector in Index, Create and Edit pages for CollectionItem
+
+===== DEV LOG (11/7/2026)=====
+[Done]
+- Implemented ADO.NET and LINQ Method query to existing code
+- Fixed Edit and Create pages for Category to use DTO classes
+- Implemented CollectionItemCategory selector in Index, Create and Edit pages for CollectionItem, but does not work properly yet
+
+[To Do]
+- Fix category selector search bar in Index, Create and Edit pages for CollectionItem
+- Fix issue where after searching something, when trying to search something else, it will only search shown items instead of all items in the database

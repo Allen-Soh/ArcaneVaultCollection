@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
 
@@ -7,72 +7,140 @@ using ArcaneVaultAPI.DataTransferObject;
 [ApiController]
 public class ArcaneVaultUserController : ControllerBase
 {
-    private readonly ArcaneDbContext _context;
-    public ArcaneVaultUserController(ArcaneDbContext context)
-    {
-        _context = context;
-    }
+    private readonly string _connectionString = "Data Source=ArcaneVault.db";
 
     // GET: api/ArcaneVaultUser
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ArcaneVaultUser>>> GetArcaneVaultUser()
+    public ActionResult<IEnumerable<ArcaneVaultUser>> GetArcaneVaultUser()
     {
-        return await _context.ArcaneVaultUsers.ToListAsync();
+        var users = new List<ArcaneVaultUser>();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "SELECT UserName, Email, IsDeleted, RoleId, Password FROM ArcaneVaultUsers",
+            connection);
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            users.Add(new ArcaneVaultUser
+            {
+                UserName = reader["UserName"].ToString(),
+                Email = reader["Email"].ToString(),
+                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
+                RoleId = Convert.ToInt32(reader["RoleId"]),
+                Password = reader["Password"].ToString()
+            });
+        }
+
+        // LINQ — order by UserName
+        var result = users.OrderBy(u => u.UserName).ToList();
+
+        return result;
     }
 
     // GET: api/ArcaneVaultUser/5
     [HttpGet("{username}")]
-    public async Task<ActionResult<ArcaneVaultUser>> GetArcaneVaultUser(string username)
+    public ActionResult<ArcaneVaultUser> GetArcaneVaultUser(string username)
     {
-        var arcanevaultuser = await _context.ArcaneVaultUsers.FindAsync(username);
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
 
-        if (arcanevaultuser == null)
+        var command = new SqliteCommand(
+            "SELECT UserName, Email, IsDeleted, RoleId, Password FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            connection);
+        command.Parameters.AddWithValue("@UserName", username);
+
+        using var reader = command.ExecuteReader();
+
+        ArcaneVaultUser? user = null;
+        while (reader.Read())
+        {
+            user = new ArcaneVaultUser
+            {
+                UserName = reader["UserName"].ToString(),
+                Email = reader["Email"].ToString(),
+                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
+                RoleId = Convert.ToInt32(reader["RoleId"]),
+                Password = reader["Password"].ToString()
+            };
+        }
+
+        if (user == null)
         {
             return NotFound();
         }
 
-        return arcanevaultuser;
+        return user;
     }
 
     // PUT: api/ArcaneVaultUser/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{username}")]
-    public async Task<IActionResult> PutArcaneVaultUser(string? username, ArcaneVaultUser arcanevaultuser)
+    public IActionResult PutArcaneVaultUser(string? username, ArcaneVaultUser arcaneVaultUser)
     {
-        if (username != arcanevaultuser.UserName)
+        if (username != arcaneVaultUser.UserName)
         {
             return BadRequest();
         }
 
-        arcanevaultuser.Role = null;
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
 
-        _context.Entry(arcanevaultuser).State = EntityState.Modified;
+        // Check if exists
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            connection);
+        checkCommand.Parameters.AddWithValue("@UserName", username);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
 
-        try
+        if (count == 0)
         {
-            await _context.SaveChangesAsync();
+            return NotFound();
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ArcaneVaultUserExists(username))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
+
+        var command = new SqliteCommand(
+            @"UPDATE ArcaneVaultUsers 
+              SET Email = @Email, 
+                  IsDeleted = @IsDeleted, 
+                  RoleId = @RoleId, 
+                  Password = @Password 
+              WHERE UserName = @UserName",
+            connection);
+
+        command.Parameters.AddWithValue("@UserName", arcaneVaultUser.UserName);
+        command.Parameters.AddWithValue("@Email", arcaneVaultUser.Email);
+        command.Parameters.AddWithValue("@IsDeleted", arcaneVaultUser.IsDeleted);
+        command.Parameters.AddWithValue("@RoleId", arcaneVaultUser.RoleId);
+        command.Parameters.AddWithValue("@Password", arcaneVaultUser.Password);
+
+        command.ExecuteNonQuery();
 
         return NoContent();
     }
 
     // POST: api/ArcaneVaultUser
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
-    public async Task<ActionResult<ArcaneVaultUser>> PostArcaneVaultUser(ArcaneVaultUserDTO dto)
+    public ActionResult<ArcaneVaultUser> PostArcaneVaultUser(ArcaneVaultUserDTO dto)
     {
-        var arcanevaultuser = new ArcaneVaultUser
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"INSERT INTO ArcaneVaultUsers (UserName, Email, IsDeleted, RoleId, Password) 
+              VALUES (@UserName, @Email, @IsDeleted, @RoleId, @Password)",
+            connection);
+
+        command.Parameters.AddWithValue("@UserName", dto.UserName);
+        command.Parameters.AddWithValue("@Email", dto.Email);
+        command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
+        command.Parameters.AddWithValue("@RoleId", dto.RoleId);
+        command.Parameters.AddWithValue("@Password", dto.Password);
+
+        command.ExecuteNonQuery();
+
+        var newUser = new ArcaneVaultUser
         {
             UserName = dto.UserName,
             Email = dto.Email,
@@ -81,30 +149,36 @@ public class ArcaneVaultUserController : ControllerBase
             Password = dto.Password
         };
 
-        _context.ArcaneVaultUsers.Add(arcanevaultuser);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetArcaneVaultUser", new { username = arcanevaultuser.UserName }, arcanevaultuser);
+        return CreatedAtAction("GetArcaneVaultUser",
+            new { username = newUser.UserName },
+            newUser);
     }
 
     // DELETE: api/ArcaneVaultUser/5
     [HttpDelete("{username}")]
-    public async Task<IActionResult> DeleteArcaneVaultUser(string? username)
+    public IActionResult DeleteArcaneVaultUser(string? username)
     {
-        var arcanevaultuser = await _context.ArcaneVaultUsers.FindAsync(username);
-        if (arcanevaultuser == null)
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Check if exists
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            connection);
+        checkCommand.Parameters.AddWithValue("@UserName", username);
+        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
+
+        if (count == 0)
         {
             return NotFound();
         }
 
-        _context.ArcaneVaultUsers.Remove(arcanevaultuser);
-        await _context.SaveChangesAsync();
+        var command = new SqliteCommand(
+            "DELETE FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            connection);
+        command.Parameters.AddWithValue("@UserName", username);
+        command.ExecuteNonQuery();
 
         return NoContent();
-    }
-
-    private bool ArcaneVaultUserExists(string? username)
-    {
-        return _context.ArcaneVaultUsers.Any(e => e.UserName == username);
     }
 }

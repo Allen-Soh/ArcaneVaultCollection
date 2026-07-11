@@ -1,36 +1,109 @@
 @page
 @model ArcaneVaultRP.Pages.CategoryPages.IndexModel
-
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Categories";
 }
 
-<h1>Index</h1>
+<h1>Categories</h1>
+
+<!-- Search -->
+<form method="get">
+    <div class="row g-2 mb-3">
+        <!-- Replace existing text input in CategoryPages/Index.cshtml -->
+        <div class="col-md-6 position-relative">
+            <label class="form-label fw-semibold">Category Name</label>
+            <input type="text"
+                   name="SearchCategoryName"
+                   id="searchCategoryName"
+                   value="@Model.SearchCategoryName"
+                   class="form-control"
+                   placeholder="Search by category name..."
+                   autocomplete="off" />
+            <div id="categoryNameSuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a asp-page="./Index" class="btn btn-secondary">Clear</a>
+        </div>
+    </div>
+</form>
 
 <p>
-    <a asp-page="Create">Create New</a>
+    <a asp-page="Create" class="btn btn-success">Create New</a>
 </p>
+
 <table class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Category[0].CategoryName)
-            </th>
-            <th></th>
+            <th>Category Code</th>
+            <th>Category Name</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model.Category) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.CategoryName)
-            </td>
-            <td>
-                <a asp-page="./Edit" asp-route-id="@item.CategoryCode">Edit</a> |
-                <a asp-page="./Details" asp-route-id="@item.CategoryCode">Details</a> |
-                <a asp-page="./Delete" asp-route-id="@item.CategoryCode">Delete</a>
-            </td>
-        </tr>
-}
+        @foreach (var item in Model.Category)
+        {
+            <tr>
+                <td>@item.CategoryCode</td>
+                <td>@item.CategoryName</td>
+                <td>
+                    <a asp-page="./Edit"
+                       asp-route-categorycode="@item.CategoryCode"
+                       class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-page="./Details"
+                       asp-route-categorycode="@item.CategoryCode"
+                       class="btn btn-info btn-sm">Details</a>
+                    <a asp-page="./Delete"
+                       asp-route-categorycode="@item.CategoryCode"
+                       class="btn btn-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        const categoryNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Category.Select(c => c.CategoryName).ToList()));
+
+        function truncate(text) {
+            if (!text) return '';
+            return text.length <= 15 ? text : text.substring(0, 15) + '...';
+        }
+
+        const searchCategoryName = document.getElementById('searchCategoryName');
+        const categoryNameSuggestions = document.getElementById('categoryNameSuggestions');
+
+        searchCategoryName.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            categoryNameSuggestions.innerHTML = '';
+
+            if (query.length === 0) return;
+
+            const matches = categoryNames
+                .filter(name => name && name.toLowerCase().includes(query))
+                .slice(0, 5);
+
+            matches.forEach(name => {
+                const item = document.createElement('a');
+                item.href = '#';
+                item.className = 'list-group-item list-group-item-action';
+                item.textContent = truncate(name);
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    searchCategoryName.value = name;
+                    categoryNameSuggestions.innerHTML = '';
+                    document.querySelector('form').submit();
+                });
+                categoryNameSuggestions.appendChild(item);
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!searchCategoryName.contains(e.target)) categoryNameSuggestions.innerHTML = '';
+        });
+    </script>
+}

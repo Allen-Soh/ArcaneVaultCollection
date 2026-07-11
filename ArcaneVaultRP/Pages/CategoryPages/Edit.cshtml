@@ -1,35 +1,49 @@
 @page
 @model ArcaneVaultRP.Pages.CategoryPages.EditModel
-
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Category";
 }
 
-<h1>Edit</h1>
-
-<h4>Category</h4>
+<h1>Edit Category</h1>
 <hr />
+
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <!-- Hidden CategoryCode -->
             <input type="hidden" asp-for="Category.CategoryCode" />
-            <div class="form-group">
-                <label asp-for="Category.CategoryName" class="control-label"></label>
-                <input asp-for="Category.CategoryName" class="form-control" />
-                <span asp-validation-for="Category.CategoryName" class="text-danger"></span>
+
+            <!-- Current Category Code — read only for reference -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Category Code</label>
+                <input type="text"
+                       value="@Model.Category.CategoryCode"
+                       class="form-control"
+                       readonly />
+                <small class="text-muted">Category code will be updated automatically when name changes.</small>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+
+            <!-- Category Name -->
+            <div class="mb-3">
+                <label asp-for="Category.CategoryName" class="form-label fw-semibold">Category Name</label>
+                <input asp-for="Category.CategoryName"
+                       class="form-control"
+                       placeholder="Enter category name" />
+                <span asp-validation-for="Category.CategoryName" class="text-danger small"></span>
+            </div>
+
+            <div class="mt-4">
+                <input type="submit" value="Save" class="btn btn-primary me-2" />
+                <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-page="./Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

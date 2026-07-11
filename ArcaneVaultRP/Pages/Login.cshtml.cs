@@ -66,7 +66,9 @@ namespace ArcaneVaultRP.Pages
             }
 
             // Find matching user — username match and not deleted
-            var user = users.FirstOrDefault(u =>
+            var user = users
+                .OrderBy(u => u.UserName)
+                .FirstOrDefault(u =>
                 u.UserName == Input.Username &&
                 u.Password == Input.Password &&
                 !u.IsDeleted);

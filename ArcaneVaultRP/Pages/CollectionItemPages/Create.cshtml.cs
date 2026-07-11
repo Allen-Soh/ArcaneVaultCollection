@@ -1,3 +1,4 @@
+using ArcaneVaultAPI.DataTransferObject;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,17 +15,32 @@ public class CreateModel : PageModel
         _httpClientFactory = httpClientFactory;
     }
 
-    public IActionResult OnGet()
+    public IList<Category> Categories { get; set; } = default!;
+
+    [BindProperty]
+    public CollectionItem CollectionItem { get; set; } = default!;
+
+    [BindProperty]
+    public string? SelectedCategoryCode { get; set; }
+
+    public async Task<IActionResult> OnGetAsync()
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
         {
             return RedirectToPage("/Login");
         }
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Load categories for dropdown
+        Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                     ?? new List<Category>();
+
+        // LINQ — sort categories by name
+        Categories = Categories.OrderBy(c => c.CategoryName).ToList();
+
         return Page();
     }
-
-    [BindProperty]
-    public CollectionItem CollectionItem { get; set; } = default!;
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -32,13 +48,25 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
         {
+            // Reload categories if validation fails
+            HttpClient httpClientReload = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+            Categories = await httpClientReload.GetFromJsonAsync<List<Category>>("Category")
+                         ?? new List<Category>();
             return Page();
         }
 
         var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
 
-        var dto = new CollectionItem
+        if (loggedInUser == null)
+        {
+            return RedirectToPage("/Login");
+        }
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Step 1 — POST CollectionItem
+        var dto = new CollectionItemDTO
         {
             ItemName = CollectionItem.ItemName,
             IsDeleted = false,
@@ -47,17 +75,31 @@ public class CreateModel : PageModel
             UserName = loggedInUser.UserName
         };
 
-        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
         var response = await httpClient.PostAsJsonAsync("CollectionItem", dto);
 
-        if (response.IsSuccessStatusCode)
-        {
-            return RedirectToPage("./Index");
-        }
-        else
+        if (!response.IsSuccessStatusCode)
         {
             ModelState.AddModelError(string.Empty, "An error occurred while creating the collection item.");
+            Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                         ?? new List<Category>();
             return Page();
         }
+
+        // Step 2 — get new ItemId from response
+        var createdItem = await response.Content.ReadFromJsonAsync<CollectionItem>();
+
+        // Step 3 — POST CollectionItemCategory if category was selected
+        if (!string.IsNullOrEmpty(SelectedCategoryCode) && createdItem != null)
+        {
+            var categoryLink = new CollectionItemCategory
+            {
+                ItemId = createdItem.ItemId,
+                CategoryCode = SelectedCategoryCode
+            };
+
+            await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
+        }
+
+        return RedirectToPage("./Index");
     }
 }
