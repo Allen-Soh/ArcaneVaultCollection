@@ -15,11 +15,9 @@ public class IndexModel : PageModel
 
     public IList<Category> Category { get; set; } = default!;
 
+    // Single search field for both name and code
     [BindProperty(SupportsGet = true)]
     public string? SearchCategoryName { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public string? SearchCategoryCode { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -34,38 +32,28 @@ public class IndexModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        Category = await httpClient.GetFromJsonAsync<List<Category>>("Category") ?? new List<Category>();
+        var categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                         ?? new List<Category>();
 
+        // LINQ — filter by category name OR code in one search
         if (!string.IsNullOrEmpty(SearchCategoryName))
         {
             SearchCategoryName = SearchCategoryName.Trim();
             if (SearchCategoryName.Length > 100)
                 SearchCategoryName = SearchCategoryName.Substring(0, 100);
 
-            Category = Category
-                .Where(c => c.CategoryName != null &&
-                       c.CategoryName.Contains(SearchCategoryName, StringComparison.OrdinalIgnoreCase))
+            categories = categories
+                .Where(c =>
+                    (c.CategoryName != null && c.CategoryName.Contains(SearchCategoryName, StringComparison.OrdinalIgnoreCase)) ||
+                    (c.CategoryCode != null && c.CategoryCode.Contains(SearchCategoryName, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
         // LINQ — sort by CategoryName
-        Category= Category
+        Category = categories
             .OrderBy(c => c.CategoryName)
             .ToList();
 
-        if (!string.IsNullOrEmpty(SearchCategoryCode))
-        {
-            SearchCategoryCode = SearchCategoryCode.Trim();
-            if (SearchCategoryCode.Length > 3)
-                SearchCategoryCode = SearchCategoryCode.Substring(0, 3);
-
-            Category = Category
-                .Where(c => c.CategoryCode != null &&
-                       c.CategoryCode.Contains(SearchCategoryCode, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        Category = Category;
         return Page();
     }
 }

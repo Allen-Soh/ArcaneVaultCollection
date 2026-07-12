@@ -16,6 +16,7 @@ public class IndexModel : PageModel
 
     public IList<CollectionItemCategory> CollectionItem { get; set; } = default!;
     public IList<Category> Categories { get; set; } = default!;
+    public IList<CollectionItemCategory> AllItems { get; set; } = default!;
 
     [BindProperty(SupportsGet = true)]
     public string? SearchItemName { get; set; }
@@ -51,6 +52,8 @@ public class IndexModel : PageModel
         collectionItems = collectionItems
             .Where(c => c.UserName == loggedInUser.UserName)
             .ToList();
+
+        AllItems = collectionItems.OrderBy(c => c.ItemName).ToList();
 
         // LINQ — smart search by Item Name
         if (!string.IsNullOrEmpty(SearchItemName))

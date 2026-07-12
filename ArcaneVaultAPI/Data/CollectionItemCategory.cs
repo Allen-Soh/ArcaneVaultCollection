@@ -9,9 +9,9 @@ namespace ArcaneVaultAPI.Data
         public string CategoryCode { get; set; }
 
         [ForeignKey("ItemId")]
-        public CollectionItem ColItem { get; set; }
+        public CollectionItem? ColItem { get; set; }
 
         [ForeignKey("CategoryCode")]
-        public Category CatCode { get; set; }
+        public Category? CatCode { get; set; }
     }
 }

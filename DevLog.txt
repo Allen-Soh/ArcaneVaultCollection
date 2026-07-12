@@ -97,3 +97,15 @@
 [To Do]
 - Fix category selector search bar in Index, Create and Edit pages for CollectionItem
 - Fix issue where after searching something, when trying to search something else, it will only search shown items instead of all items in the database
+
+===== DEV LOG (12/7/2026)=====
+[Done]
+- Fixed category selector search bar in Index, Create and Edit pages for CollectionItem
+- Fixed issue where after searching something, when trying to search something else, it will only search shown items instead of all items in the database
+- Fixed creating issues with CollectionItemCategory selector in Create and Edit pages for CollectionItem
+- Fixed CollectionItem Name search bar to have smart dropdown search bar
+- Added basic design for Index pages for Logged Out, Logged In, and Staff users
+
+[To Do]
+- Think about how to improve smart dropdown search bar and implement it
+- Implement an improved design for the entire website

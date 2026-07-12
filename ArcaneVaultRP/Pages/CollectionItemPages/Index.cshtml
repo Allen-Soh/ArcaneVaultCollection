@@ -9,8 +9,8 @@
 <form method="get" id="searchForm">
     <div class="row g-2 mb-3">
 
-        <!-- Item Name smart search -->
-        <div class="col-md-4">
+        <!-- Item Name smart search — fixed width -->
+        <div class="col-md-4 position-relative">
             <label class="form-label fw-semibold">Item Name</label>
             <input type="text"
                    name="SearchItemName"
@@ -19,10 +19,12 @@
                    class="form-control"
                    placeholder="Search by item name..."
                    autocomplete="off" />
-            <div id="itemNameSuggestions" class="list-group position-absolute z-3" style="width:100%;max-height:200px;overflow-y:auto;"></div>
+            <div id="itemNameSuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
         </div>
 
-        <!-- Category smart search dropdown -->
+        <!-- Category smart search -->
         <div class="col-md-4 position-relative">
             <label class="form-label fw-semibold">Category</label>
             <input type="text"
@@ -32,7 +34,9 @@
                    class="form-control"
                    placeholder="Search by category name or code..."
                    autocomplete="off" />
-            <div id="categorySuggestions" class="list-group position-absolute z-3" style="width:100%;max-height:200px;overflow-y:auto;"></div>
+            <div id="categorySuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
         </div>
 
         <!-- Current Quantity -->
@@ -97,19 +101,16 @@
 
 @section Scripts {
     <script>
-        // Category data from server for smart search
+        // Use AllItems for suggestions — full unfiltered list
+        const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllItems));
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
 
-        // Item names from server for smart search
-        const itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CollectionItem.Select(c => c.ItemName).Distinct()));
-
-        // Helper — truncate to 15 chars
         function truncate(text) {
             if (!text) return '';
-            return text.length <= 15 ? text : text.substring(0, 15) + '...';
+            return text.length <= 20 ? text : text.substring(0, 20) + '...';
         }
 
-        // Smart search for Item Name
+        // Smart search for Item Name — uses full unfiltered list
         const searchItemName = document.getElementById('searchItemName');
         const itemNameSuggestions = document.getElementById('itemNameSuggestions');
 
@@ -119,8 +120,11 @@
 
             if (query.length === 0) return;
 
-            const matches = itemNames
-                .filter(name => name && name.toLowerCase().includes(query))
+            // LINQ-like filter on full item list
+            const matches = allItems
+                .filter(item => item.ItemName && item.ItemName.toLowerCase().includes(query))
+                .map(item => item.ItemName)
+                .filter((name, index, self) => self.indexOf(name) === index) // distinct
                 .slice(0, 5);
 
             matches.forEach(name => {
@@ -150,18 +154,18 @@
 
             const matches = categories
                 .filter(c =>
-                    c.categoryName.toLowerCase().includes(query) ||
-                    c.categoryCode.toLowerCase().includes(query))
+                    c.CategoryName.toLowerCase().includes(query) ||
+                    c.CategoryCode.toLowerCase().includes(query))
                 .slice(0, 5);
 
             matches.forEach(cat => {
                 const item = document.createElement('a');
                 item.href = '#';
                 item.className = 'list-group-item list-group-item-action';
-                item.textContent = truncate(cat.categoryName) + ' (' + cat.categoryCode + ')';
+                item.textContent = truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
-                    searchCategory.value = cat.categoryName;
+                    searchCategory.value = cat.CategoryName;
                     categorySuggestions.innerHTML = '';
                     document.getElementById('searchForm').submit();
                 });

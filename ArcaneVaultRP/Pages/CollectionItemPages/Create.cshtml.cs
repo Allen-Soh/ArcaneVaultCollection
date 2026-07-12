@@ -91,13 +91,23 @@ public class CreateModel : PageModel
         // Step 3 — POST CollectionItemCategory if category was selected
         if (!string.IsNullOrEmpty(SelectedCategoryCode) && createdItem != null)
         {
+            // Delete any existing link first to prevent UNIQUE constraint error
+            await httpClient.DeleteAsync($"CollectionItemCategory/{createdItem.ItemId}/{SelectedCategoryCode}");
+
             var categoryLink = new CollectionItemCategory
             {
                 ItemId = createdItem.ItemId,
                 CategoryCode = SelectedCategoryCode
             };
 
-            await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
+            var categoryResponse = await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
+
+            if (!categoryResponse.IsSuccessStatusCode)
+            {
+                var error = await categoryResponse.Content.ReadAsStringAsync();
+                ModelState.AddModelError(string.Empty, $"Category link error: {error}");
+                return Page();
+            }
         }
 
         return RedirectToPage("./Index");

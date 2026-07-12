@@ -1,10 +1,99 @@
 ﻿@page
-@model IndexModel
+@using System.Text.Json
+@using ArcaneVaultRP.Models
+@using ArcaneVaultRP
+@model ArcaneVaultRP.Pages.IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Home";
+
+    var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+    var loggedInUser = userJson != null ? JsonSerializer.Deserialize<ArcaneVaultUser>(userJson) : null;
+    var isStaff = HttpContext.Session.GetString(SessionKeys.UserRole) == "1";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+
+    @if (loggedInUser != null)
+    {
+        <!-- Welcome Banner -->
+        <div class="p-4 mb-4 rounded-3 border" style="background-color: #f8f9fa;">
+            <h2 class="fw-bold">Welcome back, @loggedInUser.UserName!</h2>
+            <p class="text-muted mb-0">
+                @if (isStaff)
+                {
+                    <span class="badge bg-danger me-2">Staff</span>
+                }
+                else
+                {
+                    <span class="badge bg-primary me-2">Collector</span>
+                }
+                Logged in as <strong>@loggedInUser.Email</strong>
+            </p>
+        </div>
+
+        <!-- Quick Access Cards -->
+        <h5 class="fw-semibold mb-3">Quick Access</h5>
+        <div class="row g-3 mb-4">
+
+            <!-- Collection Items card — all users -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title fw-bold">My Collection</h5>
+                        <p class="card-text text-muted">View and manage your collectible items.</p>
+                        <a asp-page="/CollectionItemPages/Index" class="btn btn-primary">Go to Collection</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Item card — all users -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title fw-bold">Add New Item</h5>
+                        <p class="card-text text-muted">Add a new collectible to your collection.</p>
+                        <a asp-page="/CollectionItemPages/Create" class="btn btn-success">Add Item</a>
+                    </div>
+                </div>
+            </div>
+
+            @if (isStaff)
+            {
+                <!-- Categories card — Staff only -->
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h5 class="card-title fw-bold">Manage Categories</h5>
+                            <p class="card-text text-muted">Create and manage collection categories.</p>
+                            <a asp-page="/CategoryPages/Index" class="btn btn-secondary">Go to Categories</a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+        @if (isStaff)
+        {
+            <!-- Staff Notice -->
+            <div class="alert alert-warning border-0 shadow-sm" role="alert">
+                <strong>Staff Access:</strong> You have administrative privileges to manage collection categories.
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Not logged in -->
+        <div class="text-center py-5">
+            <h1 class="display-5 fw-bold mb-3">Welcome to Arcane Vault</h1>
+            <p class="lead text-muted mb-4">
+                A platform for collectors to manage and track their collectible items.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-page="/Login" class="btn btn-primary btn-lg">Login</a>
+                <a asp-page="/Registration" class="btn btn-outline-primary btn-lg">Register</a>
+            </div>
+        </div>
+    }
+
 </div>

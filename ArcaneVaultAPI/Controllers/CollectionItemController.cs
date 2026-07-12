@@ -181,6 +181,14 @@ public class CollectionItemController : ControllerBase
             return NotFound();
         }
 
+        // Delete CollectionItemCategory link first — prevents orphaned records
+        var deleteCategoryLink = new SqliteCommand(
+            "DELETE FROM CollectionItemCategories WHERE ItemId = @ItemId",
+            connection);
+        deleteCategoryLink.Parameters.AddWithValue("@ItemId", itemid);
+        deleteCategoryLink.ExecuteNonQuery();
+
+        // Then delete CollectionItem
         var command = new SqliteCommand(
             "DELETE FROM CollectionItems WHERE ItemId = @ItemId",
             connection);
