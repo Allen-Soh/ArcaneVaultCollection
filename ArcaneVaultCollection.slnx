@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="DevLog.txt" />
+    <File Path="Proposal Ideas.txt" />
   </Folder>
   <Project Path="ArcaneVaultAPI/ArcaneVaultAPI.csproj" Id="16fa2f39-e964-4654-a67a-8c5bc5731ed7" />
   <Project Path="ArcaneVaultRP/ArcaneVaultRP.csproj" Id="3b675464-0925-47fe-a1e8-8117a003e536" />

@@ -114,12 +114,17 @@
 [Done]
 - Improved smart dropdown search bar to be more user friendly and have better functionality for all pages that have it
 - Imrpoved Category Code helper functionality by adding CategoryCodeHelper in RP Models
+- Renamed ArcaneVaultRP under footer to Arcane Vault
 
 [To Do]
-- Implement an improved design for the entire website
-- Come up with an additional feature that would meet the requirement for a Complex feature
-(e.g., implementation of Create/Read/Update/Delete operations with significantly enhanced
-UI/UX and thoughtful design improvements; incorporation of meaningful new functionalities
-beyond standard Visual Studio templates; application of business analytics to generate
-actionable insights; or integration of security features such as multi-factor
-authentication (MFA), single sign-on (SSO), and password reset mechanisms)
+- Come up with an additional features that would meet the requirement for a Complex feature
+- Proposed Ideas: Users & Staffs - Collection Showoffs
+				  Staffs - Insight Management
+
+===== DEV LOG (14/7/2026)=====
+[Done]
+- Came up with additional features that meet the requirement for a Complex feature
+- Listed the information for the proposed ideas
+
+[To Do]
+- Implement proposed Idea 1 first, while taking into consideration Idea 2 for smooth implementation

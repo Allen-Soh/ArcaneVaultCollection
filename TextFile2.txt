@@ -1,0 +1,79 @@
+========== 1st Proposed Idea: User & Staff (Name: Showoffs) ==========
+Show off collection with other users
+It will have all CRUD pages
+Both users and staff have access to this
+Deletions are soft-deletes (flagged as deleted, hidden from user-facing pages) rather than hard-deletes, so historical data is preserved for Staff Insights (2nd idea) even after a user removes a showoff
+
+C - Create personal collection showoff
+- Each user is able to create a max of 3 collection showoffs
+- User is able to name their collection showoffs
+- User is able to choose the colour of their showoff background based on an rgb colour wheel
+- User is able to select the collection item that is from their collection items (collection items are drawn from the user's existing Collection Items inventory, not created fresh here)
+- User is able to upload an image of their collection item; image requirements (max file size, aspect ratio, moderation process — automatic) to be finalised before build
+- Create layout will have 2 sections
+- First section will appear after user clicks on "Manage Showoffs", which will show a "Create Showoff" button, which if the user has multiple, will show at the bottom unless the user already has 3 collection showoffs
+- Second section will appear when the user clicks on "Create Showoff", which shows a standardised template, which is to be simple and userfriendly
+- There will be 3 types of templates, Template 1 will display 1 item, Template 2 will display 2 items, Template 3 will display 3 items, all templates to center the items
+- User is able to select whether to make collection showoff Private or Public
+
+R - Index page that shows multiple users' collection showoffs
+- Will show different profiles of users with their collection showoffs which only are shown when a user clicks on their profile
+- After clicking, it will show the 
+- Users can give likes to other users' collection showoffs, only once per collection showoff to avoid one user being able to like the same collection showoff multiple times
+- Users can filter based on Newest, Most Popular and Least Popular from a dropdown box at the top (Most/Least Popular is ranked by total likes; ties are broken by Newest)
+- Users can also filter based on category, which this is how it's done: when a user adds a collection item and creates it, each collection showoff will have a list of categories that it is showcasing, which the filter will filter based on, it'll be called categorytagsgroup
+- The same smart search bar function will be implemented for searching for other Users, collection items and categories, so the same search logic can be reused on the Staff Insights page, in total 3 search bars
+
+U - User is only able to edit their own collection showoffs
+- User can swap the background colour, the selected collection items, the item image(s), and rename the collection showoff
+- User can swap whether to set collection showoff to Private or Public
+
+D - User is only able to delete their own collection showoffs
+- When deleted, the collection showoff is soft-deleted (hidden from all user-facing pages, no longer editable) but the underlying record is retained for staff-side trend and engagement tracking
+
+This will allow insights on user engagement, on what collection items and collections are popular
+
+========== 2nd Proposed Idea: Staff Only (Name: Insights) ==========
+Insights page that only Staff has access to
+Insights page will have different cards grouped under four categories, each leading to specialized features pages accordingly
+All specialized features pages listed should only be accessible to staff
+
+--- Category: Popular Items ---
+View Top 10 collection items
+- From the database across all collection items from all users, compile to show 10 of the most-owned collection items overall
+- To be given in ranking along with the total number of users owning each collection item
+- It is to be updated when there is a change in ranking
+- It will count based on the number of users that have the item, not based on the total quantity of that item
+- Able to view the top 10 collection items based on selected category as there will be a category filter smart dropdown search bar as well
+
+--- Category: Market Demand & Trends ---
+Rising collection items
+- Track collection items with high relative growth in adoption
+- "High rise" is defined as a percentage increase in the number of users adding a specific collection item over a rolling window (e.g., 7 or 30 days), rather than a fixed user count, so it scales with total platform user base
+
+Declining collection items
+- Same tracking logic as Rising, inverted — surfaces items losing adoption over the same rolling window
+- Gives a complete demand picture alongside Rising Items
+
+Category trends over time
+- Chart showing which categories are gaining or losing share of total collection activity, month over month
+
+--- Category: User Activity & Engagement ---
+Active users overview
+- Daily/weekly/monthly active user counts, and number of showoffs created per week
+
+Top engaged users/showoffs
+- Leaderboard of showoffs and users ranked by total likes received
+- Engagement rate per showoff (likes ÷ views, if view tracking is implemented) to distinguish genuinely engaging showoffs from ones that are merely old
+
+--- Category: Community Interest ---
+Only looking in Showoffs page
+
+Most-searched items/terms
+- Surfaces demand for items even if few or no users currently own them (captured via search query logs), which Top 10/Rising cannot show since both rely on existing ownership
+
+Most-viewed profiles/showoffs
+- Ranking of showoffs and profiles by view count
+
+Category popularity by user count
+- Number of distinct users interested in each category, independent of item-level rankings — shows breadth of interest vs. depth
