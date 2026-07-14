@@ -35,11 +35,15 @@ namespace ArcaneVaultAPI
 
             app.MapControllers();
 
+            // Ensure database and tables are created first
             using (var scope = app.Services.CreateScope())
             {
-                var services = scope.ServiceProvider;
-                ArcaneDbSeeder.Seed(services);
+                var context = scope.ServiceProvider.GetRequiredService<ArcaneDbContext>();
+                context.Database.EnsureCreated();  // ← creates all tables first
             }
+
+            // Then run seeder
+            ArcaneDbSeeder.Seed(app.Services);
 
             app.Run();
         }

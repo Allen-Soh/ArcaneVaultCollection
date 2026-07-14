@@ -68,15 +68,14 @@ public class IndexModel : PageModel
                 .ToList();
         }
 
-        // LINQ — smart search by Category (name or code)
+        // LINQ — smart search by Category (name)
         if (!string.IsNullOrEmpty(SearchCategory))
         {
             SearchCategory = SearchCategory.Trim();
 
             collectionItems = collectionItems
                 .Where(c =>
-                    (c.CategoryName != null && c.CategoryName.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)) ||
-                    (c.CategoryCode != null && c.CategoryCode.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)))
+                    (c.CategoryName != null && c.CategoryName.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
@@ -101,6 +100,6 @@ public class IndexModel : PageModel
     public string Truncate(string? text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
-        return text.Length <= 15 ? text : text.Substring(0, 15) + "...";
+        return text.Length <= 40 ? text : text.Substring(0, 40) + "...";
     }
 }

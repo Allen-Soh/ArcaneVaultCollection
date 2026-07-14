@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -19,13 +20,9 @@ public class CreateModel : PageModel
     public IActionResult OnGet()
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
-        {
             return RedirectToPage("/Login");
-        }
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
-        {
             return RedirectToPage("/Index");
-        }
         return Page();
     }
 
@@ -34,67 +31,51 @@ public class CreateModel : PageModel
         ModelState.Remove("Category.CategoryCode");
 
         if (!ModelState.IsValid)
+            return Page();
+
+        // Trim input
+        var trimmedName = Category.CategoryName?.Trim() ?? string.Empty;
+
+        // Minimum length check on full name
+        if (trimmedName.Length < 3)
         {
+            ModelState.AddModelError(string.Empty, "Category name must be at least 3 characters long.");
             return Page();
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-
-        // Get existing categories
         var existingCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                                  ?? new List<Category>();
 
-        // LINQ — check duplicate category name
+        // LINQ — duplicate name check (both sides trimmed)
         var duplicateName = existingCategories.Any(c =>
-            c.CategoryName.Equals(Category.CategoryName, StringComparison.OrdinalIgnoreCase));
+            c.CategoryName.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase));
 
         if (duplicateName)
         {
-            ModelState.AddModelError(string.Empty, "Category name already exists.");
+            ModelState.AddModelError(string.Empty, "A category with this name already exists.");
             return Page();
         }
 
-        // Generate category code from category name
-        Category.CategoryCode = GenerateCategoryCode(Category.CategoryName, existingCategories);
+        // Generate category code
+        try
+        {
+            var existingCodes = existingCategories.Select(c => c.CategoryCode).ToList();
+            Category.CategoryCode = CategoryCodeHelper.GenerateCategoryCode(trimmedName, existingCodes);
+            Category.CategoryName = trimmedName;
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return Page();
+        }
 
         var response = await httpClient.PostAsJsonAsync("Category", Category);
 
         if (response.IsSuccessStatusCode)
-        {
             return RedirectToPage("./Index");
-        }
-        else
-        {
-            ModelState.AddModelError(string.Empty, "An error occurred while creating the category.");
-            return Page();
-        }
-    }
 
-    private string GenerateCategoryCode(string categoryName, List<Category> existingCategories)
-    {
-        // Remove spaces and special characters, take first 4 alphanumeric characters uppercase
-        var code = new string(categoryName
-            .ToUpper()
-            .Where(char.IsLetterOrDigit)
-            .Take(4)
-            .ToArray());
-
-        // LINQ — check if code already exists, append number if it does
-        if (existingCategories.Any(c => c.CategoryCode == code))
-        {
-            int suffix = 1;
-            string newCode;
-            do
-            {
-                // Trim code to make room for suffix if needed
-                newCode = code.Substring(0, Math.Min(code.Length, 3)) + suffix.ToString();
-                suffix++;
-            }
-            while (existingCategories.Any(c => c.CategoryCode == newCode));
-
-            return newCode;
-        }
-
-        return code;
+        ModelState.AddModelError(string.Empty, "An error occurred while creating the category.");
+        return Page();
     }
 }

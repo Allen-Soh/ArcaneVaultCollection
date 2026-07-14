@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -19,32 +20,20 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnGetAsync(string? categorycode)
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
-        {
             return RedirectToPage("/Login");
-        }
         if (HttpContext.Session.GetString(SessionKeys.UserRole) != "1")
-        {
             return RedirectToPage("/Index");
-        }
-
         if (categorycode is null)
-        {
             return NotFound();
-        }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-
-        // LINQ — find category by code
         var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                             ?? new List<Category>();
 
-        var category = allCategories
-            .FirstOrDefault(c => c.CategoryCode == categorycode);
-
+        // LINQ — find category
+        var category = allCategories.FirstOrDefault(c => c.CategoryCode == categorycode);
         if (category is null)
-        {
             return NotFound();
-        }
 
         Category = category;
         return Page();
@@ -53,81 +42,67 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         if (!ModelState.IsValid)
+            return Page();
+
+        var trimmedName = Category.CategoryName?.Trim() ?? string.Empty;
+
+        // Minimum length check
+        if (trimmedName.Length < 3)
         {
+            ModelState.AddModelError(string.Empty, "Category name must be at least 3 characters long.");
             return Page();
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-
-        // Get all categories except current one
         var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                             ?? new List<Category>();
 
-        // LINQ — exclude current category from duplicate check
+        // LINQ — exclude current category from checks
         var otherCategories = allCategories
             .Where(c => c.CategoryCode != Category.CategoryCode)
             .ToList();
 
-        // LINQ — check duplicate name
+        // LINQ — duplicate name check (both sides trimmed)
         var duplicateName = otherCategories.Any(c =>
-            c.CategoryName.Equals(Category.CategoryName, StringComparison.OrdinalIgnoreCase));
+            c.CategoryName.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase));
 
         if (duplicateName)
         {
-            ModelState.AddModelError(string.Empty, "Category name already exists.");
+            ModelState.AddModelError(string.Empty, "A category with this name already exists.");
             return Page();
         }
 
-        // Generate new category code from updated name
-        string oldCategoryCode = Category.CategoryCode;
-        string newCategoryCode = GenerateCategoryCode(Category.CategoryName, otherCategories);
+        string oldCode = Category.CategoryCode;
 
-        // Delete old category first
-        await httpClient.DeleteAsync($"Category/{oldCategoryCode}");
-
-        // Create new category with new code
-        var updatedCategory = new Category
+        // Generate new code — excluding old code so its slot is freed
+        try
         {
-            CategoryCode = newCategoryCode,
-            CategoryName = Category.CategoryName
-        };
+            var existingCodes = otherCategories.Select(c => c.CategoryCode).ToList();
+            string newCode = CategoryCodeHelper.GenerateCategoryCode(trimmedName, existingCodes);
+            Category.CategoryName = trimmedName;
 
-        var response = await httpClient.PostAsJsonAsync("Category", updatedCategory);
+            // Delete old category
+            await httpClient.DeleteAsync($"Category/{oldCode}");
 
-        if (response.IsSuccessStatusCode)
-        {
-            return RedirectToPage("./Index");
-        }
-        else
-        {
+            // Create new category with new code
+            var updatedCategory = new Category
+            {
+                CategoryCode = newCode,
+                CategoryName = trimmedName
+            };
+
+            var response = await httpClient.PostAsJsonAsync("Category", updatedCategory);
+
+            if (response.IsSuccessStatusCode)
+                return RedirectToPage("./Index");
+
             ModelState.AddModelError(string.Empty, "An error occurred while updating the category.");
             return Page();
         }
-    }
-
-    private string GenerateCategoryCode(string categoryName, List<Category> existingCategories)
-    {
-        var code = new string(categoryName
-            .ToUpper()
-            .Where(char.IsLetterOrDigit)
-            .Take(4)
-            .ToArray());
-
-        // LINQ — check if code already exists
-        if (existingCategories.Any(c => c.CategoryCode == code))
+        catch (ArgumentException ex)
         {
-            int suffix = 1;
-            string newCode;
-            do
-            {
-                newCode = code.Substring(0, Math.Min(code.Length, 3)) + suffix.ToString();
-                suffix++;
-            }
-            while (existingCategories.Any(c => c.CategoryCode == newCode));
-
-            return newCode;
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return Page();
         }
-
-        return code;
     }
 }

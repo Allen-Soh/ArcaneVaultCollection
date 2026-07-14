@@ -2,6 +2,7 @@
 @model ArcaneVaultRP.Pages.CollectionItemPages.EditModel
 @{
     ViewData["Title"] = "Edit Collection Item";
+    var isStaff = HttpContext.Session.GetString(SessionKeys.UserRole) == "1";
 }
 
 <h1>Edit Collection Item</h1>
@@ -25,19 +26,23 @@
                 <span asp-validation-for="CollectionItem.ItemName" class="text-danger small"></span>
             </div>
 
-            <!-- Category smart search -->
+            <!-- Category smart dropdown -->
             <div class="mb-3 position-relative">
                 <label class="form-label fw-semibold">Category</label>
                 @if (Model.CurrentCategoryName != null)
                 {
                     <p class="text-muted small mb-1">
-                        Current: @Model.CurrentCategoryName (@Model.CurrentCategoryCode)
+                        Current: @Model.CurrentCategoryName
+                        @if (isStaff)
+                        {
+                            <span>(@Model.CurrentCategoryCode)</span>
+                        }
                     </p>
                 }
                 <input type="text"
                        id="categorySearch"
                        class="form-control"
-                       placeholder="Search to change category..."
+                       placeholder="Click to browse or type to search..."
                        autocomplete="off" />
                 <input type="hidden"
                        id="selectedCategoryCode"
@@ -45,7 +50,8 @@
                        value="@Model.CurrentCategoryCode" />
                 <div id="categorySuggestions"
                      class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;"></div>
+                     style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+                <small class="text-muted">Select a category for your item</small>
             </div>
 
             <!-- Item Quantity -->
@@ -78,45 +84,76 @@
 
     <script>
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
+        const isStaff = @isStaff.ToString().ToLower();
 
         function truncate(text) {
             if (!text) return '';
-            return text.length <= 20 ? text : text.substring(0, 20) + '...';
+            return text.length <= 40 ? text : text.substring(0, 40) + '...';
+        }
+
+        function buildSuggestionText(cat) {
+            if (isStaff) {
+                return truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
+            }
+            return truncate(cat.CategoryName);
         }
 
         const categorySearch = document.getElementById('categorySearch');
         const categorySuggestions = document.getElementById('categorySuggestions');
         const selectedCategoryCode = document.getElementById('selectedCategoryCode');
 
-        categorySearch.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
+        function renderSuggestions(filtered) {
             categorySuggestions.innerHTML = '';
-
-            if (query.length === 0) return;
-
-            const matches = categories
-                .filter(c =>
-                    c.CategoryName.toLowerCase().includes(query) ||
-                    c.CategoryCode.toLowerCase().includes(query))
-                .slice(0, 5);
-
-            matches.forEach(cat => {
+            if (filtered.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'list-group-item text-muted';
+                noResult.textContent = 'No categories found';
+                categorySuggestions.appendChild(noResult);
+                return;
+            }
+            filtered.forEach(cat => {
                 const item = document.createElement('a');
                 item.href = '#';
                 item.className = 'list-group-item list-group-item-action';
-                item.textContent = truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
+                item.textContent = buildSuggestionText(cat);
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
-                    categorySearch.value = truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
+                    categorySearch.value = truncate(cat.CategoryName);
                     selectedCategoryCode.value = cat.CategoryCode;
-                    categorySuggestions.innerHTML = '';
+                    categorySuggestions.style.display = 'none';
                 });
                 categorySuggestions.appendChild(item);
             });
+        }
+
+        // Show all on focus
+        categorySearch.addEventListener('focus', function () {
+            renderSuggestions(categories);
+            categorySuggestions.style.display = 'block';
         });
 
+        // Filter on input
+        categorySearch.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            if (query.length === 0) {
+                renderSuggestions(categories);
+                return;
+            }
+
+            const filtered = categories.filter(c => {
+                const nameMatch = c.CategoryName && c.CategoryName.toLowerCase().includes(query);
+                const codeMatch = isStaff && c.CategoryCode && c.CategoryCode.toLowerCase().includes(query);
+                return nameMatch || codeMatch;
+            });
+
+            renderSuggestions(filtered);
+        });
+
+        // Close on outside click
         document.addEventListener('click', function (e) {
-            if (!categorySearch.contains(e.target)) categorySuggestions.innerHTML = '';
+            if (!categorySearch.contains(e.target) && !categorySuggestions.contains(e.target)) {
+                categorySuggestions.style.display = 'none';
+            }
         });
 
         // Quantity +/- buttons

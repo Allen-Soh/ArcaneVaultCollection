@@ -6,6 +6,8 @@ namespace ArcaneVaultRP.Models
     {
         [Key]
         public string CategoryCode { get; set; }
+        [Required]
+        [StringLength(40)]
         public string CategoryName { get; set; }
     }
 }

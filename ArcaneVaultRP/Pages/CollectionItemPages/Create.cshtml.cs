@@ -26,19 +26,14 @@ public class CreateModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
-        {
             return RedirectToPage("/Login");
-        }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-
-        // Load categories for dropdown
         Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                      ?? new List<Category>();
 
-        // LINQ — sort categories by name
+        // LINQ — sort categories
         Categories = Categories.OrderBy(c => c.CategoryName).ToList();
-
         return Page();
     }
 
@@ -48,7 +43,6 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
         {
-            // Reload categories if validation fails
             HttpClient httpClientReload = _httpClientFactory.CreateClient("ArcaneVaultAPI");
             Categories = await httpClientReload.GetFromJsonAsync<List<Category>>("Category")
                          ?? new List<Category>();
@@ -59,16 +53,33 @@ public class CreateModel : PageModel
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
 
         if (loggedInUser == null)
-        {
             return RedirectToPage("/Login");
-        }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Get all active items for logged in user
+        var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")
+                       ?? new List<CollectionItem>();
+
+        // LINQ — duplicate item name check (both sides trimmed, active only)
+        var trimmedName = CollectionItem.ItemName?.Trim() ?? string.Empty;
+        var duplicateItem = allItems.Any(c =>
+            c.UserName == loggedInUser.UserName &&
+            !c.IsDeleted &&
+            c.ItemName.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase));
+
+        if (duplicateItem)
+        {
+            ModelState.AddModelError(string.Empty, "An item with this name already exists in your collection.");
+            Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                         ?? new List<Category>();
+            return Page();
+        }
 
         // Step 1 — POST CollectionItem
         var dto = new CollectionItemDTO
         {
-            ItemName = CollectionItem.ItemName,
+            ItemName = trimmedName,
             IsDeleted = false,
             StartingQuantity = CollectionItem.StartingQuantity,
             CurrentQuantity = CollectionItem.StartingQuantity,
@@ -85,13 +96,12 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        // Step 2 — get new ItemId from response
+        // Step 2 — get new ItemId
         var createdItem = await response.Content.ReadFromJsonAsync<CollectionItem>();
 
-        // Step 3 — POST CollectionItemCategory if category was selected
+        // Step 3 — POST CollectionItemCategory if selected
         if (!string.IsNullOrEmpty(SelectedCategoryCode) && createdItem != null)
         {
-            // Delete any existing link first to prevent UNIQUE constraint error
             await httpClient.DeleteAsync($"CollectionItemCategory/{createdItem.ItemId}/{SelectedCategoryCode}");
 
             var categoryLink = new CollectionItemCategory
@@ -100,14 +110,7 @@ public class CreateModel : PageModel
                 CategoryCode = SelectedCategoryCode
             };
 
-            var categoryResponse = await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
-
-            if (!categoryResponse.IsSuccessStatusCode)
-            {
-                var error = await categoryResponse.Content.ReadAsStringAsync();
-                ModelState.AddModelError(string.Empty, $"Category link error: {error}");
-                return Page();
-            }
+            await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
         }
 
         return RedirectToPage("./Index");

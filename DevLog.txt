@@ -109,3 +109,17 @@
 [To Do]
 - Think about how to improve smart dropdown search bar and implement it
 - Implement an improved design for the entire website
+
+===== DEV LOG (14/7/2026)=====
+[Done]
+- Improved smart dropdown search bar to be more user friendly and have better functionality for all pages that have it
+- Imrpoved Category Code helper functionality by adding CategoryCodeHelper in RP Models
+
+[To Do]
+- Implement an improved design for the entire website
+- Come up with an additional feature that would meet the requirement for a Complex feature
+(e.g., implementation of Create/Read/Update/Delete operations with significantly enhanced
+UI/UX and thoughtful design improvements; incorporation of meaningful new functionalities
+beyond standard Visual Studio templates; application of business analytics to generate
+actionable insights; or integration of security features such as multi-factor
+authentication (MFA), single sign-on (SSO), and password reset mechanisms)

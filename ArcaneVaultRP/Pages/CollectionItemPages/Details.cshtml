@@ -13,17 +13,19 @@
             <div class="card-body p-4">
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Item Name</label>
-                    <p class="form-control-plaintext">@Model.CollectionItem.ItemName</p>
-                </div>
-
-                <div class="mb-3">
                     <label class="form-label fw-semibold">Category</label>
                     <p class="form-control-plaintext">
                         @if (Model.ItemCategory != null)
                         {
-                            @Model.ItemCategory.CategoryName
-                            <span class="text-muted">(@Model.ItemCategory.CategoryCode)</span>
+                            @if (HttpContext.Session.GetString(SessionKeys.UserRole) == "1")
+                            {
+                                @Model.ItemCategory.CategoryName
+                                <span class="text-muted">(@Model.ItemCategory.CategoryCode)</span>
+                            }
+                            else
+                            {
+                                @Model.ItemCategory.CategoryName
+                            }
                         }
                         else
                         {

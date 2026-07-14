@@ -2,6 +2,7 @@
 @model ArcaneVaultRP.Pages.CollectionItemPages.IndexModel
 @{
     ViewData["Title"] = "Collection Items";
+    var isStaff = HttpContext.Session.GetString(SessionKeys.UserRole) == "1";
 }
 
 <h1>Collection Items</h1>
@@ -9,7 +10,7 @@
 <form method="get" id="searchForm">
     <div class="row g-2 mb-3">
 
-        <!-- Item Name smart search — fixed width -->
+        <!-- Item Name smart search -->
         <div class="col-md-4 position-relative">
             <label class="form-label fw-semibold">Item Name</label>
             <input type="text"
@@ -21,10 +22,10 @@
                    autocomplete="off" />
             <div id="itemNameSuggestions"
                  class="list-group position-absolute z-3"
-                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
+                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
         </div>
 
-        <!-- Category smart search -->
+        <!-- Category smart search dropdown -->
         <div class="col-md-4 position-relative">
             <label class="form-label fw-semibold">Category</label>
             <input type="text"
@@ -32,11 +33,11 @@
                    id="searchCategory"
                    value="@Model.SearchCategory"
                    class="form-control"
-                   placeholder="Search by category name or code..."
+                   placeholder="Click to browse or type to search..."
                    autocomplete="off" />
             <div id="categorySuggestions"
                  class="list-group position-absolute z-3"
-                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
+                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
         </div>
 
         <!-- Current Quantity -->
@@ -76,7 +77,9 @@
         @foreach (var item in Model.CollectionItem)
         {
             var categoryDisplay = item.CategoryName != null
-                ? Model.Truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
+                ? (isStaff
+                    ? Model.Truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
+                    : Model.Truncate(item.CategoryName))
                 : "No Category";
 
             <tr>
@@ -84,15 +87,9 @@
                 <td>@categoryDisplay</td>
                 <td>@item.CurrentQuantity</td>
                 <td>
-                    <a asp-page="./Edit"
-                       asp-route-itemid="@item.ItemId"
-                       class="btn btn-warning btn-sm">Edit</a>
-                    <a asp-page="./Details"
-                       asp-route-itemid="@item.ItemId"
-                       class="btn btn-info btn-sm">Details</a>
-                    <a asp-page="./Delete"
-                       asp-route-itemid="@item.ItemId"
-                       class="btn btn-danger btn-sm">Delete</a>
+                    <a asp-page="./Edit" asp-route-itemid="@item.ItemId" class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-page="./Details" asp-route-itemid="@item.ItemId" class="btn btn-info btn-sm">Details</a>
+                    <a asp-page="./Delete" asp-route-itemid="@item.ItemId" class="btn btn-danger btn-sm">Delete</a>
                 </td>
             </tr>
         }
@@ -101,32 +98,34 @@
 
 @section Scripts {
     <script>
-        // Use AllItems for suggestions — full unfiltered list
         const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllItems));
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
+        const isStaff = @isStaff.ToString().ToLower();
 
         function truncate(text) {
             if (!text) return '';
-            return text.length <= 20 ? text : text.substring(0, 20) + '...';
+            return text.length <= 40 ? text : text.substring(0, 40) + '...';
         }
 
-        // Smart search for Item Name — uses full unfiltered list
+        function buildCategoryText(cat) {
+            return isStaff
+                ? truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')'
+                : truncate(cat.CategoryName);
+        }
+
+        // ── Item Name smart search ──
         const searchItemName = document.getElementById('searchItemName');
         const itemNameSuggestions = document.getElementById('itemNameSuggestions');
 
-        searchItemName.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
+        function renderItemNames(matches) {
             itemNameSuggestions.innerHTML = '';
-
-            if (query.length === 0) return;
-
-            // LINQ-like filter on full item list
-            const matches = allItems
-                .filter(item => item.ItemName && item.ItemName.toLowerCase().includes(query))
-                .map(item => item.ItemName)
-                .filter((name, index, self) => self.indexOf(name) === index) // distinct
-                .slice(0, 5);
-
+            if (matches.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'list-group-item text-muted';
+                noResult.textContent = 'No items found';
+                itemNameSuggestions.appendChild(noResult);
+                return;
+            }
             matches.forEach(name => {
                 const item = document.createElement('a');
                 item.href = '#';
@@ -135,48 +134,95 @@
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
                     searchItemName.value = name;
-                    itemNameSuggestions.innerHTML = '';
+                    itemNameSuggestions.style.display = 'none';
                     document.getElementById('searchForm').submit();
                 });
                 itemNameSuggestions.appendChild(item);
             });
+        }
+
+        searchItemName.addEventListener('focus', function () {
+            const allNames = allItems
+                .map(item => item.ItemName)
+                .filter((name, index, self) => self.indexOf(name) === index);
+            renderItemNames(allNames);
+            itemNameSuggestions.style.display = 'block';
         });
 
-        // Smart search for Category
+        searchItemName.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            if (query.length === 0) {
+                const allNames = allItems
+                    .map(item => item.ItemName)
+                    .filter((name, index, self) => self.indexOf(name) === index);
+                renderItemNames(allNames);
+                return;
+            }
+            const matches = allItems
+                .filter(item => item.ItemName && item.ItemName.toLowerCase().includes(query))
+                .map(item => item.ItemName)
+                .filter((name, index, self) => self.indexOf(name) === index)
+                .slice(0, 5);
+            renderItemNames(matches);
+        });
+
+        // ── Category smart search ──
         const searchCategory = document.getElementById('searchCategory');
         const categorySuggestions = document.getElementById('categorySuggestions');
 
-        searchCategory.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
+        function renderCategories(filtered) {
             categorySuggestions.innerHTML = '';
-
-            if (query.length === 0) return;
-
-            const matches = categories
-                .filter(c =>
-                    c.CategoryName.toLowerCase().includes(query) ||
-                    c.CategoryCode.toLowerCase().includes(query))
-                .slice(0, 5);
-
-            matches.forEach(cat => {
+            if (filtered.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'list-group-item text-muted';
+                noResult.textContent = 'No categories found';
+                categorySuggestions.appendChild(noResult);
+                return;
+            }
+            filtered.forEach(cat => {
                 const item = document.createElement('a');
                 item.href = '#';
                 item.className = 'list-group-item list-group-item-action';
-                item.textContent = truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
+                item.textContent = buildCategoryText(cat);
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
                     searchCategory.value = cat.CategoryName;
-                    categorySuggestions.innerHTML = '';
+                    categorySuggestions.style.display = 'none';
                     document.getElementById('searchForm').submit();
                 });
                 categorySuggestions.appendChild(item);
             });
+        }
+
+        // Show all on focus
+        searchCategory.addEventListener('focus', function () {
+            renderCategories(categories);
+            categorySuggestions.style.display = 'block';
         });
 
-        // Close suggestions when clicking outside
+        // Filter on input
+        searchCategory.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            if (query.length === 0) {
+                renderCategories(categories);
+                return;
+            }
+            const filtered = categories.filter(c => {
+                const nameMatch = c.CategoryName && c.CategoryName.toLowerCase().includes(query);
+                const codeMatch = isStaff && c.CategoryCode && c.CategoryCode.toLowerCase().includes(query);
+                return nameMatch || codeMatch;
+            });
+            renderCategories(filtered);
+        });
+
+        // Close on outside click
         document.addEventListener('click', function (e) {
-            if (!searchCategory.contains(e.target)) categorySuggestions.innerHTML = '';
-            if (!searchItemName.contains(e.target)) itemNameSuggestions.innerHTML = '';
+            if (!searchCategory.contains(e.target) && !categorySuggestions.contains(e.target)) {
+                categorySuggestions.style.display = 'none';
+            }
+            if (!searchItemName.contains(e.target) && !itemNameSuggestions.contains(e.target)) {
+                itemNameSuggestions.style.display = 'none';
+            }
         });
     </script>
 }
