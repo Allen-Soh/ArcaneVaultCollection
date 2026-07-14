@@ -127,4 +127,5 @@
 - Listed the information for the proposed ideas
 
 [To Do]
+- Get Vas Claude Account to convert design information into Doc for Claude to read from
 - Implement proposed Idea 1 first, while taking into consideration Idea 2 for smooth implementation
