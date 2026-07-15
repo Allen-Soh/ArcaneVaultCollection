@@ -36,7 +36,7 @@
             </div>
         </div>
 
-        <!-- Search bars -->
+        <!-- Search bars — no submit button needed -->
         <div class="row g-2 mb-4">
             <div class="col-md-4 position-relative">
                 <input type="text" id="searchUsers" class="form-control"
@@ -253,17 +253,19 @@
 
 <!-- View Showoff Modal -->
 <div class="modal fade" id="viewShowoffModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="min-height: 80vh;">
+        <div class="modal-content" style="min-height: 80vh; display: flex; flex-direction: column;">
             <div class="modal-header border-0">
                 <h5 class="modal-title fw-bold" id="viewShowoffName"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="viewShowoffBody">
+            <div class="modal-body flex-grow-1 d-flex align-items-center justify-content-center" id="viewShowoffBody">
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-danger" id="likeBtn" onclick="toggleLike()">
-                    <i class="bi bi-heart"></i> <span id="likeCount">0</span>
+            <!-- Fix 4 & 5 — grey/red heart toggle, like button always visible regardless of ownership -->
+            <div class="modal-footer border-0 d-flex justify-content-between w-100">
+                <button type="button" class="btn btn-outline-secondary" id="likeBtn" onclick="toggleLike()">
+                    <i class="bi bi-heart text-secondary" id="likeIcon"></i>
+                    <span id="likeCount">0</span>
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
@@ -291,9 +293,13 @@
                         </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-warning btn-sm"
-                                    onclick="openEditModal(@showoff.ShowoffId)">Edit</button>
+                                    onclick="openEditModal(@showoff.ShowoffId)">
+                                Edit
+                            </button>
                             <button class="btn btn-danger btn-sm"
-                                    onclick="openDeleteConfirm(@showoff.ShowoffId, '@showoff.ShowoffName')">Delete</button>
+                                    onclick="openDeleteConfirm(@showoff.ShowoffId, '@showoff.ShowoffName')">
+                                Delete
+                            </button>
                         </div>
                     </div>
                 }
@@ -453,7 +459,9 @@
                     <div id="imagePreviewContainer" class="mt-2" style="display:none;">
                         <img id="imagePreview" src="" style="max-width:100%;max-height:150px;border-radius:8px;" />
                         <button type="button" class="btn btn-sm btn-outline-danger mt-1"
-                                onclick="removeImage()">Remove</button>
+                                onclick="removeImage()">
+                            Remove
+                        </button>
                     </div>
                 </div>
             </div>
@@ -466,500 +474,574 @@
 </div>
 
 @section Scripts {
-<script>
-    // Data from server
-    const currentUser = '@loggedInUser?.UserName';
-    const apiBase = 'https://localhost:7040/api';
-    const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
-    const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
-
-    // State
-    let selectedItems = [null, null, null]; // 3 cells
-    let currentPickerCell = 0;
-    let currentShowoffId = null;
-    let pendingDeleteId = null;
-    let pendingDeleteName = null;
-    let selectedItemForPicker = null;
-    let uploadedImageData = null;
-
-    // ── Hover effect on feed cards ──
-    document.querySelectorAll('.showoff-card').forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            card.querySelector('.owner-overlay').style.display = 'block';
-        });
-        card.addEventListener('mouseleave', () => {
-            card.querySelector('.owner-overlay').style.display = 'none';
-        });
-    });
-
-    // ── View Showoff ──
-    async function viewShowoff(showoffId, ownerName) {
-        // Record view
-        await fetch(`${apiBase}/ShowoffView`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ showoffId, viewerUserName: currentUser || null })
+    <script>
+        // Fix — prevent aria-hidden focus warning when closing modals
+        document.querySelectorAll('.modal').forEach(modalEl => {
+            modalEl.addEventListener('hide.bs.modal', () => {
+                if (modalEl.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+            });
         });
 
-        // Fetch showoff details
-        const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
-        const showoff = await res.json();
+        // Data from server
+        // Fix 5 — normalize currentUser to null when empty, so ownership/like checks behave correctly
+        const currentUser = '@loggedInUser?.UserName' === '' ? null : '@loggedInUser?.UserName';
+        const apiBase = 'https://localhost:7040/api';
+        const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
+        const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
 
-        // Check if user liked
-        const likeRes = await fetch(`${apiBase}/ShowoffLike/${showoffId}?userName=${currentUser}`);
-        const likeData = await likeRes.json();
+        // State
+        let selectedItems = [null, null, null]; // 3 cells
+        let currentPickerCell = 0;
+        let currentShowoffId = null;
+        let pendingDeleteId = null;
+        let pendingDeleteName = null;
+        let selectedItemForPicker = null;
+        let uploadedImageData = null;
 
-        document.getElementById('viewShowoffName').textContent = showoff.showoffName;
-        document.getElementById('likeCount').textContent = likeData.likeCount;
-        document.getElementById('likeBtn').dataset.showoffId = showoffId;
-        document.getElementById('likeBtn').dataset.liked = likeData.userLiked;
+        // ── Hover effect on feed cards ──
+        document.querySelectorAll('.showoff-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.querySelector('.owner-overlay').style.display = 'block';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.querySelector('.owner-overlay').style.display = 'none';
+            });
+        });
 
-        const icon = document.getElementById('likeBtn').querySelector('i');
-        icon.className = likeData.userLiked ? 'bi bi-heart-fill' : 'bi bi-heart';
-
-        // Build body
-        const body = document.getElementById('viewShowoffBody');
-        body.innerHTML = `
-            <div class="card border-0 p-4" style="background-color:${showoff.backgroundColor};min-height:200px;">
-                <div class="d-flex justify-content-center align-items-center gap-3">
-                    ${showoff.items.map(item => `
-                        <div class="text-center">
-                            ${item.imagePath
-                                ? `<img src="${item.imagePath}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;" />`
-                                : `<div style="width:100px;height:100px;background:rgba(255,255,255,0.3);border-radius:8px;"></div>`}
-                            <small class="d-block mt-1 fw-semibold">${item.itemName}</small>
-                            ${item.categoryName ? `<small class="text-muted">${item.categoryName}</small>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="mt-3 text-center">
-                    <span class="text-muted small">By ${showoff.userName}</span>
-                </div>
-            </div>`;
-
-        new bootstrap.Modal(document.getElementById('viewShowoffModal')).show();
-    }
-
-    // ── Like / Unlike ──
-    async function toggleLike() {
-        const btn = document.getElementById('likeBtn');
-        const showoffId = parseInt(btn.dataset.showoffId);
-        const liked = btn.dataset.liked === 'true';
-
-        if (liked) {
-            await fetch(`${apiBase}/ShowoffLike/${showoffId}/${currentUser}`, { method: 'DELETE' });
-            btn.dataset.liked = 'false';
-            btn.querySelector('i').className = 'bi bi-heart';
-            document.getElementById('likeCount').textContent =
-                parseInt(document.getElementById('likeCount').textContent) - 1;
-        } else {
-            await fetch(`${apiBase}/ShowoffLike`, {
+        // ── View Showoff ──
+        // Fix 2 — handle both camelCase and PascalCase API payloads, guard against failed fetch
+        async function viewShowoff(showoffId, ownerName) {
+            // Record view
+            await fetch(`${apiBase}/ShowoffView`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ showoffId, userName: currentUser })
+                body: JSON.stringify({ showoffId, viewerUserName: currentUser || null })
             });
-            btn.dataset.liked = 'true';
-            btn.querySelector('i').className = 'bi bi-heart-fill';
-            document.getElementById('likeCount').textContent =
-                parseInt(document.getElementById('likeCount').textContent) + 1;
+
+            // Fetch showoff details
+            const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
+            if (!res.ok) { alert('Could not load showoff.'); return; }
+            const showoff = await res.json();
+
+            // Check if user liked
+            const likeRes = await fetch(`${apiBase}/ShowoffLike/${showoffId}?userName=${currentUser}`);
+            const likeData = await likeRes.json();
+
+            document.getElementById('viewShowoffName').textContent = showoff.showoffName || showoff.ShowoffName;
+            document.getElementById('likeCount').textContent = likeData.likeCount ?? likeData.LikeCount ?? 0;
+            document.getElementById('likeBtn').dataset.showoffId = showoffId;
+            document.getElementById('likeBtn').dataset.liked = likeData.userLiked ?? likeData.UserLiked ?? false;
+
+            const icon = document.getElementById('likeIcon');
+            const liked = likeData.userLiked ?? likeData.UserLiked ?? false;
+            // Fix 4 — grey heart if not liked, red if liked
+            icon.className = liked ? 'bi bi-heart-fill text-danger' : 'bi bi-heart text-secondary';
+
+            const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
+            const items = showoff.items || showoff.Items || [];
+
+            const body = document.getElementById('viewShowoffBody');
+
+            // Determine image size based on item count — 1 item = largest, 3 items = smallest
+            const itemCount = items.length;
+            const imageSize = itemCount === 1 ? 260 : itemCount === 2 ? 190 : 140;
+            const cellWidth = itemCount === 1 ? 280 : itemCount === 2 ? 210 : 160;
+
+            body.innerHTML = `
+                <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
+                     style="background-color:${bgColor}; min-height:60vh;">
+                    <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
+                        ${items.map(item => {
+                const imgPath = item.imagePath || item.ImagePath;
+                const itemName = item.itemName || item.ItemName;
+                const catName = item.categoryName || item.CategoryName;
+                return `
+                                <div class="text-center d-flex flex-column align-items-center"
+                                     style="width:${cellWidth}px;">
+                                    ${imgPath
+                        ? `<img src="${imgPath}"
+                                                style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
+                        : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
+                                    <div class="mt-3 fw-bold fs-5 text-center"
+                                         style="width:100%; word-wrap:break-word; overflow-wrap:break-word;">
+                                        ${itemName || ''}
+                                    </div>
+                                    ${catName ? `
+                                    <div class="text-muted fs-6 text-center"
+                                         style="width:100%; word-wrap:break-word; overflow-wrap:break-word;">
+                                        ${catName}
+                                    </div>` : ''}
+                                </div>`;
+            }).join('')}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
+                    </div>
+                </div>`;
+
+            const modal = new bootstrap.Modal(document.getElementById('viewShowoffModal'));
+            modal.show();
         }
-    }
 
-    // ── Manage Modal ──
-    function openManageModal() {
-        bootstrap.Modal.getInstance(document.getElementById('viewShowoffModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('manageModal')).show();
-    }
+        // ── Like / Unlike ──
+        // Fix 4 & 5 — grey/red heart icon, works regardless of ownership
+        async function toggleLike() {
+            const btn = document.getElementById('likeBtn');
+            const icon = document.getElementById('likeIcon');
+            const showoffId = parseInt(btn.dataset.showoffId);
+            const liked = btn.dataset.liked === 'true';
 
-    // ── Delete ──
-    function openDeleteConfirm(showoffId, showoffName) {
-        pendingDeleteId = showoffId;
-        pendingDeleteName = showoffName;
-        document.getElementById('deleteShowoffName').textContent = showoffName;
-        bootstrap.Modal.getInstance(document.getElementById('manageModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
-    }
-
-    function reopenManage() {
-        bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('manageModal')).show();
-    }
-
-    async function confirmDelete() {
-        await fetch(`${apiBase}/Showoff/${pendingDeleteId}`, { method: 'DELETE' });
-        bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
-        window.location.reload();
-    }
-
-    // ── Create/Edit Modal ──
-    function openCreateModal() {
-        currentShowoffId = null;
-        selectedItems = [null, null, null];
-        document.getElementById('createEditTitle').textContent = 'Create Showoff';
-        document.getElementById('showoffName').value = '';
-        document.getElementById('bgColor').value = '#ffffff';
-        document.getElementById('nameCharCount').textContent = '0';
-        document.getElementById('visPublic').checked = true;
-        resetPreviewCells();
-        updatePreview();
-        new bootstrap.Modal(document.getElementById('createEditModal')).show();
-    }
-
-    async function openEditModal(showoffId) {
-        currentShowoffId = showoffId;
-        bootstrap.Modal.getInstance(document.getElementById('manageModal'))?.hide();
-
-        const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
-        const showoff = await res.json();
-
-        document.getElementById('createEditTitle').textContent = 'Edit Showoff';
-        document.getElementById('showoffName').value = showoff.showoffName;
-        document.getElementById('nameCharCount').textContent = showoff.showoffName.length;
-        document.getElementById('bgColor').value = showoff.backgroundColor;
-        document.getElementById(showoff.isPrivate ? 'visPrivate' : 'visPublic').checked = true;
-
-        selectedItems = [null, null, null];
-        showoff.items.forEach(item => {
-            selectedItems[item.displayOrder] = {
-                itemId: item.itemId,
-                itemName: item.itemName,
-                imagePath: item.imagePath,
-                imagePublicId: item.imagePublicId,
-                displayOrder: item.displayOrder
-            };
-        });
-
-        updatePreview();
-        updateSelectedItemsList();
-        new bootstrap.Modal(document.getElementById('createEditModal')).show();
-    }
-
-    function closeCreateEdit() {
-        bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('manageModal')).show();
-    }
-
-    function resetPreviewCells() {
-        for (let i = 0; i < 3; i++) {
-            const cell = document.getElementById(`previewCell${i}`);
-            cell.innerHTML = '<i class="bi bi-plus text-muted fs-4"></i>';
-            cell.style.border = '2px dashed #adb5bd';
-        }
-    }
-
-    function updatePreview() {
-        const name = document.getElementById('showoffName').value;
-        const color = document.getElementById('bgColor').value;
-        const isPrivate = document.getElementById('visPrivate').checked;
-
-        document.getElementById('showoffPreview').style.backgroundColor = color;
-        document.getElementById('previewName').textContent = name || 'Showoff Name';
-        document.getElementById('bgColorHex').textContent = color;
-        document.getElementById('nameCharCount').textContent = name.length;
-
-        const badge = document.getElementById('previewBadge');
-        badge.textContent = isPrivate ? 'Private' : 'Public';
-        badge.className = `badge ${isPrivate ? 'bg-secondary' : 'bg-success'}`;
-
-        // Update cells
-        for (let i = 0; i < 3; i++) {
-            const cell = document.getElementById(`previewCell${i}`);
-            const item = selectedItems[i];
-            if (item) {
-                if (item.imagePath) {
-                    cell.innerHTML = `<img src="${item.imagePath}" style="width:76px;height:76px;object-fit:cover;border-radius:6px;" />`;
-                } else {
-                    cell.innerHTML = `<span class="small text-center px-1" style="font-size:10px;">${item.itemName}</span>`;
-                }
-                cell.style.border = 'none';
+            if (liked) {
+                await fetch(`${apiBase}/ShowoffLike/${showoffId}/${currentUser}`, { method: 'DELETE' });
+                btn.dataset.liked = 'false';
+                // Grey heart when not liked
+                icon.className = 'bi bi-heart text-secondary';
+                document.getElementById('likeCount').textContent =
+                    parseInt(document.getElementById('likeCount').textContent) - 1;
             } else {
+                await fetch(`${apiBase}/ShowoffLike`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ showoffId, userName: currentUser })
+                });
+                btn.dataset.liked = 'true';
+                // Red filled heart when liked
+                icon.className = 'bi bi-heart-fill text-danger';
+                document.getElementById('likeCount').textContent =
+                    parseInt(document.getElementById('likeCount').textContent) + 1;
+            }
+        }
+
+        // ── Manage Modal ──
+        function openManageModal() {
+            bootstrap.Modal.getInstance(document.getElementById('viewShowoffModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('manageModal')).show();
+        }
+
+        // ── Delete ──
+        function openDeleteConfirm(showoffId, showoffName) {
+            pendingDeleteId = showoffId;
+            pendingDeleteName = showoffName;
+            document.getElementById('deleteShowoffName').textContent = showoffName;
+            bootstrap.Modal.getInstance(document.getElementById('manageModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+        }
+
+        function reopenManage() {
+            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('manageModal')).show();
+        }
+
+        async function confirmDelete() {
+            await fetch(`${apiBase}/Showoff/${pendingDeleteId}`, { method: 'DELETE' });
+            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+            window.location.reload();
+        }
+
+        // ── Create/Edit Modal ──
+        function openCreateModal() {
+            currentShowoffId = null;
+            selectedItems = [null, null, null];
+            document.getElementById('createEditTitle').textContent = 'Create Showoff';
+            document.getElementById('showoffName').value = '';
+            document.getElementById('bgColor').value = '#ffffff';
+            document.getElementById('nameCharCount').textContent = '0';
+            document.getElementById('visPublic').checked = true;
+            resetPreviewCells();
+            updatePreview();
+            new bootstrap.Modal(document.getElementById('createEditModal')).show();
+        }
+
+        async function openEditModal(showoffId) {
+            currentShowoffId = showoffId;
+            bootstrap.Modal.getInstance(document.getElementById('manageModal'))?.hide();
+
+            const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
+            const showoff = await res.json();
+
+            document.getElementById('createEditTitle').textContent = 'Edit Showoff';
+            document.getElementById('showoffName').value = showoff.showoffName;
+            document.getElementById('nameCharCount').textContent = showoff.showoffName.length;
+            document.getElementById('bgColor').value = showoff.backgroundColor;
+            document.getElementById(showoff.isPrivate ? 'visPrivate' : 'visPublic').checked = true;
+
+            selectedItems = [null, null, null];
+            showoff.items.forEach(item => {
+                selectedItems[item.displayOrder] = {
+                    itemId: item.itemId,
+                    itemName: item.itemName,
+                    imagePath: item.imagePath,
+                    imagePublicId: item.imagePublicId,
+                    displayOrder: item.displayOrder
+                };
+            });
+
+            updatePreview();
+            updateSelectedItemsList();
+            new bootstrap.Modal(document.getElementById('createEditModal')).show();
+        }
+
+        // Fix 1 — Cancel from Create card should not reopen Manage; Cancel from Edit should
+        function closeCreateEdit() {
+            bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
+            if (currentShowoffId !== null) {
+                // Came from Edit in Manage — reopen Manage
+                new bootstrap.Modal(document.getElementById('manageModal')).show();
+            }
+            // Came from Create card — just close, no Manage
+        }
+
+        function resetPreviewCells() {
+            for (let i = 0; i < 3; i++) {
+                const cell = document.getElementById(`previewCell${i}`);
                 cell.innerHTML = '<i class="bi bi-plus text-muted fs-4"></i>';
                 cell.style.border = '2px dashed #adb5bd';
             }
         }
-    }
 
-    function updateSelectedItemsList() {
-        const list = document.getElementById('selectedItemsList');
-        const activeItems = selectedItems.filter(i => i !== null);
-        if (activeItems.length === 0) {
-            list.innerHTML = '<p class="text-muted small">Click a cell in the preview to add items.</p>';
-            return;
+        function updatePreview() {
+            const name = document.getElementById('showoffName').value;
+            const color = document.getElementById('bgColor').value;
+            const isPrivate = document.getElementById('visPrivate').checked;
+
+            document.getElementById('showoffPreview').style.backgroundColor = color;
+            document.getElementById('previewName').textContent = name || 'Showoff Name';
+            document.getElementById('bgColorHex').textContent = color;
+            document.getElementById('nameCharCount').textContent = name.length;
+
+            const badge = document.getElementById('previewBadge');
+            badge.textContent = isPrivate ? 'Private' : 'Public';
+            badge.className = `badge ${isPrivate ? 'bg-secondary' : 'bg-success'}`;
+
+            // Update cells
+            for (let i = 0; i < 3; i++) {
+                const cell = document.getElementById(`previewCell${i}`);
+                const item = selectedItems[i];
+                if (item) {
+                    if (item.imagePath) {
+                        cell.innerHTML = `<img src="${item.imagePath}" style="width:76px;height:76px;object-fit:cover;border-radius:6px;" />`;
+                    } else {
+                        cell.innerHTML = `<span class="small text-center px-1" style="font-size:10px;">${item.itemName}</span>`;
+                    }
+                    cell.style.border = 'none';
+                } else {
+                    cell.innerHTML = '<i class="bi bi-plus text-muted fs-4"></i>';
+                    cell.style.border = '2px dashed #adb5bd';
+                }
+            }
         }
-        list.innerHTML = activeItems.map((item, idx) => `
-            <div class="d-flex align-items-center justify-content-between mb-1">
-                <span class="small">${item.itemName}</span>
-                <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${item.displayOrder})">×</button>
-            </div>
-        `).join('');
-    }
 
-    function removeItem(displayOrder) {
-        selectedItems[displayOrder] = null;
-        updatePreview();
-        updateSelectedItemsList();
-    }
+        function updateSelectedItemsList() {
+            const list = document.getElementById('selectedItemsList');
+            const activeItems = selectedItems.filter(i => i !== null);
+            if (activeItems.length === 0) {
+                list.innerHTML = '<p class="text-muted small">Click a cell in the preview to add items.</p>';
+                return;
+            }
+            list.innerHTML = activeItems.map((item, idx) => `
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="small">${item.itemName}</span>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${item.displayOrder})">×</button>
+                    </div>
+                `).join('');
+        }
 
-    // ── Item Picker ──
-    function openItemPicker(cellIndex) {
-        currentPickerCell = cellIndex;
-        selectedItemForPicker = null;
-        uploadedImageData = null;
-        document.getElementById('itemPickerSearch').value = '';
-        document.getElementById('itemPickerSuggestions').style.display = 'none';
-        document.getElementById('itemImageUpload').value = '';
-        document.getElementById('imagePreviewContainer').style.display = 'none';
+        function removeItem(displayOrder) {
+            selectedItems[displayOrder] = null;
+            updatePreview();
+            updateSelectedItemsList();
+        }
 
-        bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('itemPickerModal')).show();
-    }
+        // ── Item Picker ──
+        function openItemPicker(cellIndex) {
+            currentPickerCell = cellIndex;
+            selectedItemForPicker = null;
+            uploadedImageData = null;
+            document.getElementById('itemPickerSearch').value = '';
+            document.getElementById('itemPickerSuggestions').style.display = 'none';
+            document.getElementById('itemImageUpload').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
 
-    function closeItemPicker() {
-        bootstrap.Modal.getInstance(document.getElementById('itemPickerModal'))?.hide();
-        new bootstrap.Modal(document.getElementById('createEditModal')).show();
-    }
+            bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('itemPickerModal')).show();
+        }
 
-    // Item picker search
-    const itemPickerSearch = document.getElementById('itemPickerSearch');
-    const itemPickerSuggestions = document.getElementById('itemPickerSuggestions');
+        function closeItemPicker() {
+            bootstrap.Modal.getInstance(document.getElementById('itemPickerModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('createEditModal')).show();
+        }
 
-    itemPickerSearch.addEventListener('focus', function() {
-        renderItemPickerSuggestions(userCollectionItems);
-        itemPickerSuggestions.style.display = 'block';
-    });
+        // Item picker search
+        const itemPickerSearch = document.getElementById('itemPickerSearch');
+        const itemPickerSuggestions = document.getElementById('itemPickerSuggestions');
 
-    itemPickerSearch.addEventListener('input', function() {
-        const query = this.value.trim().toLowerCase();
-        if (query.length === 0) {
+        itemPickerSearch.addEventListener('focus', function () {
             renderItemPickerSuggestions(userCollectionItems);
-            return;
-        }
-        const filtered = userCollectionItems.filter(i =>
-            i.ItemName && i.ItemName.toLowerCase().includes(query)
-        );
-        renderItemPickerSuggestions(filtered);
-    });
-
-    function renderItemPickerSuggestions(items) {
-        itemPickerSuggestions.innerHTML = '';
-        if (items.length === 0) {
-            itemPickerSuggestions.innerHTML = '<div class="list-group-item text-muted">No items found</div>';
-            return;
-        }
-        items.forEach(item => {
-            const el = document.createElement('a');
-            el.href = '#';
-            el.className = 'list-group-item list-group-item-action';
-            el.textContent = item.ItemName + (item.CategoryName ? ` — ${item.CategoryName}` : '');
-            el.addEventListener('click', function(e) {
-                e.preventDefault();
-                selectedItemForPicker = item;
-                itemPickerSearch.value = item.ItemName;
-                itemPickerSuggestions.style.display = 'none';
-            });
-            itemPickerSuggestions.appendChild(el);
+            itemPickerSuggestions.style.display = 'block';
         });
-    }
 
-    // Image upload preview
-    document.getElementById('itemImageUpload').addEventListener('change', function() {
-        const file = this.files[0];
-        if (!file) return;
+        itemPickerSearch.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            if (query.length === 0) {
+                renderItemPickerSuggestions(userCollectionItems);
+                return;
+            }
+            const filtered = userCollectionItems.filter(i =>
+                i.ItemName && i.ItemName.toLowerCase().includes(query)
+            );
+            renderItemPickerSuggestions(filtered);
+        });
 
-        if (!['image/jpeg', 'image/png'].includes(file.type)) {
-            alert('Only JPG and PNG files are allowed.');
-            this.value = '';
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File size must not exceed 5MB.');
-            this.value = '';
-            return;
-        }
-
-        uploadedImageData = file;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('imagePreview').src = e.target.result;
-            document.getElementById('imagePreviewContainer').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    });
-
-    function removeImage() {
-        uploadedImageData = null;
-        document.getElementById('itemImageUpload').value = '';
-        document.getElementById('imagePreviewContainer').style.display = 'none';
-    }
-
-    async function confirmItemPick() {
-        if (!selectedItemForPicker) {
-            alert('Please select an item.');
-            return;
-        }
-
-        let imagePath = null;
-        let imagePublicId = null;
-
-        // Upload image if provided
-        if (uploadedImageData) {
-            const formData = new FormData();
-            formData.append('file', uploadedImageData);
-
-            const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
-                method: 'POST',
-                body: formData
+        function renderItemPickerSuggestions(items) {
+            itemPickerSuggestions.innerHTML = '';
+            if (items.length === 0) {
+                itemPickerSuggestions.innerHTML = '<div class="list-group-item text-muted">No items found</div>';
+                return;
+            }
+            items.forEach(item => {
+                const el = document.createElement('a');
+                el.href = '#';
+                el.className = 'list-group-item list-group-item-action';
+                el.textContent = item.ItemName + (item.CategoryName ? ` — ${item.CategoryName}` : '');
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    selectedItemForPicker = item;
+                    itemPickerSearch.value = item.ItemName;
+                    itemPickerSuggestions.style.display = 'none';
+                });
+                itemPickerSuggestions.appendChild(el);
             });
+        }
 
-            if (!uploadRes.ok) {
-                alert('Image upload failed. Please try again.');
+        // Image upload preview
+        document.getElementById('itemImageUpload').addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                alert('Only JPG and PNG files are allowed.');
+                this.value = '';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must not exceed 5MB.');
+                this.value = '';
                 return;
             }
 
-            const uploadData = await uploadRes.json();
-            imagePath = uploadData.imagePath;
-            imagePublicId = uploadData.imagePublicId;
+            uploadedImageData = file;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function removeImage() {
+            uploadedImageData = null;
+            document.getElementById('itemImageUpload').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
         }
 
-        // Remove existing item at this cell if replacing
-        const existing = selectedItems[currentPickerCell];
-        if (existing?.imagePublicId) {
-            // Mark for deletion on save
-            window.pendingImageDeletes = window.pendingImageDeletes || [];
-            window.pendingImageDeletes.push(existing.imagePublicId);
+        async function confirmItemPick() {
+            if (!selectedItemForPicker) {
+                alert('Please select an item.');
+                return;
+            }
+
+            let imagePath = null;
+            let imagePublicId = null;
+
+            // Upload image if provided
+            if (uploadedImageData) {
+                const formData = new FormData();
+                formData.append('file', uploadedImageData);
+
+                const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadRes.ok) {
+                    alert('Image upload failed. Please try again.');
+                    return;
+                }
+
+                const uploadData = await uploadRes.json();
+                imagePath = uploadData.imagePath;
+                imagePublicId = uploadData.imagePublicId;
+            }
+
+            // Remove existing item at this cell if replacing
+            const existing = selectedItems[currentPickerCell];
+            if (existing?.imagePublicId) {
+                // Mark for deletion on save
+                window.pendingImageDeletes = window.pendingImageDeletes || [];
+                window.pendingImageDeletes.push(existing.imagePublicId);
+            }
+
+            selectedItems[currentPickerCell] = {
+                itemId: selectedItemForPicker.ItemId,
+                itemName: selectedItemForPicker.ItemName,
+                imagePath,
+                imagePublicId,
+                displayOrder: currentPickerCell
+            };
+
+            updatePreview();
+            updateSelectedItemsList();
+            closeItemPicker();
         }
 
-        selectedItems[currentPickerCell] = {
-            itemId: selectedItemForPicker.ItemId,
-            itemName: selectedItemForPicker.ItemName,
-            imagePath,
-            imagePublicId,
-            displayOrder: currentPickerCell
-        };
+        // ── Save Showoff ──
+        async function saveShowoff() {
+            const name = document.getElementById('showoffName').value.trim();
+            if (!name) { alert('Please enter a showoff name.'); return; }
 
-        updatePreview();
-        updateSelectedItemsList();
-        closeItemPicker();
-    }
+            const activeItems = selectedItems.filter(i => i !== null);
+            if (activeItems.length === 0) { alert('Please add at least 1 item.'); return; }
 
-    // ── Save Showoff ──
-    async function saveShowoff() {
-        const name = document.getElementById('showoffName').value.trim();
-        if (!name) { alert('Please enter a showoff name.'); return; }
+            const isPrivate = document.getElementById('visPrivate').checked;
+            const bgColor = document.getElementById('bgColor').value;
 
-        const activeItems = selectedItems.filter(i => i !== null);
-        if (activeItems.length === 0) { alert('Please add at least 1 item.'); return; }
+            const payload = {
+                showoffName: name,
+                backgroundColor: bgColor,
+                isPrivate,
+                userName: currentUser,
+                items: activeItems.map(i => ({
+                    itemId: i.itemId,
+                    imagePath: i.imagePath,
+                    imagePublicId: i.imagePublicId,
+                    displayOrder: i.displayOrder
+                }))
+            };
 
-        const isPrivate = document.getElementById('visPrivate').checked;
-        const bgColor = document.getElementById('bgColor').value;
+            // Delete pending images if editing
+            if (window.pendingImageDeletes?.length) {
+                for (const publicId of window.pendingImageDeletes) {
+                    await fetch(`${apiBase}/ImageUpload`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(publicId)
+                    });
+                }
+                window.pendingImageDeletes = [];
+            }
 
-        const payload = {
-            showoffName: name,
-            backgroundColor: bgColor,
-            isPrivate,
-            userName: currentUser,
-            items: activeItems.map(i => ({
-                itemId: i.itemId,
-                imagePath: i.imagePath,
-                imagePublicId: i.imagePublicId,
-                displayOrder: i.displayOrder
-            }))
-        };
-
-        // Delete pending images if editing
-        if (window.pendingImageDeletes?.length) {
-            for (const publicId of window.pendingImageDeletes) {
-                await fetch(`${apiBase}/ImageUpload`, {
-                    method: 'DELETE',
+            let res;
+            if (currentShowoffId) {
+                res = await fetch(`${apiBase}/Showoff/${currentShowoffId}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(publicId)
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                res = await fetch(`${apiBase}/Showoff`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
             }
-            window.pendingImageDeletes = [];
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
+                window.location.reload();
+            } else {
+                const err = await res.text();
+                alert(`Failed to save: ${err}`);
+            }
         }
 
-        let res;
-        if (currentShowoffId) {
-            res = await fetch(`${apiBase}/Showoff/${currentShowoffId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        // ── Search bars (Feed) ──
+        // Fix 3 — live filtering, no submit button, resets URL param when input is cleared
+        function setupSearch(inputId, suggestionsId, dataArray, keyField, onSelect) {
+            const input = document.getElementById(inputId);
+            const suggestions = document.getElementById(suggestionsId);
+            if (!input || !suggestions) return;
+
+            // On input — filter suggestions + navigate automatically (typed text OR clicked suggestion)
+            input.addEventListener('input', function () {
+                const query = this.value.trim();
+                renderSearchSuggestions(suggestions, dataArray, keyField, onSelect, query.toLowerCase());
+
+                // Auto navigate — debounced, works for both empty (reset) and typed queries
+                clearTimeout(this._searchTimer);
+                this._searchTimer = setTimeout(() => {
+                    onSelect(query);
+                }, 500);
             });
-        } else {
-            res = await fetch(`${apiBase}/Showoff`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+
+            // Allow pressing Enter to search immediately without waiting for debounce
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(this._searchTimer);
+                    onSelect(this.value.trim());
+                    suggestions.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!input.contains(e.target) && !suggestions.contains(e.target))
+                    suggestions.style.display = 'none';
             });
         }
 
-        if (res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-            window.location.reload();
-        } else {
-            const err = await res.text();
-            alert(`Failed to save: ${err}`);
-        }
-    }
+        function renderSearchSuggestions(container, data, keyField, onSelect, query) {
+            container.innerHTML = '';
+            const filtered = query
+                ? data.filter(d => d[keyField]?.toLowerCase().includes(query))
+                : data;
 
-    // ── Search bars (Feed) ──
-    function setupSearch(inputId, suggestionsId, dataArray, keyField, onSelect) {
-        const input = document.getElementById(inputId);
-        const suggestions = document.getElementById(suggestionsId);
-        if (!input || !suggestions) return;
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="list-group-item text-muted">No results</div>';
+                return;
+            }
 
-        input.addEventListener('focus', () => {
-            renderSearchSuggestions(suggestions, dataArray, keyField, onSelect, '');
-            suggestions.style.display = 'block';
-        });
-
-        input.addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
-            renderSearchSuggestions(suggestions, dataArray, keyField, onSelect, query);
-        });
-
-        document.addEventListener('click', function(e) {
-            if (!input.contains(e.target) && !suggestions.contains(e.target))
-                suggestions.style.display = 'none';
-        });
-    }
-
-    function renderSearchSuggestions(container, data, keyField, onSelect, query) {
-        container.innerHTML = '';
-        const filtered = query
-            ? data.filter(d => d[keyField]?.toLowerCase().includes(query))
-            : data;
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<div class="list-group-item text-muted">No results</div>';
-            return;
+            filtered.slice(0, 5).forEach(item => {
+                const el = document.createElement('a');
+                el.href = '#';
+                el.className = 'list-group-item list-group-item-action';
+                el.textContent = item[keyField];
+                el.addEventListener('click', e => { e.preventDefault(); onSelect(item[keyField]); container.style.display = 'none'; });
+                container.appendChild(el);
+            });
+            container.style.display = 'block';
         }
 
-        filtered.slice(0, 5).forEach(item => {
-            const el = document.createElement('a');
-            el.href = '#';
-            el.className = 'list-group-item list-group-item-action';
-            el.textContent = item[keyField];
-            el.addEventListener('click', e => { e.preventDefault(); onSelect(item[keyField]); container.style.display = 'none'; });
-            container.appendChild(el);
+        // Get unique values for search bars
+        const allShowoffs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllShowoffs));
+        const uniqueUsers = [...new Set(allShowoffs.map(s => s.UserName))].map(u => ({ UserName: u }));
+        const uniqueItems = [...new Set(allShowoffs.flatMap(s => s.Items.map(i => i.ItemName)))].map(n => ({ ItemName: n }));
+        const uniqueCategories = [...new Set(allShowoffs.flatMap(s => s.Items.map(i => i.CategoryName).filter(Boolean)))].map(c => ({ CategoryName: c }));
+
+        // Fix 3 — onSelect handlers now build/clear URL params instead of always appending
+        setupSearch('searchUsers', 'userSuggestions', uniqueUsers, 'UserName', val => {
+            const url = new URL(window.location.href);
+            if (val) url.searchParams.set('searchUser', val);
+            else url.searchParams.delete('searchUser');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
         });
-        container.style.display = 'block';
-    }
 
-    // Get unique values for search bars
-    const allShowoffs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllShowoffs));
-    const uniqueUsers = [...new Set(allShowoffs.map(s => s.UserName))].map(u => ({ UserName: u }));
-    const uniqueItems = [...new Set(allShowoffs.flatMap(s => s.Items.map(i => i.ItemName)))].map(n => ({ ItemName: n }));
-    const uniqueCategories = [...new Set(allShowoffs.flatMap(s => s.Items.map(i => i.CategoryName).filter(Boolean)))].map(c => ({ CategoryName: c }));
+        setupSearch('searchItems', 'itemSuggestions', uniqueItems, 'ItemName', val => {
+            const url = new URL(window.location.href);
+            if (val) url.searchParams.set('searchItem', val);
+            else url.searchParams.delete('searchItem');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        });
 
-    setupSearch('searchUsers', 'userSuggestions', uniqueUsers, 'UserName', val => {
-        window.location.href = `?tab=feed&searchUser=${val}&page=1`;
-    });
-    setupSearch('searchItems', 'itemSuggestions', uniqueItems, 'ItemName', val => {
-        window.location.href = `?tab=feed&searchItem=${val}&page=1`;
-    });
-    setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', val => {
-        window.location.href = `?tab=feed&searchCategory=${val}&page=1`;
-    });
-</script>
+        setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', val => {
+            const url = new URL(window.location.href);
+            if (val) url.searchParams.set('searchCategory', val);
+            else url.searchParams.delete('searchCategory');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        });
+    </script>
 }

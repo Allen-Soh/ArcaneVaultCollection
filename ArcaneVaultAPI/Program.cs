@@ -24,6 +24,19 @@ namespace ArcaneVaultAPI
                 "<***REMOVED-CLOUDINARY-APISECRET***>"
             )));
 
+            //Poll
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend", policy =>
+                {
+                    policy.WithOrigins("https://localhost:7051")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                    // .AllowCredentials() // only if you're sending cookies/auth
+                });
+            });
+            //Poll
+
             builder.Services.AddDbContext<ArcaneDbContext>(options =>
             {
                 options.UseSqlite("Data Source=ArcaneVault.db");
@@ -38,6 +51,8 @@ namespace ArcaneVaultAPI
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowFrontend");
 
             app.UseAuthorization();
 

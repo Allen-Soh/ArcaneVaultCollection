@@ -150,3 +150,7 @@
 - Make all search bars so that they will show main page result based on input automatically, which will reset if the search bar field is empty, eliminating the need for "Search" and "Clear" buttons
 - Liking feature should show a grey heart if the logged in user never liked the respective collection showoff
 - Fix showoff so that user can like their own showoffs
+
+===== DEV LOG (15/7/2026) - Part 3 =====
+[Done]
+- Fixed issues 
