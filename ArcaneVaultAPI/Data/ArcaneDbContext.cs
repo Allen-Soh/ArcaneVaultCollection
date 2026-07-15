@@ -11,11 +11,23 @@ namespace ArcaneVaultAPI.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<CollectionItem> CollectionItems { get; set; }
         public DbSet<CollectionItemCategory> CollectionItemCategories { get; set; }
+        public DbSet<Showoff> Showoffs { get; set;  }
+        public DbSet<ShowoffItem> ShowoffItems { get; set; }
+        public DbSet<ShowoffLike> ShowoffLikes { get; set; }
+        public DbSet<ShowoffView> ShowoffViews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<CollectionItemCategory>()
                 .HasKey(c => new { c.ItemId, c.CategoryCode });
+
+            // ShowoffItem composite PK
+            modelBuilder.Entity<ShowoffItem>()
+                .HasKey(s => new { s.ShowoffId, s.ItemId });
+
+            // ShowoffLike composite PK
+            modelBuilder.Entity<ShowoffLike>()
+                .HasKey(s => new { s.ShowoffId, s.UserName });
         }
     }
 }

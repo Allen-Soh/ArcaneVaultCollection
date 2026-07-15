@@ -1,5 +1,6 @@
 
 using ArcaneVaultAPI.Data;
+using CloudinaryDotNet;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArcaneVaultAPI
@@ -9,12 +10,19 @@ namespace ArcaneVaultAPI
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var connectionString = builder.Configuration.GetConnectionString("ArcaneDbContext") ?? throw new InvalidOperationException("Connection string 'ArcaneDbContext' not found.");
 
             // Add services to the container.
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            builder.Services.AddSingleton(new Cloudinary(new Account(
+                "nyj7a9za",
+                "***REMOVED-CLOUDINARY-APIKEY***",
+                "<***REMOVED-CLOUDINARY-APISECRET***>"
+            )));
 
             builder.Services.AddDbContext<ArcaneDbContext>(options =>
             {

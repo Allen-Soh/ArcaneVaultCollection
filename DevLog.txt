@@ -129,3 +129,12 @@
 [To Do]
 - Get Vas Claude Account to convert design information into Doc for Claude to read from
 - Implement proposed Idea 1 first, while taking into consideration Idea 2 for smooth implementation
+
+===== DEV LOG (15/7/2026) - Part 1 =====
+[Done]
+- Get Vas Claude Account to convert design information into Doc for Claude to read from
+- Added Cloudinary to API project and Program.cs
+- Added the Data Classes, DTOs and Controllers for Showoff Idea in API
+
+[To Do]
+- Add RP side for Showoff Idea
