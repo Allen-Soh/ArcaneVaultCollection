@@ -153,4 +153,12 @@
 
 ===== DEV LOG (15/7/2026) - Part 3 =====
 [Done]
-- Fixed issues 
+- Fixed issue where after attempting to create but pressed "Cancel" button in create tab, it goes to "Manage Showoffs" tab
+- Fixed issue where when clicking on a showoff in Feed, there is no enlarged card floating tab to zoom in.
+- Made all search bars so that they will show main page result based on input automatically, which will reset if the search bar field is empty, eliminating the need for "Search" and "Clear" buttons
+- Liking feature now shows a grey heart if the logged in user never liked the respective collection showoff
+- Fixed showoff so that user can like their own showoffs
+
+[To Do]
+- Implement the same AJAX search bar to Index, Create and Edit for both Category and CollectionItems
+- Implement Cloudinary to be able to store images

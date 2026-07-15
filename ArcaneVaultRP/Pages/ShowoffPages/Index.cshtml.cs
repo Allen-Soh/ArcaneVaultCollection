@@ -1,6 +1,7 @@
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using System.Text.Json;
 
 namespace ArcaneVaultRP.Pages.Showoffs;
@@ -44,39 +45,71 @@ public class IndexModel : PageModel
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
 
         ActiveTab = tab;
-        SortBy = sort;
-        CurrentPage = page;
-        SearchUser = searchUser;
-        SearchItem = searchItem;
-        SearchCategory = searchCategory;
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-        // Get all public showoffs
-        AllShowoffs = await httpClient.GetFromJsonAsync<List<Showoff>>("Showoff")
-                      ?? new List<Showoff>();
-
-        // Get user's showoffs
         UserShowoffs = await httpClient
             .GetFromJsonAsync<List<Showoff>>($"Showoff/user/{loggedInUser.UserName}")
             ?? new List<Showoff>();
 
-        // Get user's collection items with category for item picker
         UserCollectionItems = await httpClient
             .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItem/withcategory")
             ?? new List<CollectionItemCategory>();
 
-        // LINQ — filter to logged in user's active items only
         UserCollectionItems = UserCollectionItems
             .Where(c => c.UserName == loggedInUser.UserName && !c.IsDeleted)
             .OrderBy(c => c.ItemName)
             .ToList();
 
-        // Get categories
         Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                      ?? new List<Category>();
 
-        // LINQ — apply search filters
+        await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnGetFilterAsync(
+        string tab = "feed",
+        string sort = "popular",
+        int page = 1,
+        string? searchUser = null,
+        string? searchItem = null,
+        string? searchCategory = null)
+    {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+            return RedirectToPage("/Login");
+
+        ActiveTab = tab;
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
+
+        return new PartialViewResult
+        {
+            ViewName = "_ShowoffGrid",
+            ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
+        };
+    }
+
+    private async Task LoadFeedDataAsync(
+        HttpClient httpClient,
+        string sort,
+        int page,
+        string? searchUser,
+        string? searchItem,
+        string? searchCategory)
+    {
+        SortBy = string.IsNullOrEmpty(sort) ? "popular" : sort;
+        CurrentPage = page < 1 ? 1 : page;
+        SearchUser = searchUser;
+        SearchItem = searchItem;
+        SearchCategory = searchCategory;
+
+        AllShowoffs = await httpClient.GetFromJsonAsync<List<Showoff>>("Showoff")
+                      ?? new List<Showoff>();
+
         var filtered = AllShowoffs.AsEnumerable();
 
         if (!string.IsNullOrEmpty(searchUser))
@@ -93,7 +126,6 @@ public class IndexModel : PageModel
                 s.Items.Any(i => i.CategoryName != null &&
                     i.CategoryName.Contains(searchCategory, StringComparison.OrdinalIgnoreCase)));
 
-        // LINQ — sort
         filtered = sort switch
         {
             "newest" => filtered.OrderByDescending(s => s.CreatedAt),
@@ -103,7 +135,6 @@ public class IndexModel : PageModel
 
         var filteredList = filtered.ToList();
 
-        // Pagination
         TotalPages = (int)Math.Ceiling(filteredList.Count / (double)PageSize);
         TotalPages = Math.Max(TotalPages, 1);
         CurrentPage = Math.Clamp(CurrentPage, 1, TotalPages);
@@ -112,7 +143,5 @@ public class IndexModel : PageModel
             .Skip((CurrentPage - 1) * PageSize)
             .Take(PageSize)
             .ToList();
-
-        return Page();
     }
 }
