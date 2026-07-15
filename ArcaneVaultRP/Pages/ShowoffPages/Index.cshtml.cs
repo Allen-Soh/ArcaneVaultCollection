@@ -1,0 +1,118 @@
+using ArcaneVaultRP.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
+
+namespace ArcaneVaultRP.Pages.Showoffs;
+
+public class IndexModel : PageModel
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private const int PageSize = 8;
+
+    public IndexModel(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public string ActiveTab { get; set; } = "feed";
+    public string SortBy { get; set; } = "popular";
+    public int CurrentPage { get; set; } = 1;
+    public int TotalPages { get; set; } = 1;
+    public string? SearchUser { get; set; }
+    public string? SearchItem { get; set; }
+    public string? SearchCategory { get; set; }
+
+    public List<Showoff> PagedShowoffs { get; set; } = new();
+    public List<Showoff> AllShowoffs { get; set; } = new();
+    public List<Showoff> UserShowoffs { get; set; } = new();
+    public List<CollectionItemCategory> UserCollectionItems { get; set; } = new();
+    public List<Category> Categories { get; set; } = new();
+
+    public async Task<IActionResult> OnGetAsync(
+        string tab = "feed",
+        string sort = "popular",
+        int page = 1,
+        string? searchUser = null,
+        string? searchItem = null,
+        string? searchCategory = null)
+    {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+            return RedirectToPage("/Login");
+
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
+
+        ActiveTab = tab;
+        SortBy = sort;
+        CurrentPage = page;
+        SearchUser = searchUser;
+        SearchItem = searchItem;
+        SearchCategory = searchCategory;
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Get all public showoffs
+        AllShowoffs = await httpClient.GetFromJsonAsync<List<Showoff>>("Showoff")
+                      ?? new List<Showoff>();
+
+        // Get user's showoffs
+        UserShowoffs = await httpClient
+            .GetFromJsonAsync<List<Showoff>>($"Showoff/user/{loggedInUser.UserName}")
+            ?? new List<Showoff>();
+
+        // Get user's collection items with category for item picker
+        UserCollectionItems = await httpClient
+            .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItem/withcategory")
+            ?? new List<CollectionItemCategory>();
+
+        // LINQ — filter to logged in user's active items only
+        UserCollectionItems = UserCollectionItems
+            .Where(c => c.UserName == loggedInUser.UserName && !c.IsDeleted)
+            .OrderBy(c => c.ItemName)
+            .ToList();
+
+        // Get categories
+        Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
+                     ?? new List<Category>();
+
+        // LINQ — apply search filters
+        var filtered = AllShowoffs.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(searchUser))
+            filtered = filtered.Where(s =>
+                s.UserName.Contains(searchUser, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(searchItem))
+            filtered = filtered.Where(s =>
+                s.Items.Any(i => i.ItemName != null &&
+                    i.ItemName.Contains(searchItem, StringComparison.OrdinalIgnoreCase)));
+
+        if (!string.IsNullOrEmpty(searchCategory))
+            filtered = filtered.Where(s =>
+                s.Items.Any(i => i.CategoryName != null &&
+                    i.CategoryName.Contains(searchCategory, StringComparison.OrdinalIgnoreCase)));
+
+        // LINQ — sort
+        filtered = sort switch
+        {
+            "newest" => filtered.OrderByDescending(s => s.CreatedAt),
+            "least" => filtered.OrderBy(s => s.LikeCount).ThenByDescending(s => s.CreatedAt),
+            _ => filtered.OrderByDescending(s => s.LikeCount).ThenByDescending(s => s.CreatedAt)
+        };
+
+        var filteredList = filtered.ToList();
+
+        // Pagination
+        TotalPages = (int)Math.Ceiling(filteredList.Count / (double)PageSize);
+        TotalPages = Math.Max(TotalPages, 1);
+        CurrentPage = Math.Clamp(CurrentPage, 1, TotalPages);
+
+        PagedShowoffs = filteredList
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+        return Page();
+    }
+}

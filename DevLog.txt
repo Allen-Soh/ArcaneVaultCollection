@@ -138,3 +138,15 @@
 
 [To Do]
 - Add RP side for Showoff Idea
+
+===== DEV LOG (15/7/2026) - Part 2 =====
+[Done]
+- Added RP side for ShowoffIdea, not fully complete
+- Seeded for Showoff, ShowoffItem, ShowoffLike & ShowoffView
+
+[To Do]
+- Fix issue where after attempting to create but pressed "Cancel" button in create tab, it goes to "Manage Showoffs" tab
+- Fix issue where when clicking on a showoff in Feed, there is no enlarged card floating tab to zoom in.
+- Make all search bars so that they will show main page result based on input automatically, which will reset if the search bar field is empty, eliminating the need for "Search" and "Clear" buttons
+- Liking feature should show a grey heart if the logged in user never liked the respective collection showoff
+- Fix showoff so that user can like their own showoffs
