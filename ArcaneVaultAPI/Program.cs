@@ -21,7 +21,7 @@ namespace ArcaneVaultAPI
             builder.Services.AddSingleton(new Cloudinary(new Account(
                 "nyj7a9za",
                 "***REMOVED-CLOUDINARY-APIKEY***",
-                "<***REMOVED-CLOUDINARY-APISECRET***>"
+                "***REMOVED-CLOUDINARY-APISECRET***"
             )));
 
             //Poll

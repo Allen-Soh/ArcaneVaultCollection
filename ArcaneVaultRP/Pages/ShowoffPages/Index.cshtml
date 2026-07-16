@@ -456,6 +456,7 @@
         const currentUser = '@loggedInUser?.UserName' === '' ? null : '@loggedInUser?.UserName';
         const apiBase = 'https://localhost:7040/api';
         const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
+
         const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
 
         // State

@@ -86,11 +86,14 @@ public class IndexModel : PageModel
 
         await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
 
-        return new PartialViewResult
-        {
-            ViewName = "_ShowoffGrid",
-            ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
-        };
+
+        return Partial("_ShowoffGrid", this);
+        
+        //return new PartialViewResult
+        //{
+         //   ViewName = "_ShowoffGrid",
+         //   ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
+        //};
     }
 
     private async Task LoadFeedDataAsync(

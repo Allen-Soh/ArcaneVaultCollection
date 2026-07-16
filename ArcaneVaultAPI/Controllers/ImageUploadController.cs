@@ -48,10 +48,13 @@ public class ImageUploadController : ControllerBase
         });
     }
 
-    // DELETE: api/ImageUpload/{publicId}
+    // DELETE: api/ImageUpload
     [HttpDelete]
     public async Task<ActionResult> DeleteImage([FromBody] string publicId)
     {
+        if (string.IsNullOrEmpty(publicId))
+            return BadRequest("Public ID is required.");
+
         var deleteParams = new DeletionParams(publicId);
         var result = await _cloudinary.DestroyAsync(deleteParams);
 

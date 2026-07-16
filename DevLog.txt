@@ -162,3 +162,12 @@
 [To Do]
 - Implement the same AJAX search bar to Index, Create and Edit for both Category and CollectionItems
 - Implement Cloudinary to be able to store images
+
+===== DEV LOG (16/7/2026) =====
+[Done]
+- Implemented Cloudinary to be able to store images
+- Updated the main claude with updated code
+
+[To Do]
+- Inform main claude about original item picker references is correct as it allows the user to create and edit showoffs
+- Fix issue where when uploading an item to showoff, there is no sign of progress
