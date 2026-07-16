@@ -89,3 +89,10 @@ Most-viewed profiles/showoffs
 
 Category popularity by user count
 - Number of distinct users interested in each category, independent of item-level rankings — shows breadth of interest vs. depth
+
+
+
+~~~~~~~~~~~~~ Showoffs Page Notes ~~~~~~~~~~~~~
+_ Item progress loading does not work.
+_ Plans to go with original idea of Create, Edit and Delete being their own separate Razor Page.
+_ Plans to improve UI and UX will take a pause on that

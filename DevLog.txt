@@ -171,3 +171,12 @@
 [To Do]
 - Inform main claude about original item picker references is correct as it allows the user to create and edit showoffs
 - Fix issue where when uploading an item to showoff, there is no sign of progress
+
+===== DEV LOG (16/7/2026) =====
+[Done]
+- Informed about correct item picker references code
+
+[To Do]
+- Images of removed showoffs still exist in cloudinary storage, need them to be deleted to ensure there is no wasted storage
+- *(Item progress loading does not work, Plans to go with original idea of Create, Edit and Delete being their own separate Razor Page, plans to improve UI and UX will take a pause on that)
+- Start on Insights page
