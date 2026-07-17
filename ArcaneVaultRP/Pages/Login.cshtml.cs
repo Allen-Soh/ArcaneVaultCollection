@@ -83,6 +83,9 @@ namespace ArcaneVaultRP.Pages
             HttpContext.Session.SetString(SessionKeys.LoggedInUser, JsonSerializer.Serialize(user));
             HttpContext.Session.SetString(SessionKeys.UserRole, user.RoleId.ToString());
 
+            var loginHttpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+            await loginHttpClient.PostAsJsonAsync("LoginLog", user.UserName);
+
             return RedirectToPage("/Index");
         }
     }

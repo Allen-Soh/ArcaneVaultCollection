@@ -593,6 +593,26 @@
         }
 
         async function confirmDelete() {
+            // Get showoff details first to retrieve image public IDs
+            const res = await fetch(`${apiBase}/Showoff/${pendingDeleteId}`);
+            if (res.ok) {
+                const showoff = await res.json();
+                const items = showoff.items || showoff.Items || [];
+
+                // Delete all images from Cloudinary before soft deleting showoff
+                for (const item of items) {
+                    const publicId = item.imagePublicId || item.ImagePublicId;
+                    if (publicId) {
+                        await fetch(`${apiBase}/ImageUpload`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(publicId)
+                        });
+                    }
+                }
+            }
+
+            // Soft delete the showoff
             await fetch(`${apiBase}/Showoff/${pendingDeleteId}`, { method: 'DELETE' });
             bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
             window.location.reload();
@@ -707,6 +727,14 @@
         }
 
         function removeItem(displayOrder) {
+            const existing = selectedItems[displayOrder];
+
+            // Mark old image for deletion if it exists
+            if (existing?.imagePublicId) {
+                window.pendingImageDeletes = window.pendingImageDeletes || [];
+                window.pendingImageDeletes.push(existing.imagePublicId);
+            }
+
             selectedItems[displayOrder] = null;
             updatePreview();
             updateSelectedItemsList();
@@ -1012,27 +1040,36 @@
         });
 
         // ── Search bars (Feed) — AJAX, keeps focus, no reload ──
-        function setupSearch(inputId, suggestionsId, dataArray, keyField, filterKey) {
+        function setupSearch(inputId, suggestionsId, dataArray, keyField, filterKey, searchType) {
             const input = document.getElementById(inputId);
             const suggestions = document.getElementById(suggestionsId);
             if (!input || !suggestions) return;
 
+            const onSelect = async (val) => {
+                input.value = val;
+                suggestions.style.display = 'none';
+
+                await fetch(`${apiBase}/SearchLog`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        searchTerm: val,
+                        searchType: searchType,
+                        userName: currentUser || null
+                    })
+                });
+
+                refreshGrid({ [filterKey]: val, page: 1 });
+            };
+
             input.addEventListener('focus', () => {
-                renderSearchSuggestions(suggestions, dataArray, keyField, (val) => {
-                    input.value = val;
-                    suggestions.style.display = 'none';
-                    refreshGrid({ [filterKey]: val, page: 1 });
-                }, '');
+                renderSearchSuggestions(suggestions, dataArray, keyField, onSelect, '');
                 suggestions.style.display = 'block';
             });
 
             input.addEventListener('input', function () {
                 const query = this.value.trim();
-                renderSearchSuggestions(suggestions, dataArray, keyField, (val) => {
-                    input.value = val;
-                    suggestions.style.display = 'none';
-                    refreshGrid({ [filterKey]: val, page: 1 });
-                }, query.toLowerCase());
+                renderSearchSuggestions(suggestions, dataArray, keyField, onSelect, query.toLowerCase());
 
                 clearTimeout(this._searchTimer);
                 this._searchTimer = setTimeout(() => {
@@ -1055,10 +1092,10 @@
             });
         }
 
-        setupSearch('searchUsers', 'userSuggestions', uniqueUsers, 'UserName', 'searchUser');
-        setupSearch('searchItems', 'itemSuggestions', uniqueItems, 'ItemName', 'searchItem');
-        setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', 'searchCategory');
-
+        // Updated calls with 6 arguments
+        setupSearch('searchUsers', 'userSuggestions', uniqueUsers, 'UserName', 'searchUser', 'User');
+        setupSearch('searchItems', 'itemSuggestions', uniqueItems, 'ItemName', 'searchItem', 'Item');
+        setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', 'searchCategory', 'Category');
         // Initial attach for the server-rendered grid on first page load
         attachGridListeners();
     </script>

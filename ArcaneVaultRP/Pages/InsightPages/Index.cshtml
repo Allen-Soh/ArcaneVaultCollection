@@ -2,7 +2,692 @@
 @model ArcaneVaultRP.Pages.InsightPages.IndexModel
 @{
     ViewData["Title"] = "Insights";
+    var marketDays = Model.MarketDays;
+    var communityDays = Model.CommunityDays;
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to showcase company insights.</p>
+<div class="container mt-4">
+    <h2 class="fw-bold mb-1">Insights</h2>
+    <p class="text-muted small mb-3">Staff only</p>
+
+    <!-- Filters Button -->
+    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 mb-3"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#filtersPanel">
+        <i class="bi bi-funnel"></i> Filters
+        <i class="bi bi-chevron-down"></i>
+    </button>
+
+    <!-- Filters Panel -->
+    <div class="collapse mb-4" id="filtersPanel">
+        <div class="card card-body border-0 shadow-sm">
+
+            <!-- Search bars -->
+            <p class="text-muted small mb-2">Search</p>
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="Search users" id="filterUser" />
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="Search items" id="filterItem" />
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="Search categories" id="filterCategory" />
+                </div>
+            </div>
+
+            <!-- Show sections -->
+            <p class="text-muted small mb-2">Show sections</p>
+            <div class="border-bottom pb-2 mb-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showAll"
+                           checked onchange="toggleAll(this)" />
+                    <label class="form-check-label fw-semibold" for="showAll">Show all</label>
+                </div>
+            </div>
+            <div class="row g-1">
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkPopular" checked
+                               data-target="cardPopular"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkPopular">Popular items</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkRising" checked
+                               data-target="cardRising"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkRising">Rising / declining</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkCatTrend" checked
+                               data-target="cardCatTrend"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkCatTrend">Category trends</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkActive" checked
+                               data-target="cardActive"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkActive">Active users</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkEngaged" checked
+                               data-target="cardEngaged"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkEngaged">Top engaged showoffs</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkSearched" checked
+                               data-target="cardSearched"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkSearched">Most-searched terms</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkViewed" checked
+                               data-target="cardViewed"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkViewed">Most-viewed</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input section-check" type="checkbox"
+                               id="chkCatPop" checked
+                               data-target="cardCatPop"
+                               onchange="toggleSection(this)" />
+                        <label class="form-check-label small" for="chkCatPop">Category popularity</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Items -->
+    <p class="text-muted small fw-semibold mb-2">Popular items</p>
+    <div class="card border-0 shadow-sm mb-4 position-relative" id="cardPopular">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0">Top 10 items</h6>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm" style="width:auto;"
+                        id="popularCategoryFilter" onchange="filterPopularByCategory(this.value)">
+                    <option value="">All Categories</option>
+                    @foreach (var cat in Model.CategoryBreakdown)
+                    {
+                        <option value="@cat.CategoryName">@cat.CategoryName</option>
+                    }
+                </select>
+                <button class="btn btn-sm btn-outline-secondary"
+                        onclick="expandCard('modalPopular')">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="chartPopular" height="120"></canvas>
+        </div>
+    </div>
+
+    <!-- Market Demand and Trends -->
+    <p class="text-muted small fw-semibold mb-2">Market demand and trends</p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6" id="cardRising">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Rising / Declining</h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm" style="width:auto;"
+                                onchange="window.location.href='?MarketDays=' + this.value + '&CommunityDays=@communityDays'">
+                            <option value="7" selected ="@(Model.CommunityDays == 7)">7 days</option>
+                            <option value="30" selected ="@(Model.CommunityDays == 30)">30 days</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="expandCard('modalMarket')">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartMarket" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6" id="cardCatTrend">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Category Trends</h6>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="expandCard('modalCatTrend')">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartCatTrend" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Activity and Engagement -->
+    <p class="text-muted small fw-semibold mb-2">User activity and engagement</p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6" id="cardActive">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Active Users (DAU / WAU / MAU)</h6>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="expandCard('modalActivity')">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-4 mb-3">
+                        <div class="text-center">
+                            <div class="fw-bold fs-5">@Model.DAU</div>
+                            <small class="text-muted">DAU</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold fs-5">@Model.WAU</div>
+                            <small class="text-muted">WAU</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold fs-5">@Model.MAU</div>
+                            <small class="text-muted">MAU</small>
+                        </div>
+                    </div>
+                    <canvas id="chartActivity" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6" id="cardEngaged">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Top Engaged Showoffs</h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm" style="width:auto;"
+                                id="engagedCategoryFilter" onchange="filterEngagedByCategory(this.value)">
+                            <option value="">All Categories</option>
+                            @foreach (var cat in Model.CategoryBreakdown)
+                            {
+                                <option value="@cat.CategoryName">@cat.CategoryName</option>
+                            }
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="expandCard('modalEngaged')">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEngaged" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Interest -->
+    <p class="text-muted small fw-semibold mb-2">Community interest</p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4" id="cardSearched">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Most-searched terms</h6>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="expandCard('modalCommunity')">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartSearched" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4" id="cardViewed">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Most-viewed</h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm" style="width:auto;"
+                                onchange="window.location.href='?MarketDays=@marketDays&CommunityDays=' + this.value">
+                            <option value="7" selected="@(Model.CommunityDays == 7)">7 days</option>
+                            <option value="30" selected ="@(Model.CommunityDays == 30)">30 days</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="expandCard('modalCommunity')">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartViewed" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4" id="cardCatPop">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Category popularity</h6>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="expandCard('modalCommunity')">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartCatPop" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expanded Modals -->
+
+<!-- Popular Items Modal -->
+<div class="modal fade" id="modalPopular" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Popular Items — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Top 10 Items by Owner Count</h6>
+                        <canvas id="chartPopularExpanded"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Category Breakdown</h6>
+                        <canvas id="chartCategoryBreakdown"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Market Demand Modal -->
+<div class="modal fade" id="modalMarket" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Market Demand — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Top Items by Owners</h6>
+                        <canvas id="chartMarketExpanded"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Active Users Over Time</h6>
+                        <canvas id="chartMarketOverTime"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Trends Modal -->
+<div class="modal fade" id="modalCatTrend" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Category Trends — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="chartCatTrendExpanded"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Activity Modal -->
+<div class="modal fade" id="modalActivity" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">User Activity — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Login Activity (Last 30 Days)</h6>
+                        <canvas id="chartActivityExpanded"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">User Breakdown</h6>
+                        <div style="max-height:300px;overflow-y:auto;">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Logins</th>
+                                        <th>Showoffs</th>
+                                        <th>Last Login</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.UserActivities)
+                                    {
+                                        <tr>
+                                            <td>@user.UserName</td>
+                                            <td>@user.TotalLogins</td>
+                                            <td>@user.TotalShowoffs</td>
+                                            <td class="text-muted small">
+                                                @(user.LastLogin != null
+                                                    ? DateTime.Parse(user.LastLogin).ToString("dd MMM yyyy")
+                                                    : "Never")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Engaged Showoffs Modal -->
+<div class="modal fade" id="modalEngaged" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Top Engaged Showoffs — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="chartEngagedExpanded"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Community Interest Modal -->
+<div class="modal fade" id="modalCommunity" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold">Community Interest — Detail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <h6 class="fw-semibold mb-3">Most Searched Terms</h6>
+                        <canvas id="chartSearchExpanded"></canvas>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="fw-semibold mb-3">Most Viewed Showoffs</h6>
+                        <canvas id="chartViewsExpanded"></canvas>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="fw-semibold mb-3">Category Popularity</h6>
+                        <canvas id="chartCatPopExpanded"></canvas>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h6 class="fw-semibold mb-3">Views Over Time</h6>
+                    <canvas id="chartCommunityOverTime"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const popularItems      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PopularItems));
+    const categoryBreakdown = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryBreakdown));
+    const marketDemand      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemand));
+    const marketOverTime    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemandOverTime));
+    const loginActivity     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity));
+    const communityInterest = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityInterest));
+    const searchTrends      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SearchTrends));
+    const communityOverTime = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityOverTime));
+
+    const colors = [
+        '#4e79a7','#f28e2b','#e15759','#76b7b2',
+        '#59a14f','#edc948','#b07aa1','#ff9da7',
+        '#9c755f','#bab0ac'
+    ];
+
+    const chartInstances = {};
+
+    function makeChart(id, type, labels, data, label) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return null;
+        if (chartInstances[id]) { chartInstances[id].destroy(); }
+        chartInstances[id] = new Chart(ctx, {
+            type,
+            data: {
+                labels,
+                datasets: [{
+                    label,
+                    data,
+                    backgroundColor: type === 'line' ? 'rgba(78,121,167,0.15)' : colors,
+                    borderColor: type === 'line' ? '#4e79a7' : colors,
+                    borderWidth: type === 'line' ? 2 : 1,
+                    fill: type === 'line',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                indexAxis: type === 'bar' ? 'y' : 'x',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: type !== 'doughnut' ? {
+                    x: { beginAtZero: true },
+                    y: { beginAtZero: true }
+                } : {}
+            }
+        });
+        return chartInstances[id];
+    }
+
+    function renderPopularChart(data) {
+        makeChart('chartPopular', 'bar',
+            data.map(i => i.ItemName),
+            data.map(i => i.OwnerCount),
+            'Owners');
+    }
+
+    renderPopularChart(popularItems);
+
+    makeChart('chartMarket', 'bar',
+        marketDemand.map(i => i.ItemName),
+        marketDemand.map(i => i.CurrentOwners),
+        'Owners');
+
+    const catData = (communityInterest.CategoryPopularity || communityInterest.categoryPopularity || []);
+    makeChart('chartCatTrend', catData.length <= 6 ? 'doughnut' : 'bar',
+        catData.map(c => c.CategoryName),
+        catData.map(c => c.UserCount),
+        'Users');
+
+    makeChart('chartActivity', 'line',
+        loginActivity.map(d => d.Date),
+        loginActivity.map(d => d.ActiveUsers),
+        'Active Users');
+
+    const mostLiked = communityInterest.MostLiked || communityInterest.mostLiked || [];
+    makeChart('chartEngaged', 'bar',
+        mostLiked.map(s => s.ShowoffName),
+        mostLiked.map(s => s.LikeCount),
+        'Likes');
+
+    const mostViewed = communityInterest.MostViewed || communityInterest.mostViewed || [];
+    makeChart('chartEngaged', 'bar',
+        mostViewed.map(s => s.ShowoffName),
+        mostViewed.map(s => s.ViewCount),
+        'Views');
+
+    makeChart('chartSearched', 'bar',
+        searchTrends.map(s => s.SearchTerm),
+        searchTrends.map(s => s.Count),
+        'Searches');
+
+    makeChart('chartViewed', 'bar',
+        mostViewed.map(s => s.ShowoffName),
+        mostViewed.map(s => s.ViewCount),
+        'Views');
+
+    makeChart('chartCatPop', categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
+        categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
+        categoryBreakdown.map(c => c.OwnerCount),
+        'Owners');
+
+    function filterPopularByCategory(category) {
+        const filtered = category
+            ? popularItems.filter(i => i.CategoryName === category)
+            : popularItems;
+        renderPopularChart(filtered);
+    }
+
+    function filterEngagedByCategory(category) {
+        const filtered = category
+            ? mostLiked.filter(s => s.CategoryName === category)
+            : mostLiked;
+        makeChart('chartEngaged', 'bar',
+            filtered.map(s => s.ShowoffName),
+            filtered.map(s => s.LikeCount),
+            'Likes');
+    }
+
+    function expandCard(modalId) {
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+        document.getElementById(modalId).addEventListener('shown.bs.modal', function () {
+            renderExpandedCharts(modalId);
+        }, { once: true });
+    }
+
+    function renderExpandedCharts(modalId) {
+        if (modalId === 'modalPopular') {
+            makeChart('chartPopularExpanded', 'bar',
+                popularItems.map(i => i.ItemName),
+                popularItems.map(i => i.OwnerCount),
+                'Owners');
+            makeChart('chartCategoryBreakdown',
+                categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
+                categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
+                categoryBreakdown.map(c => c.OwnerCount),
+                'Owners');
+        }
+        if (modalId === 'modalMarket') {
+            makeChart('chartMarketExpanded', 'bar',
+                marketDemand.map(i => i.ItemName),
+                marketDemand.map(i => i.CurrentOwners),
+                'Owners');
+            makeChart('chartMarketOverTime', 'line',
+                marketOverTime.map(d => d.Date),
+                marketOverTime.map(d => d.ActiveUsers),
+                'Active Users');
+        }
+        if (modalId === 'modalCatTrend') {
+            makeChart('chartCatTrendExpanded',
+                catData.length <= 6 ? 'doughnut' : 'bar',
+                catData.map(c => c.CategoryName),
+                catData.map(c => c.UserCount),
+                'Users');
+        }
+        if (modalId === 'modalActivity') {
+            makeChart('chartActivityExpanded', 'line',
+                loginActivity.map(d => d.Date),
+                loginActivity.map(d => d.ActiveUsers),
+                'Active Users');
+        }
+        if (modalId === 'modalEngaged') {
+            makeChart('chartEngagedExpanded', 'bar',
+                mostLiked.map(s => s.ShowoffName),
+                mostLiked.map(s => s.LikeCount),
+                'Likes');
+        }
+        if (modalId === 'modalCommunity') {
+            makeChart('chartSearchExpanded', 'bar',
+                searchTrends.map(s => s.SearchTerm),
+                searchTrends.map(s => s.Count),
+                'Searches');
+            makeChart('chartViewsExpanded', 'bar',
+                mostViewed.map(s => s.ShowoffName),
+                mostViewed.map(s => s.ViewCount),
+                'Views');
+            makeChart('chartCatPopExpanded',
+                categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
+                categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
+                categoryBreakdown.map(c => c.OwnerCount),
+                'Owners');
+            makeChart('chartCommunityOverTime', 'line',
+                communityOverTime.map(d => d.Date),
+                communityOverTime.map(d => d.Count),
+                'Views');
+        }
+    }
+
+    function toggleSection(checkbox) {
+        const target = checkbox.dataset.target;
+        document.getElementById(target).style.display = checkbox.checked ? '' : 'none';
+        const allChecks = document.querySelectorAll('.section-check');
+        const allChecked = Array.from(allChecks).every(c => c.checked);
+        const anyChecked = Array.from(allChecks).some(c => c.checked);
+        const showAllEl = document.getElementById('showAll');
+        showAllEl.checked = allChecked;
+        showAllEl.indeterminate = !allChecked && anyChecked;
+    }
+
+    function toggleAll(checkbox) {
+        document.querySelectorAll('.section-check').forEach(c => {
+            c.checked = checkbox.checked;
+            document.getElementById(c.dataset.target).style.display = checkbox.checked ? '' : 'none';
+        });
+    }
+
+    document.getElementById('filterUser')?.addEventListener('input', applyFilters);
+    document.getElementById('filterItem')?.addEventListener('input', applyFilters);
+    document.getElementById('filterCategory')?.addEventListener('input', applyFilters);
+
+    function applyFilters() {
+        const userQ = document.getElementById('filterUser').value.trim().toLowerCase();
+        const itemQ = document.getElementById('filterItem').value.trim().toLowerCase();
+        const catQ  = document.getElementById('filterCategory').value.trim().toLowerCase();
+        const filtered = popularItems.filter(i => {
+            const matchUser = !userQ || (i.UserName && i.UserName.toLowerCase().includes(userQ));
+            const matchItem = !itemQ || (i.ItemName && i.ItemName.toLowerCase().includes(itemQ));
+            const matchCat  = !catQ  || (i.CategoryName && i.CategoryName.toLowerCase().includes(catQ));
+            return matchUser && matchItem && matchCat;
+        });
+        renderPopularChart(filtered);
+    }
+</script>
+}

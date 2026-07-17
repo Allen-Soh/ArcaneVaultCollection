@@ -15,6 +15,8 @@ namespace ArcaneVaultAPI.Data
         public DbSet<ShowoffItem> ShowoffItems { get; set; }
         public DbSet<ShowoffLike> ShowoffLikes { get; set; }
         public DbSet<ShowoffView> ShowoffViews { get; set; }
+        public DbSet<LoginLog> LoginLogs { get; set; }
+        public DbSet<SearchLog> SearchLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

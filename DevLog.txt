@@ -180,3 +180,14 @@
 - Images of removed showoffs still exist in cloudinary storage, need them to be deleted to ensure there is no wasted storage
 - *(Item progress loading does not work, Plans to go with original idea of Create, Edit and Delete being their own separate Razor Page, plans to improve UI and UX will take a pause on that)
 - Start on Insights page
+
+===== DEV LOG (17/7/2026) =====
+[Done]
+- Fixed wasted storage so there is image removal from cloudinary storage
+- Added Insights Page, Insights API
+
+[To Do]
+- Fix Top Engaged Showoffs to show based on number of likes instead of views
+- Give the updated Insights.cshtml layout
+- Mention that <option value="30" selected="@(Model.CommunityDays == 30)"> format is correct while <option value="30" @(marketDays == 30 ? "selected" : "")> is wrong and causes errors
+- Possibly remove search bars
