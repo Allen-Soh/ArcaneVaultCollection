@@ -191,3 +191,13 @@
 - Give the updated Insights.cshtml layout
 - Mention that <option value="30" selected="@(Model.CommunityDays == 30)"> format is correct while <option value="30" @(marketDays == 30 ? "selected" : "")> is wrong and causes errors
 - Possibly remove search bars
+
+===== DEV LOG (17/7/2026) - Part 2 =====
+[Done]
+- Gave updated Insights Index.cshtml layout
+- Mentioned that <option value="30" selected="@(Model.CommunityDays == 30)"> format is correct while <option value="30" @(marketDays == 30 ? "selected" : "")> is wrong and causes errors
+
+[To Do]
+- Fix issue where when someone views a showoff once, it actually records as being viewed twice, hence recording additional 2 views rather than supposed 1
+- Fix issue where Top Engaged Showoffs minimized and exapanded graphss are not showing any data 
+- Fix issue where minimized and expanded Category Trends shows no table visual for both

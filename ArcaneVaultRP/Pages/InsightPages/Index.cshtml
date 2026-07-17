@@ -542,16 +542,12 @@
         'Active Users');
 
     const mostLiked = communityInterest.MostLiked || communityInterest.mostLiked || [];
+    const mostViewed = communityInterest.MostViewed || communityInterest.mostViewed || [];
+
     makeChart('chartEngaged', 'bar',
         mostLiked.map(s => s.ShowoffName),
         mostLiked.map(s => s.LikeCount),
         'Likes');
-
-    const mostViewed = communityInterest.MostViewed || communityInterest.mostViewed || [];
-    makeChart('chartEngaged', 'bar',
-        mostViewed.map(s => s.ShowoffName),
-        mostViewed.map(s => s.ViewCount),
-        'Views');
 
     makeChart('chartSearched', 'bar',
         searchTrends.map(s => s.SearchTerm),
@@ -576,12 +572,11 @@
     }
 
     function filterEngagedByCategory(category) {
-        const filtered = category
-            ? mostLiked.filter(s => s.CategoryName === category)
-            : mostLiked;
+    // Category filter not applicable to showoffs directly
+    // Reset to full mostLiked data
         makeChart('chartEngaged', 'bar',
-            filtered.map(s => s.ShowoffName),
-            filtered.map(s => s.LikeCount),
+            mostLiked.map(s => s.ShowoffName),
+            mostLiked.map(s => s.LikeCount),
             'Likes');
     }
 

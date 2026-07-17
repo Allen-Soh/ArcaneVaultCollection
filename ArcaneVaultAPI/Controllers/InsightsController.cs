@@ -219,6 +219,33 @@ public class InsightsController : ControllerBase
             });
         }
 
+        // Most liked showoffs — separate query ordered by LikeCount
+        var likesCommand = new SqliteCommand(
+            @"SELECT s.ShowoffName, s.UserName,
+                 COUNT(sl.UserName) as LikeCount,
+                 COUNT(sv.ViewId) as ViewCount
+          FROM Showoffs s
+          LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
+          LEFT JOIN ShowoffViews sv ON s.ShowoffId = sv.ShowoffId
+          WHERE s.IsDeleted = 0 AND s.IsPrivate = 0
+          GROUP BY s.ShowoffId
+          ORDER BY LikeCount DESC
+          LIMIT 10",
+            connection);
+
+        var mostLiked = new List<object>();
+        using var likesReader = likesCommand.ExecuteReader();
+        while (likesReader.Read())
+        {
+            mostLiked.Add(new
+            {
+                ShowoffName = likesReader["ShowoffName"].ToString(),
+                UserName = likesReader["UserName"].ToString(),
+                LikeCount = Convert.ToInt32(likesReader["LikeCount"]),
+                ViewCount = Convert.ToInt32(likesReader["ViewCount"])
+            });
+        }
+
         // Category popularity by user count
         var catCommand = new SqliteCommand(
             @"SELECT c.CategoryName,

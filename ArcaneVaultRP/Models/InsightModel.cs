@@ -33,6 +33,14 @@
         public int ViewCount { get; set; }
         public int LikeCount { get; set; }
     }
+    
+    public class ShowoffEngagement
+    {
+        public string ShowoffName { get; set; }
+        public string UserName { get; set; }
+        public int LikeCount { get; set; }
+        public int ViewCount { get; set; }
+    }
 
     public class SearchTrend
     {
@@ -63,6 +71,7 @@
     public class CommunityInterestData
     {
         public List<ShowoffView> MostViewed { get; set; } = new();
+        public List<ShowoffEngagement> MostLiked { get; set; } = new();
         public List<CategoryPopularity> CategoryPopularity { get; set; } = new();
     }
 }
