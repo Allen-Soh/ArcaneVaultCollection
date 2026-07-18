@@ -471,12 +471,6 @@
         // ── View Showoff ──
         // Fix 2 — handle both camelCase and PascalCase API payloads, guard against failed fetch
         async function viewShowoff(showoffId, ownerName) {
-            // Record view
-            await fetch(`${apiBase}/ShowoffView`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ showoffId, viewerUserName: currentUser || null })
-            });
 
             // Fetch showoff details
             const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
@@ -540,6 +534,16 @@
                         </div>`;
 
             const modal = new bootstrap.Modal(document.getElementById('viewShowoffModal'));
+
+            // Record view ONLY when modal is fully shown — single record
+            document.getElementById('viewShowoffModal').addEventListener('shown.bs.modal', async function () {
+                await fetch(`${apiBase}/ShowoffView`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ showoffId, viewerUserName: currentUser || null })
+                });
+            }, { once: true });
+
             modal.show();
         }
 

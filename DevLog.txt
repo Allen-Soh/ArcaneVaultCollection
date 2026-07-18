@@ -201,3 +201,11 @@
 - Fix issue where when someone views a showoff once, it actually records as being viewed twice, hence recording additional 2 views rather than supposed 1
 - Fix issue where Top Engaged Showoffs minimized and exapanded graphss are not showing any data 
 - Fix issue where minimized and expanded Category Trends shows no table visual for both
+
+===== DEV LOG (18/7/2026) =====
+[Done]
+- Fixed issue where when someone views a showoff once, it actually records as being viewed twice, hence recording additional 2 views rather than supposed 1 
+
+[To Do]
+- Rework the entire insights page (Undo till 17/7/2026)
+- Filter button is to remain, however should remove search bars

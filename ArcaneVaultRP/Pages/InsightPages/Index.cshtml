@@ -362,7 +362,26 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <canvas id="chartCatTrendExpanded"></canvas>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Category Popularity Chart</h6>
+                        <canvas id="chartCatTrendExpanded"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Category Breakdown</h6>
+                        <div style="max-height:300px;overflow-y:auto;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Category</th>
+                                        <th class="text-end">Users</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="categoryTrendsTableBodyExpanded"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -466,223 +485,395 @@
 </div>
 
 @section Scripts {
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const popularItems      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PopularItems));
-    const categoryBreakdown = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryBreakdown));
-    const marketDemand      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemand));
-    const marketOverTime    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemandOverTime));
-    const loginActivity     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity));
-    const communityInterest = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityInterest));
-    const searchTrends      = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SearchTrends));
-    const communityOverTime = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityOverTime));
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // ════════════════════════════════════════════════
+        // 1. SERVER DATA
+        // ════════════════════════════════════════════════
+        const popularItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PopularItems));
+        const categoryBreakdown = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryBreakdown));
+        const marketDemand = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemand));
+        const marketOverTime = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDemandOverTime));
+        const loginActivity = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity));
+        const userActivities = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserActivities));
+        const communityRaw = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityInterest));
+        const searchTrends = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SearchTrends));
+        const communityOverTime = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CommunityOverTime));
 
-    const colors = [
-        '#4e79a7','#f28e2b','#e15759','#76b7b2',
-        '#59a14f','#edc948','#b07aa1','#ff9da7',
-        '#9c755f','#bab0ac'
-    ];
+        // ════════════════════════════════════════════════
+        // 2. EXTRACT COMMUNITY DATA — handle PascalCase + camelCase
+        // ════════════════════════════════════════════════
+        const mostLiked = communityRaw.MostLiked || communityRaw.mostLiked || [];
+        const mostViewed = communityRaw.MostViewed || communityRaw.mostViewed || [];
+        const catData = communityRaw.CategoryPopularity || communityRaw.categoryPopularity || [];
 
-    const chartInstances = {};
+        // ════════════════════════════════════════════════
+        // 3. CONSTANTS
+        // ════════════════════════════════════════════════
+        const colors = [
+        '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
+        '#59a14f', '#edc948', '#b07aa1', '#ff9da7',
+        '#9c755f', '#bab0ac'
+        ];
 
-    function makeChart(id, type, labels, data, label) {
+        // ════════════════════════════════════════════════
+        // 4. HELPERS
+        // ════════════════════════════════════════════════
+
+        // Generic chart factory
+        function makeChart(id, type, labels, data, label) {
         const ctx = document.getElementById(id);
         if (!ctx) return null;
-        if (chartInstances[id]) { chartInstances[id].destroy(); }
-        chartInstances[id] = new Chart(ctx, {
-            type,
-            data: {
-                labels,
-                datasets: [{
-                    label,
-                    data,
-                    backgroundColor: type === 'line' ? 'rgba(78,121,167,0.15)' : colors,
-                    borderColor: type === 'line' ? '#4e79a7' : colors,
-                    borderWidth: type === 'line' ? 2 : 1,
-                    fill: type === 'line',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                indexAxis: type === 'bar' ? 'y' : 'x',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: type !== 'doughnut' ? {
-                    x: { beginAtZero: true },
-                    y: { beginAtZero: true }
-                } : {}
-            }
+
+        // Destroy existing chart on canvas if re-rendering
+        const existing = Chart.getChart(ctx);
+        if (existing) existing.destroy();
+
+        return new Chart(ctx, {
+        type,
+        data: {
+        labels,
+        datasets: [{
+        label,
+        data,
+        backgroundColor: type === 'line'
+        ? 'rgba(78,121,167,0.15)'
+        : colors,
+        borderColor: type === 'line'
+        ? '#4e79a7'
+        : colors,
+        borderWidth: type === 'line' ? 2 : 1,
+        fill: type === 'line',
+        tension: 0.4,
+        pointRadius: type === 'line' ? 3 : 0
+        }]
+        },
+        options: {
+        indexAxis: type === 'bar' ? 'y' : 'x',
+        responsive: true,
+        plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true }
+        },
+        scales: type !== 'doughnut' && type !== 'pie'
+        ? {
+        x: { beginAtZero: true },
+        y: { beginAtZero: true }
+        }
+        : {}
+        }
         });
-        return chartInstances[id];
-    }
+        }
 
-    function renderPopularChart(data) {
-        makeChart('chartPopular', 'bar',
-            data.map(i => i.ItemName),
-            data.map(i => i.OwnerCount),
-            'Owners');
-    }
+        // Show empty state inside a canvas container
+        function showEmpty(id, message = 'No data yet.') {
+        const ctx = document.getElementById(id);
+        if (ctx) {
+        ctx.style.display = 'none';
+        const wrapper = ctx.parentElement;
+        if (!wrapper.querySelector('.empty-state')) {
+        const el = document.createElement('p');
+        el.className = 'text-muted text-center py-3 empty-state';
+        el.textContent = message;
+        wrapper.appendChild(el);
+        }
+        }
+        }
 
-    renderPopularChart(popularItems);
+        // Render category trends as a table
+        function renderCategoryTable(data, tbodyId) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
 
-    makeChart('chartMarket', 'bar',
-        marketDemand.map(i => i.ItemName),
-        marketDemand.map(i => i.CurrentOwners),
-        'Owners');
+        if (!data || data.length === 0) {
+        tbody.innerHTML = `
+        <tr>
+        <td colspan="2" class="text-muted text-center py-3">
+        No category data yet.
+        </td>
+        </tr>`;
+        return;
+        }
 
-    const catData = (communityInterest.CategoryPopularity || communityInterest.categoryPopularity || []);
-    makeChart('chartCatTrend', catData.length <= 6 ? 'doughnut' : 'bar',
-        catData.map(c => c.CategoryName),
-        catData.map(c => c.UserCount),
-        'Users');
+        tbody.innerHTML = data.map((c, i) => {
+        const name = c.CategoryName || c.categoryName || 'Uncategorized';
+        const count = c.UserCount || c.userCount || 0;
+        return `
+        <tr>
+        <td>
+        <span style="
+        display:inline-block;
+        width:10px;height:10px;
+        border-radius:50%;
+        background:${colors[i % colors.length]};
+        margin-right:6px;">
+        </span>
+        ${name}
+        </td>
+        <td class="text-end fw-semibold">${count}</td>
+        </tr>`;
+        }).join('');
+        }
 
-    makeChart('chartActivity', 'line',
-        loginActivity.map(d => d.Date),
-        loginActivity.map(d => d.ActiveUsers),
-        'Active Users');
+        // ════════════════════════════════════════════════
+        // 5. MINIMIZED CARD CHARTS — rendered on page load
+        // ════════════════════════════════════════════════
 
-    const mostLiked = communityInterest.MostLiked || communityInterest.mostLiked || [];
-    const mostViewed = communityInterest.MostViewed || communityInterest.mostViewed || [];
+        // Popular Items — horizontal bar
+        if (popularItems.length > 0) {
+        makeChart(
+        'chartPopular', 'bar',
+        popularItems.map(i => i.ItemName || i.itemName),
+        popularItems.map(i => i.OwnerCount || i.ownerCount || 0),
+        'Owners'
+        );
+        } else {
+        showEmpty('chartPopular', 'No item data yet.');
+        }
 
-    makeChart('chartEngaged', 'bar',
-        mostLiked.map(s => s.ShowoffName),
-        mostLiked.map(s => s.LikeCount),
-        'Likes');
+        // Market Demand — horizontal bar
+        if (marketDemand.length > 0) {
+        makeChart(
+        'chartMarket', 'bar',
+        marketDemand.map(i => i.ItemName || i.itemName),
+        marketDemand.map(i => i.CurrentOwners || i.currentOwners || 0),
+        'Owners'
+        );
+        } else {
+        showEmpty('chartMarket', 'No market data yet.');
+        }
 
-    makeChart('chartSearched', 'bar',
-        searchTrends.map(s => s.SearchTerm),
-        searchTrends.map(s => s.Count),
-        'Searches');
+        // User Activity — line chart
+        if (loginActivity.length > 0) {
+        makeChart(
+        'chartActivity', 'line',
+        loginActivity.map(d => d.Date || d.date),
+        loginActivity.map(d => d.ActiveUsers || d.activeUsers || 0),
+        'Active Users'
+        );
+        } else {
+        showEmpty('chartActivity', 'No login activity yet.');
+        }
 
-    makeChart('chartViewed', 'bar',
-        mostViewed.map(s => s.ShowoffName),
-        mostViewed.map(s => s.ViewCount),
-        'Views');
+        // Top Engaged Showoffs — horizontal bar (likes)
+        if (mostLiked.length > 0) {
+        makeChart(
+        'chartEngaged', 'bar',
+        mostLiked.map(s => s.ShowoffName || s.showoffName),
+        mostLiked.map(s => s.LikeCount || s.likeCount || 0),
+        'Likes'
+        );
+        } else {
+        showEmpty('chartEngaged', 'No showoff data yet.');
+        }
 
-    makeChart('chartCatPop', categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
-        categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
-        categoryBreakdown.map(c => c.OwnerCount),
-        'Owners');
+        // Category Trends — table
+        renderCategoryTable(catData, 'categoryTrendsTableBody');
 
-    function filterPopularByCategory(category) {
-        const filtered = category
-            ? popularItems.filter(i => i.CategoryName === category)
-            : popularItems;
-        renderPopularChart(filtered);
-    }
+        // ════════════════════════════════════════════════
+        // 6. EXPANDED MODAL CHARTS — rendered on modal open
+        // ════════════════════════════════════════════════
 
-    function filterEngagedByCategory(category) {
-    // Category filter not applicable to showoffs directly
-    // Reset to full mostLiked data
-        makeChart('chartEngaged', 'bar',
-            mostLiked.map(s => s.ShowoffName),
-            mostLiked.map(s => s.LikeCount),
-            'Likes');
-    }
+        function renderExpandedCharts(modalId) {
+        switch (modalId) {
 
-    function expandCard(modalId) {
+        case 'modalPopular':
+        // Top items bar chart
+        if (popularItems.length > 0) {
+        makeChart(
+        'chartPopularExpanded', 'bar',
+        popularItems.map(i => i.ItemName || i.itemName),
+        popularItems.map(i => i.OwnerCount || i.ownerCount || 0),
+        'Owners'
+        );
+        } else {
+        showEmpty('chartPopularExpanded', 'No item data yet.');
+        }
+
+        // Category breakdown — doughnut if ≤6, bar otherwise
+        if (categoryBreakdown.length > 0) {
+        const catType = categoryBreakdown.length <= 6 ? 'doughnut' : 'bar';
+        makeChart(
+        'chartCategoryBreakdown', catType,
+        categoryBreakdown.map(c => c.CategoryName || c.categoryName || 'Uncategorized'),
+        categoryBreakdown.map(c => c.OwnerCount || c.ownerCount || 0),
+        'Owners'
+        );
+        } else {
+        showEmpty('chartCategoryBreakdown', 'No category data yet.');
+        }
+        break;
+
+        case 'modalMarket':
+        // Top items by owners
+        if (marketDemand.length > 0) {
+        makeChart(
+        'chartMarketExpanded', 'bar',
+        marketDemand.map(i => i.ItemName || i.itemName),
+        marketDemand.map(i => i.CurrentOwners || i.currentOwners || 0),
+        'Owners'
+        );
+        } else {
+        showEmpty('chartMarketExpanded', 'No market data yet.');
+        }
+
+        // Active users over time
+        if (marketOverTime.length > 0) {
+        makeChart(
+        'chartMarketOverTime', 'line',
+        marketOverTime.map(d => d.Date || d.date),
+        marketOverTime.map(d => d.ActiveUsers || d.activeUsers || 0),
+        'Active Users'
+        );
+        } else {
+        showEmpty('chartMarketOverTime', 'No trend data yet.');
+        }
+        break;
+
+        case 'modalActivity':
+        // Login activity line chart
+        if (loginActivity.length > 0) {
+        makeChart(
+        'chartActivityExpanded', 'line',
+        loginActivity.map(d => d.Date || d.date),
+        loginActivity.map(d => d.ActiveUsers || d.activeUsers || 0),
+        'Active Users'
+        );
+        } else {
+        showEmpty('chartActivityExpanded', 'No login activity yet.');
+        }
+        // User breakdown table already rendered server-side via Razor
+        break;
+
+        case 'modalEngaged':
+        // Top liked showoffs bar chart
+        if (mostLiked.length > 0) {
+        makeChart(
+        'chartEngagedExpanded', 'bar',
+        mostLiked.map(s => s.ShowoffName || s.showoffName),
+        mostLiked.map(s => s.LikeCount || s.likeCount || 0),
+        'Likes'
+        );
+        } else {
+        showEmpty('chartEngagedExpanded', 'No showoff data yet.');
+        }
+        break;
+
+        case 'modalCommunity':
+        // Most searched terms bar chart
+        if (searchTrends.length > 0) {
+        makeChart(
+        'chartSearchExpanded', 'bar',
+        searchTrends.map(s => s.SearchTerm || s.searchTerm),
+        searchTrends.map(s => s.Count || s.count || 0),
+        'Searches'
+        );
+        } else {
+        showEmpty('chartSearchExpanded', 'No search data yet.');
+        }
+
+        // Views over time line chart
+        if (communityOverTime.length > 0) {
+        makeChart(
+        'chartCommunityOverTime', 'line',
+        communityOverTime.map(d => d.Date || d.date),
+        communityOverTime.map(d => d.Count || d.count || 0),
+        'Views'
+        );
+        } else {
+        showEmpty('chartCommunityOverTime', 'No view data yet.');
+        }
+
+        // Category trends expanded table
+        
+        case 'modalCatTrend':
+        if (catData.length > 0) {
+        makeChart(
+        'chartCatTrendExpanded',
+        catData.length <= 6 ? 'doughnut' : 'bar',
+        catData.map(c => c.CategoryName || c.categoryName || 'Uncategorized'),
+        catData.map(c => c.UserCount || c.userCount || 0),
+        'Users'
+        );
+        renderCategoryTable(catData, 'categoryTrendsTableBodyExpanded');
+        } else {
+        showEmpty('chartCatTrendExpanded', 'No category data yet.');
+        }
+        break;
+        }
+        }
+
+        // ════════════════════════════════════════════════
+        // 7. EXPAND CARD — open modal + render expanded charts
+        // ════════════════════════════════════════════════
+        function expandCard(modalId) {
         const modal = new bootstrap.Modal(document.getElementById(modalId));
         modal.show();
-        document.getElementById(modalId).addEventListener('shown.bs.modal', function () {
-            renderExpandedCharts(modalId);
-        }, { once: true });
-    }
 
-    function renderExpandedCharts(modalId) {
-        if (modalId === 'modalPopular') {
-            makeChart('chartPopularExpanded', 'bar',
-                popularItems.map(i => i.ItemName),
-                popularItems.map(i => i.OwnerCount),
-                'Owners');
-            makeChart('chartCategoryBreakdown',
-                categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
-                categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
-                categoryBreakdown.map(c => c.OwnerCount),
-                'Owners');
+        document.getElementById(modalId).addEventListener(
+        'shown.bs.modal',
+        function () { renderExpandedCharts(modalId); },
+        { once: true }
+        );
         }
-        if (modalId === 'modalMarket') {
-            makeChart('chartMarketExpanded', 'bar',
-                marketDemand.map(i => i.ItemName),
-                marketDemand.map(i => i.CurrentOwners),
-                'Owners');
-            makeChart('chartMarketOverTime', 'line',
-                marketOverTime.map(d => d.Date),
-                marketOverTime.map(d => d.ActiveUsers),
-                'Active Users');
-        }
-        if (modalId === 'modalCatTrend') {
-            makeChart('chartCatTrendExpanded',
-                catData.length <= 6 ? 'doughnut' : 'bar',
-                catData.map(c => c.CategoryName),
-                catData.map(c => c.UserCount),
-                'Users');
-        }
-        if (modalId === 'modalActivity') {
-            makeChart('chartActivityExpanded', 'line',
-                loginActivity.map(d => d.Date),
-                loginActivity.map(d => d.ActiveUsers),
-                'Active Users');
-        }
-        if (modalId === 'modalEngaged') {
-            makeChart('chartEngagedExpanded', 'bar',
-                mostLiked.map(s => s.ShowoffName),
-                mostLiked.map(s => s.LikeCount),
-                'Likes');
-        }
-        if (modalId === 'modalCommunity') {
-            makeChart('chartSearchExpanded', 'bar',
-                searchTrends.map(s => s.SearchTerm),
-                searchTrends.map(s => s.Count),
-                'Searches');
-            makeChart('chartViewsExpanded', 'bar',
-                mostViewed.map(s => s.ShowoffName),
-                mostViewed.map(s => s.ViewCount),
-                'Views');
-            makeChart('chartCatPopExpanded',
-                categoryBreakdown.length <= 6 ? 'doughnut' : 'bar',
-                categoryBreakdown.map(c => c.CategoryName || 'Uncategorized'),
-                categoryBreakdown.map(c => c.OwnerCount),
-                'Owners');
-            makeChart('chartCommunityOverTime', 'line',
-                communityOverTime.map(d => d.Date),
-                communityOverTime.map(d => d.Count),
-                'Views');
-        }
-    }
 
-    function toggleSection(checkbox) {
-        const target = checkbox.dataset.target;
-        document.getElementById(target).style.display = checkbox.checked ? '' : 'none';
+        // ════════════════════════════════════════════════
+        // 8. SECTION TOGGLES
+        // ════════════════════════════════════════════════
+        function toggleSection(cardId, checkbox) {
+        document.getElementById(cardId).style.display = checkbox.checked ? '' : 'none';
+
         const allChecks = document.querySelectorAll('.section-check');
         const allChecked = Array.from(allChecks).every(c => c.checked);
         const anyChecked = Array.from(allChecks).some(c => c.checked);
-        const showAllEl = document.getElementById('showAll');
-        showAllEl.checked = allChecked;
-        showAllEl.indeterminate = !allChecked && anyChecked;
-    }
 
-    function toggleAll(checkbox) {
+        const showAll = document.getElementById('showAll');
+        showAll.checked = allChecked;
+        showAll.indeterminate = !allChecked && anyChecked;
+        }
+
+        function toggleAll(checkbox) {
         document.querySelectorAll('.section-check').forEach(c => {
-            c.checked = checkbox.checked;
-            document.getElementById(c.dataset.target).style.display = checkbox.checked ? '' : 'none';
+        c.checked = checkbox.checked;
         });
-    }
-
-    document.getElementById('filterUser')?.addEventListener('input', applyFilters);
-    document.getElementById('filterItem')?.addEventListener('input', applyFilters);
-    document.getElementById('filterCategory')?.addEventListener('input', applyFilters);
-
-    function applyFilters() {
-        const userQ = document.getElementById('filterUser').value.trim().toLowerCase();
-        const itemQ = document.getElementById('filterItem').value.trim().toLowerCase();
-        const catQ  = document.getElementById('filterCategory').value.trim().toLowerCase();
-        const filtered = popularItems.filter(i => {
-            const matchUser = !userQ || (i.UserName && i.UserName.toLowerCase().includes(userQ));
-            const matchItem = !itemQ || (i.ItemName && i.ItemName.toLowerCase().includes(itemQ));
-            const matchCat  = !catQ  || (i.CategoryName && i.CategoryName.toLowerCase().includes(catQ));
-            return matchUser && matchItem && matchCat;
+        ['cardPopular', 'cardMarket', 'cardActivity', 'cardEngaged', 'cardCommunity']
+        .forEach(id => {
+        document.getElementById(id).style.display = checkbox.checked ? '' : 'none';
         });
-        renderPopularChart(filtered);
-    }
-</script>
+        }
+
+        // ════════════════════════════════════════════════
+        // 9. CATEGORY FILTER FOR POPULAR ITEMS
+        // ════════════════════════════════════════════════
+        function filterPopularByCategory(category) {
+        const filtered = category
+        ? popularItems.filter(i =>
+        (i.CategoryName || i.categoryName || '') === category)
+        : popularItems;
+
+        makeChart(
+        'chartPopular', 'bar',
+        filtered.map(i => i.ItemName || i.itemName),
+        filtered.map(i => i.OwnerCount || i.ownerCount || 0),
+        'Owners'
+        );
+        }
+
+        // ════════════════════════════════════════════════
+        // 10. CATEGORY FILTER FOR MARKET DEMAND
+        // ════════════════════════════════════════════════
+        function filterMarketByCategory(category) {
+        const filtered = category
+        ? marketDemand.filter(i =>
+        (i.CategoryName || i.categoryName || '') === category)
+        : marketDemand;
+
+        makeChart(
+        'chartMarket', 'bar',
+        filtered.map(i => i.ItemName || i.itemName),
+        filtered.map(i => i.CurrentOwners || i.currentOwners || 0),
+        'Owners'
+        );
+        }
+    </script>
 }
