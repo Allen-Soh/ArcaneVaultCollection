@@ -21,11 +21,6 @@
         public int TotalShowoffs { get; set; }
         public string? LastLogin { get; set; }
     }
-    public class CountResult
-    {
-        public int Count { get; set; }
-    }
-
     public class ShowoffView
     {
         public string ShowoffName { get; set; }
@@ -73,5 +68,20 @@
         public List<ShowoffView> MostViewed { get; set; } = new();
         public List<ShowoffEngagement> MostLiked { get; set; } = new();
         public List<CategoryPopularity> CategoryPopularity { get; set; } = new();
+    }
+
+    public class MarketDemandDetailItem
+    {
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public int Start { get; set; }
+        public int Current { get; set; }
+        public int OwnerCount { get; set; }
+        public int Pct { get; set; }
+    }
+
+    public class CountResult
+    {
+        public int Count { get; set; }
     }
 }

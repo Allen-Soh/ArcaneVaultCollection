@@ -2,485 +2,151 @@
 @model ArcaneVaultRP.Pages.InsightPages.IndexModel
 @{
     ViewData["Title"] = "Insights";
-    var marketDays = Model.MarketDays;
-    var communityDays = Model.CommunityDays;
 }
 
-<div class="container mt-4">
-    <h2 class="fw-bold mb-1">Insights</h2>
-    <p class="text-muted small mb-3">Staff only</p>
+<div class="container mt-4" style="max-width:860px;">
 
-    <!-- Filters Button -->
-    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 mb-3"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#filtersPanel">
-        <i class="bi bi-funnel"></i> Filters
-        <i class="bi bi-chevron-down"></i>
-    </button>
-
-    <!-- Filters Panel -->
-    <div class="collapse mb-4" id="filtersPanel">
-        <div class="card card-body border-0 shadow-sm">
-
-            <!-- Search bars -->
-            <p class="text-muted small mb-2">Search</p>
-            <div class="row g-2 mb-3">
-                <div class="col-md-4">
-                    <input type="text" class="form-control form-control-sm"
-                           placeholder="Search users" id="filterUser" />
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control form-control-sm"
-                           placeholder="Search items" id="filterItem" />
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control form-control-sm"
-                           placeholder="Search categories" id="filterCategory" />
-                </div>
-            </div>
-
-            <!-- Show sections -->
-            <p class="text-muted small mb-2">Show sections</p>
-            <div class="border-bottom pb-2 mb-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="showAll"
-                           checked onchange="toggleAll(this)" />
-                    <label class="form-check-label fw-semibold" for="showAll">Show all</label>
-                </div>
-            </div>
-            <div class="row g-1">
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkPopular" checked
-                               data-target="cardPopular"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkPopular">Popular items</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkRising" checked
-                               data-target="cardRising"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkRising">Rising / declining</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkCatTrend" checked
-                               data-target="cardCatTrend"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkCatTrend">Category trends</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkActive" checked
-                               data-target="cardActive"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkActive">Active users</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkEngaged" checked
-                               data-target="cardEngaged"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkEngaged">Top engaged showoffs</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkSearched" checked
-                               data-target="cardSearched"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkSearched">Most-searched terms</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkViewed" checked
-                               data-target="cardViewed"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkViewed">Most-viewed</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input section-check" type="checkbox"
-                               id="chkCatPop" checked
-                               data-target="cardCatPop"
-                               onchange="toggleSection(this)" />
-                        <label class="form-check-label small" for="chkCatPop">Category popularity</label>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="fw-500 mb-1" style="font-size:22px;">Insights</h2>
+        <p class="text-muted" style="font-size:13px;">Staff only · Data refreshes on each page load</p>
     </div>
 
-    <!-- Popular Items -->
-    <p class="text-muted small fw-semibold mb-2">Popular items</p>
-    <div class="card border-0 shadow-sm mb-4 position-relative" id="cardPopular">
-        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold mb-0">Top 10 items</h6>
-            <div class="d-flex gap-2 align-items-center">
-                <select class="form-select form-select-sm" style="width:auto;"
-                        id="popularCategoryFilter" onchange="filterPopularByCategory(this.value)">
-                    <option value="">All Categories</option>
-                    @foreach (var cat in Model.CategoryBreakdown)
-                    {
-                        <option value="@cat.CategoryName">@cat.CategoryName</option>
-                    }
-                </select>
-                <button class="btn btn-sm btn-outline-secondary"
-                        onclick="expandCard('modalPopular')">
-                    <i class="bi bi-arrows-fullscreen"></i>
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <canvas id="chartPopular" height="120"></canvas>
-        </div>
-    </div>
+    <!-- Rows -->
+    <div class="border-top">
 
-    <!-- Market Demand and Trends -->
-    <p class="text-muted small fw-semibold mb-2">Market demand and trends</p>
-    <div class="row g-3 mb-4">
-        <div class="col-md-6" id="cardRising">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Rising / Declining</h6>
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" style="width:auto;"
-                                onchange="window.location.href='?MarketDays=' + this.value + '&CommunityDays=@communityDays'">
-                            <option value="7" selected ="@(Model.CommunityDays == 7)">7 days</option>
-                            <option value="30" selected ="@(Model.CommunityDays == 30)">30 days</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-secondary"
-                                onclick="expandCard('modalMarket')">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
+        <!-- Popular Items -->
+        <a asp-page="./PopularItems"
+           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
+           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
+           onmouseenter="this.style.background='#f8f9fa'"
+           onmouseleave="this.style.background='transparent'">
+            <div style="flex:1;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-trophy-fill text-warning" style="font-size:15px;"></i>
+                    <span class="fw-500" style="font-size:16px;color:#212529;">Popular items</span>
                 </div>
-                <div class="card-body">
-                    <canvas id="chartMarket" height="180"></canvas>
-                </div>
+                @{
+                    var topItem = Model.PopularItems.FirstOrDefault();
+                    var topCat  = Model.CategoryBreakdown.FirstOrDefault();
+                }
+                @if (topItem != null)
+                {
+                    <p class="mb-1" style="font-size:14px;color:#212529;">
+                        Most owned: <strong>@topItem.ItemName</strong>
+                        <span class="text-muted">(@topItem.OwnerCount owners)</span>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size:13px;">
+                        Top category: @(topCat?.CategoryName ?? "—") ·
+                        @Model.PopularItems.Count items tracked across all users
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-0 text-muted" style="font-size:13px;">No item data yet.</p>
+                }
             </div>
-        </div>
-        <div class="col-md-6" id="cardCatTrend">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Category Trends</h6>
-                    <button class="btn btn-sm btn-outline-secondary"
-                            onclick="expandCard('modalCatTrend')">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartCatTrend" height="180"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+            <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>
+        </a>
 
-    <!-- User Activity and Engagement -->
-    <p class="text-muted small fw-semibold mb-2">User activity and engagement</p>
-    <div class="row g-3 mb-4">
-        <div class="col-md-6" id="cardActive">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Active Users (DAU / WAU / MAU)</h6>
-                    <button class="btn btn-sm btn-outline-secondary"
-                            onclick="expandCard('modalActivity')">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
+        <!-- User Activity -->
+        <a asp-page="./UserActivity"
+           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
+           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
+           onmouseenter="this.style.background='#f8f9fa'"
+           onmouseleave="this.style.background='transparent'">
+            <div style="flex:1;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-people-fill text-primary" style="font-size:15px;"></i>
+                    <span class="fw-500" style="font-size:16px;color:#212529;">User activity and engagement</span>
                 </div>
-                <div class="card-body">
-                    <div class="d-flex gap-4 mb-3">
-                        <div class="text-center">
-                            <div class="fw-bold fs-5">@Model.DAU</div>
-                            <small class="text-muted">DAU</small>
-                        </div>
-                        <div class="text-center">
-                            <div class="fw-bold fs-5">@Model.WAU</div>
-                            <small class="text-muted">WAU</small>
-                        </div>
-                        <div class="text-center">
-                            <div class="fw-bold fs-5">@Model.MAU</div>
-                            <small class="text-muted">MAU</small>
-                        </div>
-                    </div>
-                    <canvas id="chartActivity" height="150"></canvas>
-                </div>
+                @{
+                    var mostActive = Model.UserActivities
+                        .OrderByDescending(u => u.TotalLogins)
+                        .FirstOrDefault();
+                }
+                <p class="mb-1" style="font-size:14px;color:#212529;">
+                    Active today: <strong>@Model.DAU</strong> ·
+                    This week: <strong>@Model.WAU</strong> ·
+                    This month: <strong>@Model.MAU</strong>
+                </p>
+                <p class="mb-0 text-muted" style="font-size:13px;">
+                    Most active: @(mostActive?.UserName ?? "—") ·
+                    Last login: @(mostActive?.LastLogin != null
+                        ? DateTime.Parse(mostActive.LastLogin).ToString("dd MMM yyyy")
+                        : "—")
+                </p>
             </div>
-        </div>
-        <div class="col-md-6" id="cardEngaged">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Top Engaged Showoffs</h6>
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" style="width:auto;"
-                                id="engagedCategoryFilter" onchange="filterEngagedByCategory(this.value)">
-                            <option value="">All Categories</option>
-                            @foreach (var cat in Model.CategoryBreakdown)
-                            {
-                                <option value="@cat.CategoryName">@cat.CategoryName</option>
-                            }
-                        </select>
-                        <button class="btn btn-sm btn-outline-secondary"
-                                onclick="expandCard('modalEngaged')">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartEngaged" height="150"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+            <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>
+        </a>
 
-    <!-- Community Interest -->
-    <p class="text-muted small fw-semibold mb-2">Community interest</p>
-    <div class="row g-3 mb-4">
-        <div class="col-md-4" id="cardSearched">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Most-searched terms</h6>
-                    <button class="btn btn-sm btn-outline-secondary"
-                            onclick="expandCard('modalCommunity')">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
+        <!-- Market Demand -->
+        <a asp-page="./MarketDemand"
+           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
+           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
+           onmouseenter="this.style.background='#f8f9fa'"
+           onmouseleave="this.style.background='transparent'">
+            <div style="flex:1;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-graph-up-arrow text-success" style="font-size:15px;"></i>
+                    <span class="fw-500" style="font-size:16px;color:#212529;">Market demand and trends</span>
                 </div>
-                <div class="card-body">
-                    <canvas id="chartSearched" height="180"></canvas>
-                </div>
+                @{
+                    var topMarket = Model.MarketDemand
+                        .OrderByDescending(i => i.CurrentOwners)
+                        .FirstOrDefault();
+                    var topMarketCat = Model.MarketDemand
+                        .GroupBy(i => i.CategoryName)
+                        .OrderByDescending(g => g.Count())
+                        .FirstOrDefault();
+                }
+                @if (topMarket != null)
+                {
+                    <p class="mb-1" style="font-size:14px;color:#212529;">
+                        Trending: <strong>@topMarket.ItemName</strong>
+                        <span class="text-muted">(@topMarket.CurrentOwners owners in the last @Model.MarketDays days)</span>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size:13px;">
+                        Most collected category this week: @(topMarketCat?.Key ?? "—")
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-0 text-muted" style="font-size:13px;">No market data yet.</p>
+                }
             </div>
-        </div>
-        <div class="col-md-4" id="cardViewed">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Most-viewed</h6>
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" style="width:auto;"
-                                onchange="window.location.href='?MarketDays=@marketDays&CommunityDays=' + this.value">
-                            <option value="7" selected="@(Model.CommunityDays == 7)">7 days</option>
-                            <option value="30" selected ="@(Model.CommunityDays == 30)">30 days</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-secondary"
-                                onclick="expandCard('modalCommunity')">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartViewed" height="180"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4" id="cardCatPop">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0">Category popularity</h6>
-                    <button class="btn btn-sm btn-outline-secondary"
-                            onclick="expandCard('modalCommunity')">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartCatPop" height="180"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+            <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>
+        </a>
 
-<!-- Expanded Modals -->
-
-<!-- Popular Items Modal -->
-<div class="modal fade" id="modalPopular" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">Popular Items — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Top 10 Items by Owner Count</h6>
-                        <canvas id="chartPopularExpanded"></canvas>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Category Breakdown</h6>
-                        <canvas id="chartCategoryBreakdown"></canvas>
-                    </div>
+        <!-- Community Interest -->
+        <a asp-page="./CommunityInterest"
+           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
+           style="border-top:0.5px solid #e5e5e5;border-bottom:0.5px solid #e5e5e5; transition:background 0.15s;"
+           onmouseenter="this.style.background='#f8f9fa'"
+           onmouseleave="this.style.background='transparent'">
+            <div style="flex:1;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-heart-fill text-danger" style="font-size:15px;"></i>
+                    <span class="fw-500" style="font-size:16px;color:#212529;">Community interest</span>
                 </div>
+                @{
+                    var totalViews = Model.CommunityInterest.MostViewed.Sum(s => s.ViewCount);
+                    var totalLikes = Model.CommunityInterest.MostViewed.Sum(s => s.LikeCount);
+                    var topSearch  = Model.SearchTrends.FirstOrDefault();
+                    var topShowoff = Model.CommunityInterest.MostViewed.FirstOrDefault();
+                }
+                <p class="mb-1" style="font-size:14px;color:#212529;">
+                    <strong>@totalViews</strong> showoff views this week ·
+                    <strong>@totalLikes</strong> likes this week
+                </p>
+                <p class="mb-0 text-muted" style="font-size:13px;">
+                    Most searched: "@(topSearch?.SearchTerm ?? "—")" ·
+                    Most viewed showoff: "@(topShowoff?.ShowoffName ?? "—")"
+                </p>
             </div>
-        </div>
-    </div>
-</div>
+            <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>
+        </a>
 
-<!-- Market Demand Modal -->
-<div class="modal fade" id="modalMarket" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">Market Demand — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Top Items by Owners</h6>
-                        <canvas id="chartMarketExpanded"></canvas>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Active Users Over Time</h6>
-                        <canvas id="chartMarketOverTime"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Category Trends Modal -->
-<div class="modal fade" id="modalCatTrend" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">Category Trends — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Category Popularity Chart</h6>
-                        <canvas id="chartCatTrendExpanded"></canvas>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Category Breakdown</h6>
-                        <div style="max-height:300px;overflow-y:auto;">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>Category</th>
-                                        <th class="text-end">Users</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="categoryTrendsTableBodyExpanded"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- User Activity Modal -->
-<div class="modal fade" id="modalActivity" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">User Activity — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">Login Activity (Last 30 Days)</h6>
-                        <canvas id="chartActivityExpanded"></canvas>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-semibold mb-3">User Breakdown</h6>
-                        <div style="max-height:300px;overflow-y:auto;">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>User</th>
-                                        <th>Logins</th>
-                                        <th>Showoffs</th>
-                                        <th>Last Login</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var user in Model.UserActivities)
-                                    {
-                                        <tr>
-                                            <td>@user.UserName</td>
-                                            <td>@user.TotalLogins</td>
-                                            <td>@user.TotalShowoffs</td>
-                                            <td class="text-muted small">
-                                                @(user.LastLogin != null
-                                                    ? DateTime.Parse(user.LastLogin).ToString("dd MMM yyyy")
-                                                    : "Never")
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Top Engaged Showoffs Modal -->
-<div class="modal fade" id="modalEngaged" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">Top Engaged Showoffs — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <canvas id="chartEngagedExpanded"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Community Interest Modal -->
-<div class="modal fade" id="modalCommunity" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold">Community Interest — Detail</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <h6 class="fw-semibold mb-3">Most Searched Terms</h6>
-                        <canvas id="chartSearchExpanded"></canvas>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="fw-semibold mb-3">Most Viewed Showoffs</h6>
-                        <canvas id="chartViewsExpanded"></canvas>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="fw-semibold mb-3">Category Popularity</h6>
-                        <canvas id="chartCatPopExpanded"></canvas>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <h6 class="fw-semibold mb-3">Views Over Time</h6>
-                    <canvas id="chartCommunityOverTime"></canvas>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 

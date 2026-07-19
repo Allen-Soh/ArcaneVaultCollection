@@ -304,4 +304,48 @@ public class InsightsController : ControllerBase
 
         return Ok(results);
     }
+
+    // GET: api/Insights/marketdemand/detail
+    [HttpGet("marketdemand/detail")]
+    public ActionResult GetMarketDemandDetail()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT ci.ItemName,
+                 c.CategoryName,
+                 SUM(ci.StartingQuantity) as TotalStart,
+                 SUM(ci.CurrentQuantity) as TotalCurrent,
+                 COUNT(DISTINCT ci.UserName) as OwnerCount
+          FROM CollectionItems ci
+          LEFT JOIN CollectionItemCategories cic ON ci.ItemId = cic.ItemId
+          LEFT JOIN Categories c ON cic.CategoryCode = c.CategoryCode
+          WHERE ci.IsDeleted = 0
+          GROUP BY ci.ItemName
+          ORDER BY (SUM(ci.CurrentQuantity) - SUM(ci.StartingQuantity)) DESC",
+            connection);
+
+        var results = new List<object>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var start = Convert.ToInt32(reader["TotalStart"]);
+            var current = Convert.ToInt32(reader["TotalCurrent"]);
+            var pct = start == 0 ? 0 : (int)Math.Round(((double)(current - start) / start) * 100);
+
+            results.Add(new
+            {
+                Name = reader["ItemName"].ToString(),
+                Category = reader["CategoryName"] == DBNull.Value
+                                ? "Uncategorized" : reader["CategoryName"].ToString(),
+                Start = start,
+                Current = current,
+                OwnerCount = Convert.ToInt32(reader["OwnerCount"]),
+                Pct = pct
+            });
+        }
+
+        return Ok(results);
+    }
 }
