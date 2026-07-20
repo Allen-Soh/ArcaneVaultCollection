@@ -1,0 +1,439 @@
+﻿@page
+@model ArcaneVaultRP.Pages.InsightPages.PopularItemsModel
+@{
+    ViewData["Title"] = "Popular Items";
+}
+
+<div class="container mt-4" style="max-width:860px;">
+
+    <!-- Back + Header -->
+    <div class="mb-1">
+        <a asp-page="./Index"
+           class="text-decoration-none d-inline-flex align-items-center gap-1"
+           style="font-size:13px;">
+            <i class="bi bi-arrow-left" style="font-size:13px;"></i> Insights
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <h1 style="font-size:22px;font-weight:500;margin:0;">Popular items</h1>
+        <select id="catFilter" onchange="applyFilters()"
+                class="form-select form-select-sm" style="width:auto;">
+            <option value="">All categories</option>
+            @foreach (var cat in Model.Categories)
+            {
+                <option value="@cat">@cat</option>
+            }
+        </select>
+    </div>
+    <p class="text-muted mb-4" style="font-size:13px;">
+        Collection ownership across all users
+    </p>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <div class="rounded p-3" style="background:#f8f9fa;">
+                <p class="text-muted mb-1" style="font-size:12px;">Total items tracked</p>
+                <p class="fw-500 mb-0" id="totalItems" style="font-size:22px;">—</p>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="rounded p-3" style="background:#f8f9fa;">
+                <p class="text-muted mb-1" style="font-size:12px;">Most owned item</p>
+                <p class="fw-500 mb-0" id="mostOwned"
+                   style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</p>
+                <p class="text-muted mb-0" id="mostOwnedCount" style="font-size:12px;"></p>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="rounded p-3" style="background:#f8f9fa;">
+                <p class="text-muted mb-1" style="font-size:12px;">Top category</p>
+                <p class="fw-500 mb-0" id="topCat" style="font-size:14px;">—</p>
+                <p class="text-muted mb-0" id="topCatCount" style="font-size:12px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 10 items bar chart — full width -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-1" style="font-size:15px;">Top 10 items by owner count</p>
+        <p class="text-muted mb-3" style="font-size:13px;">
+            How many unique users own each item
+        </p>
+        <div id="barChart" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- Doughnut — full width, own section -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-1" style="font-size:15px;" id="doughnutTitle">
+            Top 10 Category breakdown
+        </p>
+        <p class="text-muted mb-3" style="font-size:13px;" id="doughnutSubtitle">
+            Distribution of items across categories
+        </p>
+
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <canvas id="doughnutCanvas" width="180" height="180"
+                    style="flex-shrink:0;"></canvas>
+            <div style="flex:1;min-width:180px;">
+                <div id="doughnutLegendShort"
+                     style="display:flex;flex-direction:column;gap:5px;"></div>
+                <div id="doughnutLegendFull"
+                     style="display:none;flex-direction:column;gap:5px;"></div>
+                <button id="legendToggleBtn" onclick="toggleLegend()"
+                        class="btn btn-link p-0 mt-2 text-decoration-none d-none align-items-center gap-1"
+                        style="font-size:12px;">
+                    View more <i class="bi bi-arrow-right" style="font-size:12px;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- All items table -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-1" style="font-size:15px;">All items</p>
+        <p class="text-muted mb-3" style="font-size:13px;">
+            Full breakdown with ownership and quantity data
+        </p>
+
+        <div class="d-flex gap-2 mb-3 flex-wrap">
+            <input type="text" id="nameSearch" placeholder="Search item name"
+                   oninput="applyFilters()"
+                   class="form-control form-control-sm" style="flex:1;min-width:160px;" />
+            <input type="text" id="catSearch" placeholder="Search category"
+                   oninput="applyFilters()"
+                   class="form-control form-control-sm" style="flex:1;min-width:160px;" />
+            <select id="sortSelect" onchange="applyFilters()"
+                    class="form-select form-select-sm" style="width:auto;flex-shrink:0;">
+                <option value="owners">Most owners</option>
+                <option value="qty">Highest quantity</option>
+                <option value="name">Item name A – Z</option>
+                <option value="ratio">Duplication ratio</option>
+            </select>
+        </div>
+
+        <div class="border rounded overflow-hidden">
+            <table class="table table-sm mb-0"
+                   style="font-size:13px;table-layout:fixed;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:32%;">Item</th>
+                        <th style="width:22%;">Category</th>
+                        <th class="text-end" style="width:14%;">Owners</th>
+                        <th class="text-end" style="width:16%;">Total qty</th>
+                        <th class="text-end" style="width:16%;">Qty / owner</th>
+                    </tr>
+                </thead>
+                <tbody id="itemTableBody"></tbody>
+            </table>
+            <div id="tableEmpty"
+                 style="display:none;"
+                 class="text-center text-muted py-4" style="font-size:13px;">
+                No items match your search.
+            </div>
+        </div>
+    </div>
+
+    <!-- Most duplicated items -->
+    <div class="border-top pt-4 mb-5">
+        <p class="fw-500 mb-1" style="font-size:15px;">Most duplicated items</p>
+        <p class="text-muted mb-3" style="font-size:13px;">
+            Items where total quantity significantly exceeds unique owner count —
+            indicates collectors own multiples
+        </p>
+        <div id="dupeList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        // ── Data from server ──
+        const items = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items));
+
+        // Normalise property names — handle PascalCase from API
+        items.forEach(i => {
+            i.name     = i.Name     || i.name;
+            i.category = i.Category || i.category || 'Uncategorized';
+            i.owners   = i.Owners   || i.owners   || 0;
+            i.qty      = i.Qty      || i.qty      || 0;
+            i.ratio    = i.Ratio    || i.ratio    || 0;
+        });
+
+        const allCats = [...new Set(items.map(i => i.category))].sort();
+        const colors  = [
+            '#4e79a7','#f28e2b','#e15759','#76b7b2',
+            '#59a14f','#edc948','#b07aa1','#ff9da7',
+            '#9c755f','#bab0ac'
+        ];
+        const LEGEND_LIMIT = 5;
+        let legendExpanded = false;
+        let doughnutCtx    = null;
+
+        // ════════════════════════════════════════════════
+        // FILTER — returns filtered + sorted item list
+        // ════════════════════════════════════════════════
+        function getFiltered() {
+            const catVal = document.getElementById('catFilter').value;
+            const nameQ  = (document.getElementById('nameSearch')?.value || '').trim().toLowerCase();
+            const catQ   = (document.getElementById('catSearch')?.value  || '').trim().toLowerCase();
+            const sort   = document.getElementById('sortSelect')?.value  || 'owners';
+
+            let f = [...items];
+            if (catVal) f = f.filter(i => i.category === catVal);
+            if (nameQ)  f = f.filter(i => i.name.toLowerCase().includes(nameQ));
+            if (catQ)   f = f.filter(i => i.category.toLowerCase().includes(catQ));
+
+            f.sort((a, b) => {
+                if (sort === 'owners') return b.owners - a.owners;
+                if (sort === 'qty')    return b.qty - a.qty;
+                if (sort === 'name')   return a.name.localeCompare(b.name);
+                if (sort === 'ratio')  return b.ratio - a.ratio;
+                return 0;
+            });
+
+            return f;
+        }
+
+        // ════════════════════════════════════════════════
+        // SUMMARY CARDS
+        // ════════════════════════════════════════════════
+        function renderSummary(data) {
+            document.getElementById('totalItems').textContent = data.length;
+
+            const top = [...data].sort((a, b) => b.owners - a.owners)[0];
+            document.getElementById('mostOwned').textContent =
+                top ? top.name : '—';
+            document.getElementById('mostOwnedCount').textContent =
+                top ? `${top.owners} owner${top.owners === 1 ? '' : 's'}` : '';
+
+            const catCounts = {};
+            data.forEach(i => { catCounts[i.category] = (catCounts[i.category] || 0) + 1; });
+            const topCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topCat').textContent =
+                topCat ? topCat[0] : '—';
+            document.getElementById('topCatCount').textContent =
+                topCat ? `${topCat[1]} item${topCat[1] === 1 ? '' : 's'}` : '';
+        }
+
+        // ════════════════════════════════════════════════
+        // BAR CHART — top 10 items by owner count
+        // ════════════════════════════════════════════════
+        function renderBar(data) {
+            const top10     = data.slice(0, 10);
+            const maxOwners = Math.max(...top10.map(i => i.owners), 1);
+
+            document.getElementById('barChart').innerHTML = top10.length === 0
+                ? '<p class="text-muted" style="font-size:13px;">No items to display.</p>'
+                : top10.map(item => {
+                    const w      = Math.round((item.owners / maxOwners) * 100);
+                    const catIdx = allCats.indexOf(item.category);
+                    return `
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:12px;color:#6c757d;width:170px;text-align:right;
+                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                                         flex-shrink:0;">${item.name}</span>
+                            <div style="flex:1;height:16px;background:#f8f9fa;border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${w}%;
+                                            background:${colors[catIdx % colors.length]};
+                                            border-radius:3px;transition:width 0.3s;"></div>
+                            </div>
+                            <span style="font-size:12px;color:#6c757d;width:20px;
+                                         text-align:right;flex-shrink:0;">${item.owners}</span>
+                        </div>`;
+                }).join('');
+        }
+
+        // ════════════════════════════════════════════════
+        // DOUGHNUT — category breakdown OR item breakdown
+        // ════════════════════════════════════════════════
+        function renderDoughnut(data) {
+            const catVal = document.getElementById('catFilter').value;
+            const canvas = document.getElementById('doughnutCanvas');
+            const ctx    = canvas.getContext('2d');
+
+            let entries, titleText, subtitleText;
+
+            if (catVal) {
+                // Item breakdown mode — slices = individual items in selected category
+                const inCat = [...items]
+                    .filter(i => i.category === catVal)
+                    .sort((a, b) => b.owners - a.owners)
+                    .slice(0, 10);
+                entries     = inCat.map(i => [i.name, i.owners]);
+                titleText   = `Item breakdown — ${catVal}`;
+                subtitleText = `Owner count per item within this category`;
+            } else {
+                // Category breakdown mode — slices = categories
+                const catCounts = {};
+                data.forEach(i => {
+                    catCounts[i.category] = (catCounts[i.category] || 0) + 1;
+                });
+                entries     = Object.entries(catCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10);
+                titleText   = 'Top 10 Category breakdown';
+                subtitleText = 'Distribution of items across categories';
+            }
+
+            document.getElementById('doughnutTitle').textContent    = titleText;
+            document.getElementById('doughnutSubtitle').textContent = subtitleText;
+
+            // Draw doughnut
+            const total = entries.reduce((s, [, v]) => s + v, 0);
+            const cx = 90, cy = 90, r = 72, inner = 42;
+            ctx.clearRect(0, 0, 180, 180);
+
+            let angle = -Math.PI / 2;
+            entries.forEach(([, count], idx) => {
+                const slice = (count / total) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, angle, angle + slice);
+                ctx.closePath();
+                ctx.fillStyle = colors[idx % colors.length];
+                ctx.fill();
+                angle += slice;
+            });
+
+            // Centre hole
+            ctx.beginPath();
+            ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+
+            // Centre label
+            ctx.fillStyle = '#111';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(entries.length, cx, cy - 7);
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#888';
+            ctx.fillText(catVal ? 'items' : 'categories', cx, cy + 9);
+
+            // Legend rows
+            const makeLegendRow = ([label, count], idx) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            font-size:12px;padding:1px 0;">
+                    <span style="display:flex;align-items:center;gap:6px;color:#6c757d;">
+                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
+                                     background:${colors[idx % colors.length]};flex-shrink:0;"></span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                                     max-width:160px;">${label}</span>
+                    </span>
+                    <span style="color:#adb5bd;margin-left:8px;flex-shrink:0;">${count}</span>
+                </div>`;
+
+            document.getElementById('doughnutLegendShort').innerHTML =
+                entries.slice(0, LEGEND_LIMIT).map(makeLegendRow).join('');
+            document.getElementById('doughnutLegendFull').innerHTML =
+                entries.map(makeLegendRow).join('');
+
+            const btn = document.getElementById('legendToggleBtn');
+            if (entries.length <= LEGEND_LIMIT) {
+                btn.classList.add('d-none');
+                document.getElementById('doughnutLegendFull').style.display  = 'none';
+                document.getElementById('doughnutLegendShort').style.display = 'flex';
+            } else {
+                btn.classList.remove('d-none');
+                btn.classList.add('d-flex');
+                legendExpanded = false;
+                document.getElementById('doughnutLegendShort').style.display = 'flex';
+                document.getElementById('doughnutLegendFull').style.display  = 'none';
+                btn.innerHTML = `View more <i class="bi bi-arrow-right" style="font-size:12px;"></i>`;
+            }
+        }
+
+        // ════════════════════════════════════════════════
+        // LEGEND TOGGLE
+        // ════════════════════════════════════════════════
+        function toggleLegend() {
+            legendExpanded = !legendExpanded;
+            document.getElementById('doughnutLegendShort').style.display =
+                legendExpanded ? 'none' : 'flex';
+            document.getElementById('doughnutLegendFull').style.display =
+                legendExpanded ? 'flex' : 'none';
+            document.getElementById('legendToggleBtn').innerHTML = legendExpanded
+                ? `Show less <i class="bi bi-arrow-left" style="font-size:12px;"></i>`
+                : `View more <i class="bi bi-arrow-right" style="font-size:12px;"></i>`;
+        }
+
+        // ════════════════════════════════════════════════
+        // ALL ITEMS TABLE
+        // ════════════════════════════════════════════════
+        function renderTable(data) {
+            const tbody = document.getElementById('itemTableBody');
+            const empty = document.getElementById('tableEmpty');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            tbody.innerHTML = data.map((item, idx) => {
+                const border     = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
+                const ratioColor = item.ratio >= 2 ? '#0F6E56' : '#6c757d';
+                return `
+                    <tr style="${border}">
+                        <td style="padding:8px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
+                        <td style="padding:8px 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
+                        <td style="padding:8px 12px;text-align:right;color:#6c757d;">${item.owners}</td>
+                        <td style="padding:8px 12px;text-align:right;color:#6c757d;">${item.qty}</td>
+                        <td style="padding:8px 12px;text-align:right;font-weight:500;color:${ratioColor};">${item.ratio}x</td>
+                    </tr>`;
+            }).join('');
+        }
+
+        // ════════════════════════════════════════════════
+        // MOST DUPLICATED ITEMS
+        // ════════════════════════════════════════════════
+        function renderDupes(data) {
+            const dupes = [...data]
+                .filter(i => i.ratio >= 2)
+                .sort((a, b) => b.ratio - a.ratio)
+                .slice(0, 5);
+
+            const container = document.getElementById('dupeList');
+
+            if (dupes.length === 0) {
+                container.innerHTML =
+                    '<p class="text-muted mb-0" style="font-size:13px;">No items with high duplication detected.</p>';
+                return;
+            }
+
+            container.innerHTML = dupes.map(item => `
+                <div class="d-flex align-items-center justify-content-between p-3 rounded"
+                     style="background:#f8f9fa;border:0.5px solid #dee2e6;">
+                    <div style="overflow:hidden;">
+                        <p class="fw-500 mb-0" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</p>
+                        <p class="text-muted mb-0" style="font-size:12px;">
+                            ${item.category} · ${item.owners} owner${item.owners === 1 ? '' : 's'}, ${item.qty} total
+                        </p>
+                    </div>
+                    <div class="text-end flex-shrink-0 ms-3">
+                        <p class="fw-500 mb-0" style="font-size:15px;color:#0F6E56;">${item.ratio}x</p>
+                        <p class="text-muted mb-0" style="font-size:11px;">qty per owner</p>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ════════════════════════════════════════════════
+        // APPLY ALL — master render function
+        // ════════════════════════════════════════════════
+        function applyFilters() {
+            const data = getFiltered();
+            renderSummary(data);
+            renderBar(data);
+            renderDoughnut(data);
+            renderTable(data);
+            renderDupes(data);
+        }
+
+        // ── Init ──
+        applyFilters();
+    </script>
+}

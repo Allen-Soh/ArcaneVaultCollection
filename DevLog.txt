@@ -217,3 +217,11 @@
 
 [To Do]
 - Add new Popular items/User Activity and Engagement/Community Interest details page
+
+===== DEV LOG (20/7/2026) =====
+[Done]
+- Added Popular Items details page
+
+[To Do]
+- For multiplier, make the Highlighted values to be bolder for more noticablility
+- Add new User Activity and Engagement/Community Interest details page

@@ -84,4 +84,13 @@
     {
         public int Count { get; set; }
     }
+
+    public class PopularItemDetail
+    {
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public int Owners { get; set; }
+        public int Qty { get; set; }
+        public double Ratio { get; set; }
+    }
 }

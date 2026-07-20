@@ -348,4 +348,44 @@ public class InsightsController : ControllerBase
 
         return Ok(results);
     }
+
+    // GET: api/Insights/popularitems/detail
+    [HttpGet("popularitems/detail")]
+    public ActionResult GetPopularItemsDetail()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT ci.ItemName,
+                 c.CategoryName,
+                 COUNT(DISTINCT ci.UserName) as Owners,
+                 SUM(ci.CurrentQuantity) as TotalQty
+          FROM CollectionItems ci
+          LEFT JOIN CollectionItemCategories cic ON ci.ItemId = cic.ItemId
+          LEFT JOIN Categories c ON cic.CategoryCode = c.CategoryCode
+          WHERE ci.IsDeleted = 0
+          GROUP BY ci.ItemName
+          ORDER BY Owners DESC",
+            connection);
+
+        var results = new List<object>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var owners = Convert.ToInt32(reader["Owners"]);
+            var qty = Convert.ToInt32(reader["TotalQty"]);
+            results.Add(new
+            {
+                Name = reader["ItemName"].ToString(),
+                Category = reader["CategoryName"] == DBNull.Value
+                            ? "Uncategorized" : reader["CategoryName"].ToString(),
+                Owners = owners,
+                Qty = qty,
+                Ratio = owners == 0 ? 0.0 : Math.Round((double)qty / owners, 1)
+            });
+        }
+
+        return Ok(results);
+    }
 }
