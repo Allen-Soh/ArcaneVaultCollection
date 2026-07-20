@@ -146,19 +146,23 @@
     <div class="border-top pt-4 mb-4">
         <p class="fw-500 mb-1" style="font-size:15px;">Starting vs current quantity</p>
         <p class="text-muted mb-3" style="font-size:13px;">Per item across all users</p>
-        <div class="border rounded overflow-hidden">
-            <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;">
-                <thead class="table-light">
+        <div class="border rounded overflow-hidden" style="position:relative;">
+            <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
+                <thead class="table-light" style="position:sticky;top:0;z-index:1;">
                     <tr>
-                        <th style="width:38%;">Item</th>
-                        <th style="width:22%;">Category</th>
+                        <th style="width:25%;">Item</th>
+                        <th style="width:30%;">Category</th>
                         <th class="text-end" style="width:15%;">Start</th>
                         <th class="text-end" style="width:15%;">Current</th>
                         <th class="text-center" style="width:10%;">Status</th>
                     </tr>
                 </thead>
-                <tbody id="qtyTableBody"></tbody>
             </table>
+            <div style="position:relative;overflow:hidden;">
+                <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;margin:0;">
+                    <tbody id="qtyTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -302,6 +306,110 @@
                             </td>
                         </tr>`;
             }).join('');
+        }
+
+        // ════════════════════════════════════════════════
+        // VIRTUAL SCROLL — shared utility
+        // ════════════════════════════════════════════════
+        const ROW_HEIGHT = 37;   // px — must match actual rendered row height
+        const BUFFER = 5;    // extra rows above/below viewport
+        const THRESHOLD = 12;   // min rows before virtual scroll activates
+
+        function createVirtualTable(containerId, data, renderRowFn, colCount) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // Below threshold — render normally, no scroll wrapper needed
+            if (data.length <= THRESHOLD) {
+                container.style.height = '';
+                container.style.overflow = '';
+                container.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const totalHeight = data.length * ROW_HEIGHT;
+            const visibleHeight = ROW_HEIGHT * THRESHOLD;  // fixed container height
+
+            // Wrap container in scrollable div
+            const wrapper = container.closest('.virtual-scroll-wrapper') || (() => {
+                const w = document.createElement('div');
+                w.className = 'virtual-scroll-wrapper';
+                w.style.cssText = `
+                    height:${visibleHeight}px;
+                    overflow-y:auto;
+                    position:relative;
+                    border-radius:0 0 4px 4px;`;
+                container.parentNode.insertBefore(w, container);
+                w.appendChild(container);
+                return w;
+            })();
+
+            // Spacer div — gives scroll the correct total height
+            let spacer = wrapper.querySelector('.vs-spacer');
+            if (!spacer) {
+                spacer = document.createElement('div');
+                spacer.className = 'vs-spacer';
+                spacer.style.cssText = 'position:absolute;top:0;left:0;width:1px;pointer-events:none;';
+                wrapper.appendChild(spacer);
+            }
+            spacer.style.height = `${totalHeight}px`;
+
+            // tbody stays position:absolute so it overlaps spacer correctly
+            container.style.cssText = `
+                position:absolute;
+                top:0;left:0;right:0;
+                will-change:transform;`;
+
+            function renderVisible() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    data.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+
+                const offsetY = startIdx * ROW_HEIGHT;
+                container.style.transform = `translateY(${offsetY}px)`;
+                container.innerHTML = data
+                    .slice(startIdx, endIdx)
+                    .map((row, i) => renderRowFn(row, startIdx + i))
+                    .join('');
+            }
+
+            // Throttled scroll handler
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { renderVisible(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            renderVisible();
+        }
+
+        // ════════════════════════════════════════════════
+        // STARTING VS CURRENT QTY TABLE — virtual scroll
+        // (for MarketDemand page)
+        // ════════════════════════════════════════════════
+        function renderQtyTable() {
+            function rowFn(item, idx) {
+                const diff = item.current - item.start;
+                const dotColor = diff > 0 ? '#1D9E75' : diff < 0 ? '#E24B4A' : '#6c757d';
+                const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
+                return `
+                    <tr style="${border}height:${ROW_HEIGHT}px;">
+                        <td style="padding:7px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
+                        <td style="padding:7px 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
+                        <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.start}</td>
+                        <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.current}</td>
+                        <td style="padding:7px 12px;text-align:center;">
+                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>
+                        </td>
+                    </tr>`;
+            }
+
+            createVirtualTable('qtyTableBody', allItems, rowFn, 5);
         }
 
         // ── At-risk items (pct ≤ -20) ──

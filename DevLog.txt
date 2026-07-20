@@ -225,3 +225,10 @@
 [To Do]
 - For multiplier, make the Highlighted values to be bolder for more noticablility
 - Add new User Activity and Engagement/Community Interest details page
+
+===== DEV LOG (20/7/2026) - Part 2 =====
+[Done]
+- Added virtual scroller to "All Items" and "Starting vs current quantity" tables
+
+[To Do]
+- Fix table header and body column alignment, for both with less than 12 and more than 12 items

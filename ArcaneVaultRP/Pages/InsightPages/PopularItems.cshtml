@@ -113,10 +113,9 @@
             </select>
         </div>
 
-        <div class="border rounded overflow-hidden">
-            <table class="table table-sm mb-0"
-                   style="font-size:13px;table-layout:fixed;">
-                <thead class="table-light">
+        <div class="border rounded overflow-hidden" style="position:relative;">
+            <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
+                <thead class="table-light" style="position:sticky;top:0;z-index:1;">
                     <tr>
                         <th style="width:32%;">Item</th>
                         <th style="width:22%;">Category</th>
@@ -125,10 +124,14 @@
                         <th class="text-end" style="width:16%;">Qty / owner</th>
                     </tr>
                 </thead>
-                <tbody id="itemTableBody"></tbody>
             </table>
-            <div id="tableEmpty"
-                 style="display:none;"
+            <!-- tbody lives outside thead so virtual scroll wrapper can take over -->
+            <div style="position:relative;overflow:hidden;">
+                <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;margin:0;">
+                    <tbody id="itemTableBody"></tbody>
+                </table>
+            </div>
+            <div id="tableEmpty" style="display:none;"
                  class="text-center text-muted py-4" style="font-size:13px;">
                 No items match your search.
             </div>
@@ -323,7 +326,7 @@
                         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
                                      max-width:160px;">${label}</span>
                     </span>
-                    <span style="color:#adb5bd;margin-left:8px;flex-shrink:0;">${count}</span>
+                    <span style="color:#6c757d;margin-left:8px;flex-shrink:0;">${count}</span>
                 </div>`;
 
             document.getElementById('doughnutLegendShort').innerHTML =
@@ -361,31 +364,117 @@
         }
 
         // ════════════════════════════════════════════════
-        // ALL ITEMS TABLE
+        // VIRTUAL SCROLL — shared utility
+        // ════════════════════════════════════════════════
+        const ROW_HEIGHT = 37;   // px — must match actual rendered row height
+        const BUFFER = 5;    // extra rows above/below viewport
+        const THRESHOLD = 12;   // min rows before virtual scroll activates
+
+        function createVirtualTable(containerId, data, renderRowFn, colCount) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // Below threshold — render normally, no scroll wrapper needed
+            if (data.length <= THRESHOLD) {
+                container.style.height = '';
+                container.style.overflow = '';
+                container.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const totalHeight = data.length * ROW_HEIGHT;
+            const visibleHeight = ROW_HEIGHT * THRESHOLD;  // fixed container height
+
+            // Wrap container in scrollable div
+            const wrapper = container.closest('.virtual-scroll-wrapper') || (() => {
+                const w = document.createElement('div');
+                w.className = 'virtual-scroll-wrapper';
+                w.style.cssText = `
+                    height:${visibleHeight}px;
+                    overflow-y:auto;
+                    position:relative;
+                    border-radius:0 0 4px 4px;`;
+                container.parentNode.insertBefore(w, container);
+                w.appendChild(container);
+                return w;
+            })();
+
+            // Spacer div — gives scroll the correct total height
+            let spacer = wrapper.querySelector('.vs-spacer');
+            if (!spacer) {
+                spacer = document.createElement('div');
+                spacer.className = 'vs-spacer';
+                spacer.style.cssText = 'position:absolute;top:0;left:0;width:1px;pointer-events:none;';
+                wrapper.appendChild(spacer);
+            }
+            spacer.style.height = `${totalHeight}px`;
+
+            // tbody stays position:absolute so it overlaps spacer correctly
+            container.style.cssText = `
+                position:absolute;
+                top:0;left:0;right:0;
+                will-change:transform;`;
+
+            function renderVisible() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    data.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+
+                const offsetY = startIdx * ROW_HEIGHT;
+                container.style.transform = `translateY(${offsetY}px)`;
+                container.innerHTML = data
+                    .slice(startIdx, endIdx)
+                    .map((row, i) => renderRowFn(row, startIdx + i))
+                    .join('');
+            }
+
+            // Throttled scroll handler
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { renderVisible(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            renderVisible();
+        }
+
+        // ════════════════════════════════════════════════
+        // ALL ITEMS TABLE — virtual scroll
         // ════════════════════════════════════════════════
         function renderTable(data) {
-            const tbody = document.getElementById('itemTableBody');
             const empty = document.getElementById('tableEmpty');
 
             if (data.length === 0) {
-                tbody.innerHTML = '';
                 empty.style.display = 'block';
+                // Clear any existing virtual scroll
+                const wrapper = document.querySelector('#itemTableBody .virtual-scroll-wrapper')
+                    || document.getElementById('itemTableBody')?.closest('.virtual-scroll-wrapper');
+                if (wrapper) wrapper.style.height = '0';
+                document.getElementById('itemTableBody').innerHTML = '';
                 return;
             }
 
             empty.style.display = 'none';
-            tbody.innerHTML = data.map((item, idx) => {
-                const border     = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
-                const ratioColor = item.ratio >= 2 ? '#0F6E56' : '#6c757d';
+
+            function rowFn(item, idx) {
+                const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
+                const ratioColor = item.ratio >= 2 ? '#0eb034' : '#6c757d';
                 return `
-                    <tr style="${border}">
+                    <tr style="${border}height:${ROW_HEIGHT}px;">
                         <td style="padding:8px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
                         <td style="padding:8px 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
                         <td style="padding:8px 12px;text-align:right;color:#6c757d;">${item.owners}</td>
                         <td style="padding:8px 12px;text-align:right;color:#6c757d;">${item.qty}</td>
                         <td style="padding:8px 12px;text-align:right;font-weight:500;color:${ratioColor};">${item.ratio}x</td>
                     </tr>`;
-            }).join('');
+            }
+
+            createVirtualTable('itemTableBody', data, rowFn, 5);
         }
 
         // ════════════════════════════════════════════════
