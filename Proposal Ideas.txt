@@ -96,3 +96,7 @@ Category popularity by user count
 _ Item progress loading does not work.
 _ Plans to go with original idea of Create, Edit and Delete being their own separate Razor Page.
 _ Plans to improve UI and UX will take a pause on that
+
+~~~~~~~~~~~~~ Additional Features Notes ~~~~~~~~~~~~~
+_ Add user settings for user and staff which allows uploads of profile which will be shown circular, but can be clicked to view the whole image as the shape uploaded
+_ Under user settings, add password reset, password change, username change and email change, all with mfa
