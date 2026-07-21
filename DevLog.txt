@@ -239,3 +239,10 @@
 
 [To Do]
 - Add new User Activity and Engagement/Community Interest details page
+
+===== DEV LOG (21/7/2026) - Part 2 =====
+[Done]
+- Fixed table bottom margin from colliding with top divider from following section
+
+[To Do]
+- Add new User Activity and Engagement/Community Interest details page
