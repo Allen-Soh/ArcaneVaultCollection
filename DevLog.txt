@@ -232,3 +232,10 @@
 
 [To Do]
 - Fix table header and body column alignment, for both with less than 12 and more than 12 items
+
+===== DEV LOG (21/7/2026) =====
+[Done]
+- Fixed table header and body column alignments for both with <= && > 12 items
+
+[To Do]
+- Add new User Activity and Engagement/Community Interest details page

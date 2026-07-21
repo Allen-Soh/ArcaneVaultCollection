@@ -91,50 +91,31 @@
     </div>
 
     <!-- All items table -->
-    <div class="border-top pt-4 mb-4">
-        <p class="fw-500 mb-1" style="font-size:15px;">All items</p>
-        <p class="text-muted mb-3" style="font-size:13px;">
-            Full breakdown with ownership and quantity data
-        </p>
-
-        <div class="d-flex gap-2 mb-3 flex-wrap">
-            <input type="text" id="nameSearch" placeholder="Search item name"
-                   oninput="applyFilters()"
-                   class="form-control form-control-sm" style="flex:1;min-width:160px;" />
-            <input type="text" id="catSearch" placeholder="Search category"
-                   oninput="applyFilters()"
-                   class="form-control form-control-sm" style="flex:1;min-width:160px;" />
-            <select id="sortSelect" onchange="applyFilters()"
-                    class="form-select form-select-sm" style="width:auto;flex-shrink:0;">
-                <option value="owners">Most owners</option>
-                <option value="qty">Highest quantity</option>
-                <option value="name">Item name A – Z</option>
-                <option value="ratio">Duplication ratio</option>
-            </select>
-        </div>
-
-        <div class="border rounded overflow-hidden" style="position:relative;">
+    <div class="border rounded overflow-hidden" style="position:relative;">
+        <div id="itemTableWrapper" style="overflow-y:auto;">
             <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
-                <thead class="table-light" style="position:sticky;top:0;z-index:1;">
+                <colgroup>
+                    <col style="width:32%;" />
+                    <col style="width:22%;" />
+                    <col style="width:14%;" />
+                    <col style="width:16%;" />
+                    <col style="width:16%;" />
+                </colgroup>
+                <thead class="table-light" style="position:sticky;top:0;z-index:2;">
                     <tr>
-                        <th style="width:32%;">Item</th>
-                        <th style="width:22%;">Category</th>
-                        <th class="text-end" style="width:14%;">Owners</th>
-                        <th class="text-end" style="width:16%;">Total qty</th>
-                        <th class="text-end" style="width:16%;">Qty / owner</th>
+                        <th style="padding:8px 12px;">Item</th>
+                        <th style="padding:8px 12px;">Category</th>
+                        <th style="padding:8px 12px;text-align:right;">Owners</th>
+                        <th style="padding:8px 12px;text-align:right;">Total qty</th>
+                        <th style="padding:8px 12px;text-align:right;">Qty / owner</th>
                     </tr>
                 </thead>
+                <tbody id="itemTableBody"></tbody>
             </table>
-            <!-- tbody lives outside thead so virtual scroll wrapper can take over -->
-            <div style="position:relative;overflow:hidden;">
-                <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;margin:0;">
-                    <tbody id="itemTableBody"></tbody>
-                </table>
-            </div>
-            <div id="tableEmpty" style="display:none;"
-                 class="text-center text-muted py-4" style="font-size:13px;">
-                No items match your search.
-            </div>
+        </div>
+        <div id="tableEmpty" style="display:none;"
+             class="text-center text-muted py-4" style="font-size:13px;">
+            No items match your search.
         </div>
     </div>
 
@@ -364,58 +345,36 @@
         }
 
         // ════════════════════════════════════════════════
-        // VIRTUAL SCROLL — shared utility
+        // VIRTUAL SCROLL — revised
+        // Single table, wrapper div scrolls, thead stays sticky
         // ════════════════════════════════════════════════
-        const ROW_HEIGHT = 37;   // px — must match actual rendered row height
-        const BUFFER = 5;    // extra rows above/below viewport
-        const THRESHOLD = 12;   // min rows before virtual scroll activates
+        const ROW_HEIGHT = 37;
+        const BUFFER = 5;
+        const THRESHOLD = 12;
 
-        function createVirtualTable(containerId, data, renderRowFn, colCount) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
 
-            // Below threshold — render normally, no scroll wrapper needed
+            // Below threshold — render all rows normally, no fixed height
             if (data.length <= THRESHOLD) {
-                container.style.height = '';
-                container.style.overflow = '';
-                container.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
                 return;
             }
 
-            const totalHeight = data.length * ROW_HEIGHT;
-            const visibleHeight = ROW_HEIGHT * THRESHOLD;  // fixed container height
+            // Fixed visible height — 12 rows + 1 partial to hint scrollability
+            const visibleHeight = ROW_HEIGHT * 12 + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
 
-            // Wrap container in scrollable div
-            const wrapper = container.closest('.virtual-scroll-wrapper') || (() => {
-                const w = document.createElement('div');
-                w.className = 'virtual-scroll-wrapper';
-                w.style.cssText = `
-                    height:${visibleHeight}px;
-                    overflow-y:auto;
-                    position:relative;
-                    border-radius:0 0 4px 4px;`;
-                container.parentNode.insertBefore(w, container);
-                w.appendChild(container);
-                return w;
-            })();
-
-            // Spacer div — gives scroll the correct total height
-            let spacer = wrapper.querySelector('.vs-spacer');
-            if (!spacer) {
-                spacer = document.createElement('div');
-                spacer.className = 'vs-spacer';
-                spacer.style.cssText = 'position:absolute;top:0;left:0;width:1px;pointer-events:none;';
-                wrapper.appendChild(spacer);
-            }
-            spacer.style.height = `${totalHeight}px`;
-
-            // tbody stays position:absolute so it overlaps spacer correctly
-            container.style.cssText = `
-                position:absolute;
-                top:0;left:0;right:0;
-                will-change:transform;`;
-
-            function renderVisible() {
+            // Total spacer rows to give correct scroll height
+            // We pad tbody with invisible spacer rows above and below
+            function render() {
                 const scrollTop = wrapper.scrollTop;
                 const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
                 const endIdx = Math.min(
@@ -423,39 +382,50 @@
                     Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
                 );
 
-                const offsetY = startIdx * ROW_HEIGHT;
-                container.style.transform = `translateY(${offsetY}px)`;
-                container.innerHTML = data
-                    .slice(startIdx, endIdx)
-                    .map((row, i) => renderRowFn(row, startIdx + i))
-                    .join('');
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+
+                // Pad rows keep the scroll height correct without rendering all data
+                const topSpacer = topPad > 0
+                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+                const bottomSpacer = bottomPad > 0
+                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+
+                tbody.innerHTML =
+                    topSpacer +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    bottomSpacer;
             }
 
-            // Throttled scroll handler
+            // Throttle scroll events with requestAnimationFrame
             let ticking = false;
             wrapper.onscroll = () => {
                 if (!ticking) {
-                    requestAnimationFrame(() => { renderVisible(); ticking = false; });
+                    requestAnimationFrame(() => { render(); ticking = false; });
                     ticking = true;
                 }
             };
 
-            renderVisible();
+            // Reset scroll to top when data changes
+            wrapper.scrollTop = 0;
+            render();
         }
 
         // ════════════════════════════════════════════════
-        // ALL ITEMS TABLE — virtual scroll
+        // ALL ITEMS TABLE
         // ════════════════════════════════════════════════
         function renderTable(data) {
             const empty = document.getElementById('tableEmpty');
 
             if (data.length === 0) {
                 empty.style.display = 'block';
-                // Clear any existing virtual scroll
-                const wrapper = document.querySelector('#itemTableBody .virtual-scroll-wrapper')
-                    || document.getElementById('itemTableBody')?.closest('.virtual-scroll-wrapper');
-                if (wrapper) wrapper.style.height = '0';
                 document.getElementById('itemTableBody').innerHTML = '';
+                const wrapper = document.getElementById('itemTableWrapper');
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
                 return;
             }
 
@@ -463,7 +433,7 @@
 
             function rowFn(item, idx) {
                 const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
-                const ratioColor = item.ratio >= 2 ? '#0eb034' : '#6c757d';
+                const ratioColor = item.ratio >= 2 ? '#0F6E56' : '#6c757d';
                 return `
                     <tr style="${border}height:${ROW_HEIGHT}px;">
                         <td style="padding:8px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
@@ -474,7 +444,7 @@
                     </tr>`;
             }
 
-            createVirtualTable('itemTableBody', data, rowFn, 5);
+            createVirtualTable('itemTableWrapper', 'itemTableBody', data, rowFn);
         }
 
         // ════════════════════════════════════════════════
