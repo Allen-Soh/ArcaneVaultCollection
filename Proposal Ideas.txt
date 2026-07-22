@@ -98,5 +98,8 @@ _ Plans to go with original idea of Create, Edit and Delete being their own sepa
 _ Plans to improve UI and UX will take a pause on that
 
 ~~~~~~~~~~~~~ Additional Features Notes ~~~~~~~~~~~~~
+*Settings*
 _ Add user settings for user and staff which allows uploads of profile which will be shown circular, but can be clicked to view the whole image as the shape uploaded
 _ Under user settings, add password reset, password change, username change and email change, all with mfa
+
+*Home Page*

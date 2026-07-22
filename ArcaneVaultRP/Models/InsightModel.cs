@@ -93,4 +93,20 @@
         public int Qty { get; set; }
         public double Ratio { get; set; }
     }
+
+    public class UserActivityDetail
+    {
+        public List<TimeSeriesPoint> LoginActivity { get; set; } = new();
+        public int[] DayOfWeek { get; set; } = new int[7];
+        public int[] MonthData { get; set; } = new int[12];
+        public List<UserActivityUser> Users { get; set; } = new();
+    }
+
+    public class UserActivityUser
+    {
+        public string Name { get; set; }
+        public int Logins { get; set; }
+        public int Showoffs { get; set; }
+        public string? LastLogin { get; set; }
+    }
 }

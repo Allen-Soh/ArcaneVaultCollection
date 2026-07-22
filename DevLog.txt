@@ -246,3 +246,10 @@
 
 [To Do]
 - Add new User Activity and Engagement/Community Interest details page
+
+===== DEV LOG (22/7/2026) =====
+[Done]
+- Added User Activity and Engagement details page
+
+[To Do]
+- Add new Community Interest details page

@@ -388,4 +388,105 @@ public class InsightsController : ControllerBase
 
         return Ok(results);
     }
+
+    // GET: api/Insights/useractivity/detail?days=30
+    [HttpGet("useractivity/detail")]
+    public ActionResult GetUserActivityDetail([FromQuery] int days = 30)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Login activity over time
+        var activityCommand = new SqliteCommand(
+            @"SELECT DATE(LoggedInAt) as Date, COUNT(DISTINCT UserName) as Count
+          FROM LoginLogs
+          WHERE LoggedInAt >= @Since
+          GROUP BY DATE(LoggedInAt)
+          ORDER BY Date ASC",
+            connection);
+        activityCommand.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var loginActivity = new List<object>();
+        using var actReader = activityCommand.ExecuteReader();
+        while (actReader.Read())
+        {
+            loginActivity.Add(new
+            {
+                Date = actReader["Date"].ToString(),
+                Count = Convert.ToInt32(actReader["Count"])
+            });
+        }
+
+        // Day of week breakdown
+        var dowCommand = new SqliteCommand(
+            @"SELECT STRFTIME('%w', LoggedInAt) as DayOfWeek, COUNT(*) as Count
+          FROM LoginLogs
+          WHERE LoggedInAt >= @Since
+          GROUP BY DayOfWeek
+          ORDER BY DayOfWeek",
+            connection);
+        dowCommand.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var dowData = new int[7];
+        using var dowReader = dowCommand.ExecuteReader();
+        while (dowReader.Read())
+        {
+            var idx = Convert.ToInt32(dowReader["DayOfWeek"]);
+            dowData[idx] = Convert.ToInt32(dowReader["Count"]);
+        }
+
+        // Month breakdown
+        var monthCommand = new SqliteCommand(
+            @"SELECT STRFTIME('%m', LoggedInAt) as Month, COUNT(*) as Count
+          FROM LoginLogs
+          WHERE LoggedInAt >= @Since
+          GROUP BY Month
+          ORDER BY Month",
+            connection);
+        monthCommand.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var monthData = new int[12];
+        using var monthReader = monthCommand.ExecuteReader();
+        while (monthReader.Read())
+        {
+            var idx = Convert.ToInt32(monthReader["Month"]) - 1;
+            monthData[idx] = Convert.ToInt32(monthReader["Count"]);
+        }
+
+        // Per-user breakdown
+        var userCommand = new SqliteCommand(
+            @"SELECT u.UserName,
+                 COUNT(DISTINCT ll.LogId) as TotalLogins,
+                 COUNT(DISTINCT s.ShowoffId) as TotalShowoffs,
+                 MAX(ll.LoggedInAt) as LastLogin
+          FROM ArcaneVaultUsers u
+          LEFT JOIN LoginLogs ll ON u.UserName = ll.UserName
+          LEFT JOIN Showoffs s ON u.UserName = s.UserName AND s.IsDeleted = 0
+          WHERE u.IsDeleted = 0
+          GROUP BY u.UserName
+          ORDER BY TotalLogins DESC",
+            connection);
+
+        var users = new List<object>();
+        using var userReader = userCommand.ExecuteReader();
+        while (userReader.Read())
+        {
+            users.Add(new
+            {
+                Name = userReader["UserName"].ToString(),
+                Logins = Convert.ToInt32(userReader["TotalLogins"]),
+                Showoffs = Convert.ToInt32(userReader["TotalShowoffs"]),
+                LastLogin = userReader["LastLogin"] == DBNull.Value
+                                ? null : userReader["LastLogin"].ToString()
+            });
+        }
+
+        return Ok(new
+        {
+            LoginActivity = loginActivity,
+            DayOfWeek = dowData,
+            MonthData = monthData,
+            Users = users
+        });
+    }
 }
