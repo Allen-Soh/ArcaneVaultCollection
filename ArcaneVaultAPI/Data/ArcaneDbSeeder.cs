@@ -29,7 +29,8 @@
                         Email = "admin@arcanevault.com",
                         IsDeleted = false,
                         RoleId = 1,
-                        Password = "Admin123"
+                        Password = "Admin123",
+                        Country = "Singapore"
                     },
                     new ArcaneVaultUser
                     {
@@ -37,7 +38,8 @@
                         Email = "allen@example.com",
                         IsDeleted = false,
                         RoleId = 2,
-                        Password = "Password123"
+                        Password = "Password123",
+                        Country = "Malaysia"
                     },
                     new ArcaneVaultUser
                     {
@@ -45,7 +47,8 @@
                         Email = "enderfunneh@gmail.com",
                         IsDeleted = false,
                         RoleId = 2,
-                        Password = "Password123"
+                        Password = "Password123",
+                        Country = "Singapore"
                     },
                     new ArcaneVaultUser
                     {
@@ -53,7 +56,8 @@
                         Email = "altiasvas@gmail.com",
                         IsDeleted = false,
                         RoleId = 2,
-                        Password = "Password123"
+                        Password = "Password123",
+                        Country = "Malaysia"
                     }
                 );
                 context.SaveChanges();

@@ -109,4 +109,11 @@
         public int Showoffs { get; set; }
         public string? LastLogin { get; set; }
     }
+
+    public class CountryDemographic
+    {
+        public string Country { get; set; }
+        public int UserCount { get; set; }
+        public double Percentage { get; set; }
+    }
 }

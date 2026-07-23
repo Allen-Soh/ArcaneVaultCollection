@@ -14,6 +14,7 @@ public class UserActivityModel : PageModel
     }
 
     public UserActivityDetail ActivityDetail { get; set; } = new();
+    public List<CountryDemographic> CountryData { get; set; } = new();
     public int DAU { get; set; }
     public int WAU { get; set; }
     public int MAU { get; set; }
@@ -30,7 +31,6 @@ public class UserActivityModel : PageModel
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-        // DAU / WAU / MAU
         var dauRes = await httpClient.GetFromJsonAsync<CountResult>("LoginLog/dau");
         var wauRes = await httpClient.GetFromJsonAsync<CountResult>("LoginLog/wau");
         var mauRes = await httpClient.GetFromJsonAsync<CountResult>("LoginLog/mau");
@@ -38,10 +38,14 @@ public class UserActivityModel : PageModel
         WAU = wauRes?.Count ?? 0;
         MAU = mauRes?.Count ?? 0;
 
-        // Detail data
         ActivityDetail = await httpClient
             .GetFromJsonAsync<UserActivityDetail>($"Insights/useractivity/detail?days={Days}")
             ?? new UserActivityDetail();
+
+        // Country demographic
+        CountryData = await httpClient
+            .GetFromJsonAsync<List<CountryDemographic>>("Insights/countrydemographic")
+            ?? new List<CountryDemographic>();
 
         return Page();
     }

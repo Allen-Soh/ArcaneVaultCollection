@@ -26,6 +26,9 @@ namespace ArcaneVaultRP.Pages
             [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
             public string Email { get; set; } = string.Empty;
 
+            [Required(ErrorMessage = "Please select your country.")]
+            public string Country { get; set; } = string.Empty;
+
             [Required(ErrorMessage = "Password is required.")]
             [DataType(DataType.Password)]
             [StringLength(50, ErrorMessage = "Password must be at least 6 characters long.", MinimumLength = 6)]
@@ -84,7 +87,8 @@ namespace ArcaneVaultRP.Pages
                 Email = Input.Email,
                 IsDeleted = false,
                 RoleId = 2,
-                Password = Input.Password
+                Password = Input.Password,
+                Country = Input.Country
             };
 
             var response = await httpClient.PostAsJsonAsync("ArcaneVaultUser", newUser);

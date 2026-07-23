@@ -106,6 +106,59 @@
         <div id="breakdownBars" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
+    <!-- Country demographic -->
+    <div class="border-top pt-4 mb-5">
+        <p class="fw-500 mb-1" style="font-size:15px;">Country demographic</p>
+        <p class="text-muted mb-3" style="font-size:13px;">
+            Where your users are from — all registered users
+        </p>
+
+        @if (!Model.CountryData.Any())
+        {
+            <p class="text-muted" style="font-size:13px;">No country data yet.</p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                @foreach (var (country, idx) in Model.CountryData.Select((c, i) => (c, i)))
+                {
+                    var flag = ArcaneVaultRP.Helpers.CountryHelper.GetFlag(country.Country);
+                    var barWidth = (int)Math.Round(country.Percentage);
+                    var isTop = idx == 0;
+                    var barColor = isTop ? "#4e79a7" : "#93b4d4";
+
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <!-- Flag + name -->
+                        <div style="width:200px;display:flex;align-items:center;
+                            gap:6px;flex-shrink:0;justify-content:flex-end;">
+                            <span style="font-size:16px;line-height:1;">@flag</span>
+                            <span style="font-size:12px;color:#6c757d;
+                            overflow:hidden;text-overflow:ellipsis;
+                            white-space:nowrap;">@country.Country</span>
+                        </div>
+                        <!-- Bar -->
+                        <div style="flex:1;height:14px;background:#f8f9fa;
+                            border-radius:3px;overflow:hidden;">
+                            <div style="height:100%;width:@(barWidth)%;
+                            background:@barColor;border-radius:3px;"></div>
+                        </div>
+                        <!-- Count + % -->
+                        <div style="width:80px;display:flex;align-items:center;
+                            gap:4px;flex-shrink:0;">
+                            <span style="font-size:12px;font-weight:@(isTop ? "500" : "400");
+                                color:@(isTop ? "#212529" : "#adb5bd");">
+                                @country.UserCount
+                            </span>
+                            <span style="font-size:11px;color:#adb5bd;">
+                                (@country.Percentage%)
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
     <!-- User breakdown table -->
     <div class="border-top pt-4 mb-5">
         <p class="fw-500 mb-1" style="font-size:15px;">User breakdown</p>

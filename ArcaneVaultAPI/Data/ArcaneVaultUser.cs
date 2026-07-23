@@ -12,6 +12,7 @@ namespace ArcaneVaultAPI.Data
         [Range(1, 2)]
         public int RoleId { get; set; }
         public string Password { get; set; }
+        public string Country { get; set; }
 
         [ForeignKey("RoleId")]
         public ArcaneVaultUserRoles Role { get; set; }

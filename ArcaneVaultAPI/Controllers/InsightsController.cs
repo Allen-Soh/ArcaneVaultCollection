@@ -489,4 +489,46 @@ public class InsightsController : ControllerBase
             Users = users
         });
     }
+
+    // GET: api/Insights/countrydemographic
+    [HttpGet("countrydemographic")]
+    public ActionResult GetCountryDemographic()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT COALESCE(Country, 'Not specified') as Country,
+                 COUNT(*) as UserCount
+          FROM ArcaneVaultUsers
+          WHERE IsDeleted = 0
+          GROUP BY Country
+          ORDER BY UserCount DESC",
+            connection);
+
+        var results = new List<object>();
+        int total = 0;
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<(string Country, int Count)>();
+        while (reader.Read())
+        {
+            var country = reader["Country"].ToString();
+            var count = Convert.ToInt32(reader["UserCount"]);
+            rows.Add((country, count));
+            total += count;
+        }
+
+        foreach (var (country, count) in rows)
+        {
+            results.Add(new
+            {
+                Country = country,
+                UserCount = count,
+                Percentage = total > 0 ? Math.Round((double)count / total * 100, 1) : 0
+            });
+        }
+
+        return Ok(results);
+    }
 }

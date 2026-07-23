@@ -253,3 +253,10 @@
 
 [To Do]
 - Add new Community Interest details page
+
+===== DEV LOG (23/7/2026) =====
+[Done]
+- Added Country to User, Registration and User Activity details pages\
+
+[To Do]
+- Add new Community Interest details page
