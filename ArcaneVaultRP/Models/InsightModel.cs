@@ -116,4 +116,25 @@
         public int UserCount { get; set; }
         public double Percentage { get; set; }
     }
+
+    public class ShowoffComparison
+    {
+        public int ShowoffId { get; set; }
+        public string ShowoffName { get; set; }
+        public string UserName { get; set; }
+        public int ViewCount { get; set; }
+        public int LikeCount { get; set; }
+        public double LikeRate { get; set; }
+    }
+
+    public class CommunityInterestDetail
+    {
+        public List<TimeSeriesPoint> ViewsOverTime { get; set; } = new();
+        public int TotalViews { get; set; }
+        public int TotalLikes { get; set; }
+        public List<ShowoffComparison> MostViewed { get; set; } = new();
+        public List<ShowoffComparison> MostLiked { get; set; } = new();
+        public List<ShowoffComparison> AllShowoffs { get; set; } = new();
+        public List<SearchTrend> SearchTerms { get; set; } = new();
+    }
 }

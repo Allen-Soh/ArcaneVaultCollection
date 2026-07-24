@@ -531,4 +531,185 @@ public class InsightsController : ControllerBase
 
         return Ok(results);
     }
+
+    // GET: api/Insights/communityinterest/detail?days=7
+    [HttpGet("communityinterest/detail")]
+    public ActionResult GetCommunityInterestDetail([FromQuery] int days = 7)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Views over time
+        var viewsCommand = new SqliteCommand(
+            @"SELECT DATE(sv.ViewedAt) as Date, COUNT(sv.ViewId) as Count
+          FROM ShowoffViews sv
+          JOIN Showoffs s ON sv.ShowoffId = s.ShowoffId
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0
+          AND sv.ViewedAt >= @Since
+          GROUP BY DATE(sv.ViewedAt)
+          ORDER BY Date ASC",
+            connection);
+        viewsCommand.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var viewsOverTime = new List<object>();
+        using var vReader = viewsCommand.ExecuteReader();
+        while (vReader.Read())
+        {
+            viewsOverTime.Add(new
+            {
+                Date = vReader["Date"].ToString(),
+                Count = Convert.ToInt32(vReader["Count"])
+            });
+        }
+
+        // Total views in period
+        var totalViewsCmd = new SqliteCommand(
+            @"SELECT COUNT(sv.ViewId) as Total
+          FROM ShowoffViews sv
+          JOIN Showoffs s ON sv.ShowoffId = s.ShowoffId
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0
+          AND sv.ViewedAt >= @Since",
+            connection);
+        totalViewsCmd.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+        var totalViews = Convert.ToInt32(totalViewsCmd.ExecuteScalar());
+
+        // Total likes in period — all time since no timestamp on likes
+        var totalLikesCmd = new SqliteCommand(
+            @"SELECT COUNT(*) FROM ShowoffLikes sl
+          JOIN Showoffs s ON sl.ShowoffId = s.ShowoffId
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0",
+            connection);
+        var totalLikes = Convert.ToInt32(totalLikesCmd.ExecuteScalar());
+
+        // Most viewed showoffs
+        var mostViewedCmd = new SqliteCommand(
+            @"SELECT s.ShowoffId, s.ShowoffName, s.UserName,
+                 COUNT(sv.ViewId) as ViewCount,
+                 COUNT(DISTINCT sl.UserName) as LikeCount
+          FROM Showoffs s
+          LEFT JOIN ShowoffViews sv ON s.ShowoffId = sv.ShowoffId
+              AND sv.ViewedAt >= @Since
+          LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0
+          GROUP BY s.ShowoffId
+          ORDER BY ViewCount DESC
+          LIMIT 6",
+            connection);
+        mostViewedCmd.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var mostViewed = new List<object>();
+        using var mvReader = mostViewedCmd.ExecuteReader();
+        while (mvReader.Read())
+        {
+            var views = Convert.ToInt32(mvReader["ViewCount"]);
+            var likes = Convert.ToInt32(mvReader["LikeCount"]);
+            mostViewed.Add(new
+            {
+                ShowoffId = Convert.ToInt32(mvReader["ShowoffId"]),
+                ShowoffName = mvReader["ShowoffName"].ToString(),
+                UserName = mvReader["UserName"].ToString(),
+                ViewCount = views,
+                LikeCount = likes,
+                LikeRate = views > 0 ? Math.Round((double)likes / views * 100, 1) : 0
+            });
+        }
+
+        // Most liked showoffs
+        var mostLikedCmd = new SqliteCommand(
+            @"SELECT s.ShowoffId, s.ShowoffName, s.UserName,
+                 COUNT(DISTINCT sl.UserName) as LikeCount,
+                 COUNT(sv.ViewId) as ViewCount
+          FROM Showoffs s
+          LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
+          LEFT JOIN ShowoffViews sv ON s.ShowoffId = sv.ShowoffId
+              AND sv.ViewedAt >= @Since
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0
+          GROUP BY s.ShowoffId
+          ORDER BY LikeCount DESC
+          LIMIT 6",
+            connection);
+        mostLikedCmd.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var mostLiked = new List<object>();
+        using var mlReader = mostLikedCmd.ExecuteReader();
+        while (mlReader.Read())
+        {
+            var views = Convert.ToInt32(mlReader["ViewCount"]);
+            var likes = Convert.ToInt32(mlReader["LikeCount"]);
+            mostLiked.Add(new
+            {
+                ShowoffId = Convert.ToInt32(mlReader["ShowoffId"]),
+                ShowoffName = mlReader["ShowoffName"].ToString(),
+                UserName = mlReader["UserName"].ToString(),
+                ViewCount = views,
+                LikeCount = likes,
+                LikeRate = views > 0 ? Math.Round((double)likes / views * 100, 1) : 0
+            });
+        }
+
+        // All showoffs for comparison table
+        var allShowoffsCmd = new SqliteCommand(
+            @"SELECT s.ShowoffId, s.ShowoffName, s.UserName,
+                 COUNT(sv.ViewId) as ViewCount,
+                 COUNT(DISTINCT sl.UserName) as LikeCount
+          FROM Showoffs s
+          LEFT JOIN ShowoffViews sv ON s.ShowoffId = sv.ShowoffId
+              AND sv.ViewedAt >= @Since
+          LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
+          WHERE s.IsPrivate = 0 AND s.IsDeleted = 0
+          GROUP BY s.ShowoffId
+          ORDER BY ViewCount DESC",
+            connection);
+        allShowoffsCmd.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var allShowoffs = new List<object>();
+        using var asReader = allShowoffsCmd.ExecuteReader();
+        while (asReader.Read())
+        {
+            var views = Convert.ToInt32(asReader["ViewCount"]);
+            var likes = Convert.ToInt32(asReader["LikeCount"]);
+            allShowoffs.Add(new
+            {
+                ShowoffId = Convert.ToInt32(asReader["ShowoffId"]),
+                ShowoffName = asReader["ShowoffName"].ToString(),
+                UserName = asReader["UserName"].ToString(),
+                ViewCount = views,
+                LikeCount = likes,
+                LikeRate = views > 0 ? Math.Round((double)likes / views * 100, 1) : 0
+            });
+        }
+
+        // Most searched terms in period
+        var searchCmd = new SqliteCommand(
+            @"SELECT SearchTerm, COUNT(*) as Count
+          FROM SearchLogs
+          WHERE SearchedAt >= @Since
+          GROUP BY SearchTerm
+          ORDER BY Count DESC
+          LIMIT 10",
+            connection);
+        searchCmd.Parameters.AddWithValue("@Since", DateTime.UtcNow.AddDays(-days));
+
+        var searchTerms = new List<object>();
+        using var sReader = searchCmd.ExecuteReader();
+        while (sReader.Read())
+        {
+            searchTerms.Add(new
+            {
+                Term = sReader["SearchTerm"].ToString(),
+                Count = Convert.ToInt32(sReader["Count"])
+            });
+        }
+
+        return Ok(new
+        {
+            ViewsOverTime = viewsOverTime,
+            TotalViews = totalViews,
+            TotalLikes = totalLikes,
+            MostViewed = mostViewed,
+            MostLiked = mostLiked,
+            AllShowoffs = allShowoffs,
+            SearchTerms = searchTerms
+        });
+    }
 }

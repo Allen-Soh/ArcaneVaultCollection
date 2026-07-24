@@ -260,3 +260,11 @@
 
 [To Do]
 - Add new Community Interest details page
+
+===== DEV LOG (24/7/2026) =====
+[Done]
+- Added Community Interest details page
+
+[To Do]
+- Add scroll indicator to all tables
+- Add settings
