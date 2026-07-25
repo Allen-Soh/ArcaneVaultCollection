@@ -219,10 +219,9 @@
             </div>
         </div>
 
-        <!-- Scroll indicator -->
         <div class="d-flex justify-content-between mt-2">
             <p class="text-muted mb-0" id="scrollIndicator" style="font-size:12px;"></p>
-            <p class="text-muted mb-0" style="font-size:12px;">Scroll to load more</p>
+            <p class="text-muted mb-0" id="scrollMoreText" style="font-size:12px;">Scroll to load more</p>
         </div>
     </div>
 
@@ -486,8 +485,16 @@
 
         const visStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) + 1);
         const visEnd   = Math.min(total, visStart + VISIBLE_ROWS);
+
         document.getElementById('scrollIndicator').textContent =
-            total === 0 ? 'No results' : `Showing ${visStart}–${visEnd} of ${total}`;
+            total === 0
+                ? 'No results'
+                : total > VISIBLE_ROWS
+                    ? `Showing ${visStart}–${visEnd} of ${total}`
+                    : `${total} showoff${total === 1 ? '' : 's'}`;
+
+        document.getElementById('scrollMoreText').style.display =
+            total > VISIBLE_ROWS ? 'block' : 'none';
 
         document.getElementById('virtualBody').innerHTML =
             filteredData.slice(startIdx, endIdx).map(s => {
@@ -503,8 +510,7 @@
                         <td style="padding:0 12px;text-align:right;color:#6c757d;">${s.likes}</td>
                         <td style="padding:0 12px;text-align:right;font-weight:500;color:${rateCol};">${rate}%</td>
                         <td style="padding:0 12px;text-align:center;">
-                            <span style="display:inline-block;width:8px;height:8px;
-                                         border-radius:50%;background:${dotColor};"></span>
+                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>
                         </td>
                     </tr>`;
             }).join('');

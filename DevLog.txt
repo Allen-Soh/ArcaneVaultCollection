@@ -268,3 +268,10 @@
 [To Do]
 - Add scroll indicator to all tables
 - Add settings
+
+===== DEV LOG (25/7/2026) =====
+[Done]
+- Added scoll indicators to all list tables
+
+[To Do]
+- Add settings

@@ -712,4 +712,6 @@ public class InsightsController : ControllerBase
             SearchTerms = searchTerms
         });
     }
+
+
 }

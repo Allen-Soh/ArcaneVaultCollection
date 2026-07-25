@@ -207,6 +207,10 @@
                 No users match your search.
             </div>
         </div>
+        <div class="d-flex justify-content-between mt-2 mb-4" id="userTableIndicatorRow">
+            <p class="text-muted mb-0" id="userScrollIndicator" style="font-size:12px;"></p>
+            <p class="text-muted mb-0" id="userScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+        </div>
     </div>
 
 </div>
@@ -493,79 +497,99 @@
     }
 
     function renderTable() {
-        const data  = getFilteredUsers();
+        const data = getFilteredUsers();
         const tbody = document.getElementById('userTableBody');
         const empty = document.getElementById('tableEmpty');
         const wrapper = document.getElementById('userTableWrapper');
+        const indicatorRow = document.getElementById('userTableIndicatorRow');
+        const moreText = document.getElementById('userScrollMoreText');
 
         if (data.length === 0) {
-            empty.style.display   = 'block';
-            tbody.innerHTML       = '';
-            wrapper.style.height  = '';
-            wrapper.onscroll      = null;
+            empty.style.display = 'block';
+            tbody.innerHTML = '';
+            wrapper.style.height = '';
+            wrapper.onscroll = null;
+            indicatorRow.style.display = 'none';
             return;
         }
 
         empty.style.display = 'none';
+        indicatorRow.style.removeProperty('display');
+        moreText.style.display = data.length > THRESHOLD ? 'block' : 'none';
+
         const now = new Date();
 
+        function updateIndicator() {
+            const scrollTop = wrapper.scrollTop;
+            const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+            const visEnd = Math.min(data.length, visStart + THRESHOLD - 1);
+            document.getElementById('userScrollIndicator').textContent =
+                data.length > THRESHOLD
+                    ? `Showing ${visStart}–${visEnd} of ${data.length}`
+                    : `${data.length} user${data.length === 1 ? '' : 's'}`;
+        }
+
         function rowFn(u, idx) {
-            const border   = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
+            const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
             const lastDate = u.lastLogin ? new Date(u.lastLogin) : null;
-            const diff     = lastDate
+            const diff = lastDate
                 ? Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
                 : null;
             const lastLabel = diff === null ? '—'
                 : diff === 0 ? 'Today'
-                : diff === 1 ? 'Yesterday'
-                : `${diff} days ago`;
-            const isActive     = diff !== null && diff <= 7;
-            const badgeBg      = isActive ? '#E1F5EE' : '#f8f9fa';
-            const badgeColor   = isActive ? '#0F6E56' : '#adb5bd';
-            const badgeLabel   = isActive ? 'Active' : 'Inactive';
+                    : diff === 1 ? 'Yesterday'
+                        : `${diff} days ago`;
+            const isActive = diff !== null && diff <= 7;
+            const badgeBg = isActive ? '#E1F5EE' : '#f8f9fa';
+            const badgeColor = isActive ? '#0F6E56' : '#adb5bd';
+            const badgeLabel = isActive ? 'Active' : 'Inactive';
 
             return `
-                <tr style="${border}height:${ROW_HEIGHT}px;">
-                    <td style="padding:8px 12px;font-weight:500;">${u.name}</td>
-                    <td style="padding:8px 12px;text-align:right;color:#6c757d;">${u.logins}</td>
-                    <td style="padding:8px 12px;text-align:right;color:#6c757d;">${u.showoffs}</td>
-                    <td style="padding:8px 12px;color:#adb5bd;">${lastLabel}</td>
-                    <td style="padding:8px 12px;text-align:center;">
-                        <span style="display:inline-block;font-size:11px;padding:2px 8px;
-                                     border-radius:999px;background:${badgeBg};
-                                     color:${badgeColor};">${badgeLabel}</span>
-                    </td>
-                </tr>`;
+                        <tr style="${border}height:${ROW_HEIGHT}px;">
+                            <td style="padding:8px 12px;font-weight:500;">${u.name}</td>
+                            <td style="padding:8px 12px;text-align:right;color:#6c757d;">${u.logins}</td>
+                            <td style="padding:8px 12px;text-align:right;color:#6c757d;">${u.showoffs}</td>
+                            <td style="padding:8px 12px;color:#adb5bd;">${lastLabel}</td>
+                            <td style="padding:8px 12px;text-align:center;">
+                                <span style="display:inline-block;font-size:11px;padding:2px 8px;
+                                                border-radius:999px;background:${badgeBg};
+                                                color:${badgeColor};">${badgeLabel}</span>
+                            </td>
+                        </tr>`;
         }
 
-        // Virtual scroll
         if (data.length <= THRESHOLD) {
-            wrapper.style.height  = '';
+            wrapper.style.height = '';
             wrapper.style.maxHeight = '';
-            wrapper.onscroll      = null;
-            tbody.innerHTML       = data.map((u, i) => rowFn(u, i)).join('');
+            wrapper.onscroll = null;
+            tbody.innerHTML = data.map((u, i) => rowFn(u, i)).join('');
+            updateIndicator();
             return;
         }
 
+        updateIndicator();
+
         const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
-        wrapper.style.height    = `${visibleHeight}px`;
+        wrapper.style.height = `${visibleHeight}px`;
         wrapper.style.maxHeight = `${visibleHeight}px`;
         wrapper.style.overflowY = 'auto';
 
         function render() {
             const scrollTop = wrapper.scrollTop;
-            const startIdx  = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
-            const endIdx    = Math.min(
+            const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+            const endIdx = Math.min(
                 data.length,
                 Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
             );
-            const topPad    = startIdx * ROW_HEIGHT;
+            const topPad = startIdx * ROW_HEIGHT;
             const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
 
             tbody.innerHTML =
-                (topPad    > 0 ? `<tr style="height:${topPad}px;"><td colspan="5"></td></tr>` : '') +
+                (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="5"></td></tr>` : '') +
                 data.slice(startIdx, endIdx).map((u, i) => rowFn(u, startIdx + i)).join('') +
                 (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="5"></td></tr>` : '');
+
+            updateIndicator();
         }
 
         let ticking = false;

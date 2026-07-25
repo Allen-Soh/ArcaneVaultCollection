@@ -132,6 +132,10 @@
                     No items match your filters.
                 </div>
             </div>
+            <div class="d-flex justify-content-between mt-2" id="fullTableIndicatorRow">
+                <p class="text-muted mb-0" id="fullTableScrollIndicator" style="font-size:12px;"></p>
+                <p class="text-muted mb-0" id="fullTableScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+            </div>
         </div>
     </div>
 
@@ -147,7 +151,7 @@
         <p class="fw-500 mb-1" style="font-size:15px;">Starting vs Current Quantity</p>
         <p class="text-muted mb-3" style="font-size:13px;">Per item across all users</p>
     </div>
-    <div class="border rounded overflow-hidden mb-4" style="position:relative;">
+    <div class="border rounded overflow-hidden" style="position:relative;">
         <div id="qtyTableWrapper" style="overflow-y:auto;">
             <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
                 <colgroup>
@@ -169,6 +173,11 @@
                 <tbody id="qtyTableBody"></tbody>
             </table>
         </div>
+    </div>
+    <!-- After closing </div> of border rounded overflow-hidden -->
+    <div class="d-flex justify-content-between mt-2 mb-4" id="qtyTableIndicatorRow">
+        <p class="text-muted mb-0" id="qtyScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id ="qtyScrollMoreText" style="font-size:12px;">Scroll to load more</p>
     </div>
 
     <!-- At-risk items -->
@@ -293,25 +302,6 @@
                     </div>`).join('');
         }
 
-        // ── Qty table ──
-        function renderQtyTable() {
-            const tbody = document.getElementById('qtyTableBody');
-            tbody.innerHTML = allItems.map((item, idx) => {
-                const diff = item.current - item.start;
-                const dotColor = diff > 0 ? '#1D9E75' : diff < 0 ? '#E24B4A' : '#6c757d';
-                const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
-                return `
-                        <tr style="${border}">
-                            <td style="padding:7px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
-                            <td style="padding:7px 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
-                            <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.start}</td>
-                            <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.current}</td>
-                            <td style="padding:7px 12px;text-align:center;">
-                                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>
-                            </td>
-                        </tr>`;
-            }).join('');
-        }
 
         // ════════════════════════════════════════════════
         // VIRTUAL SCROLL — revised
@@ -386,6 +376,21 @@
         // STARTING VS CURRENT QTY TABLE
         // ════════════════════════════════════════════════
         function renderQtyTable() {
+            const wrapper = document.getElementById('qtyTableWrapper');
+            const tbody = document.getElementById('qtyTableBody');
+            const indicatorRow = document.getElementById('qtyTableIndicatorRow');
+            const moreText = document.getElementById('qtyScrollMoreText');
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(allItems.length, visStart + THRESHOLD - 1);
+                document.getElementById('qtyScrollIndicator').textContent =
+                    allItems.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${allItems.length}`
+                        : `${allItems.length} item${allItems.length === 1 ? '' : 's'}`;
+            }
+
             function rowFn(item, idx) {
                 const diff = item.current - item.start;
                 const dotColor = diff > 0 ? '#1D9E75' : diff < 0 ? '#E24B4A' : '#6c757d';
@@ -402,7 +407,54 @@
                     </tr>`;
             }
 
-            createVirtualTable('qtyTableWrapper', 'qtyTableBody', allItems, rowFn);
+            // Row always visible now — count always shown, "scroll more" gated by threshold
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = allItems.length > THRESHOLD ? 'block' : 'none';
+
+            if (allItems.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = allItems.map((row, i) => rowFn(row, i)).join('');
+                updateIndicator();
+                return;
+            }
+
+            updateIndicator();
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    allItems.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (allItems.length - endIdx) * ROW_HEIGHT;
+
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="5"></td></tr>` : '') +
+                    allItems.slice(startIdx, endIdx).map((row, i) => rowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="5"></td></tr>` : '');
+
+                updateIndicator();
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            wrapper.scrollTop = 0;
+            render();
         }
 
         // ── At-risk items (pct ≤ -20) ──
@@ -464,14 +516,23 @@
 
             const tbody = document.getElementById('tableBody');
             const empty = document.getElementById('emptyState');
+            const fullRow = document.getElementById('fullTableIndicatorRow');
 
             if (filtered.length === 0) {
                 tbody.innerHTML = '';
                 empty.style.display = 'block';
+                fullRow.style.display = 'none';
                 return;
             }
 
             empty.style.display = 'none';
+
+            fullRow.style.removeProperty('display');
+            document.getElementById('fullTableScrollIndicator').textContent =
+                `${filtered.length} item${filtered.length === 1 ? '' : 's'} found`;
+            document.getElementById('fullTableScrollMoreText').style.display =
+                filtered.length > THRESHOLD ? 'block' : 'none';
+
             tbody.innerHTML = filtered.map((item, idx) => {
                 const isRising = item.pct > 0, isFlat = item.pct === 0;
                 const badgeBg = isFlat ? '#f8f9fa' : isRising ? '#E1F5EE' : '#FCEBEB';
