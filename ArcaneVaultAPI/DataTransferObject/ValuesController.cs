@@ -8,6 +8,7 @@
         public int RoleId { get; set; }
         public string Password { get; set; }
         public string Country { get; set; }
+        public string? AvatarUrl { get; set; }
     }
 
     public class CollectionItemDTO

@@ -275,3 +275,12 @@
 
 [To Do]
 - Add settings
+
+===== DEV LOG (25/7/2026) =====
+[Done]
+- Added settings
+
+[To Do]
+- Change how Changing username will be shown
+- Fix so that profile image will be updated as it stores the profile, but does not actually display the updated profile. When changing profile, the old profile should be deleted after the change. It should also be a tab pop up to drag in file or upload, with an alignment tool where the part that will be shown in the profile is in a circle while the outer area is darkend out with high shadow. The user then can click on either save or cancel button at the bottom right of the tab.
+- Fix issue where country is not saved after selecting.

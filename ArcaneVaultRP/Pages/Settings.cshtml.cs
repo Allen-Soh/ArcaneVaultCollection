@@ -1,0 +1,60 @@
+using ArcaneVaultRP.Helpers;
+using ArcaneVaultRP.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
+
+namespace ArcaneVaultRP.Pages;
+
+public class SettingsModel : PageModel
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public SettingsModel(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public ArcaneVaultUser CurrentUser { get; set; } = default!;
+    public List<string> AllCountries { get; set; } = CountryHelper.AllCountries;
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
+            return RedirectToPage("/Login");
+
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var sessionUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Get fresh user data from API
+        var freshUser = await httpClient
+            .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{sessionUser.UserName}");
+
+        if (freshUser == null) return RedirectToPage("/Login");
+
+        CurrentUser = freshUser;
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostRefreshSessionAsync([FromQuery] string newUsername)
+    {
+        if (string.IsNullOrEmpty(newUsername))
+            return BadRequest();
+
+        HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+        var freshUser = await httpClient
+            .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{newUsername}");
+
+        if (freshUser == null) return BadRequest();
+
+        // Update session with new username
+        HttpContext.Session.SetString(SessionKeys.LoggedInUser,
+            JsonSerializer.Serialize(freshUser));
+        HttpContext.Session.SetString(SessionKeys.UserRole,
+            freshUser.RoleId.ToString());
+
+        return new OkResult();
+    }
+}

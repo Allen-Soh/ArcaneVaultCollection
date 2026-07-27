@@ -49,29 +49,21 @@ namespace ArcaneVaultRP.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
+            if (!ModelState.IsValid) return Page();
 
             HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-
-            // Get all users from API
             var users = await httpClient.GetFromJsonAsync<List<ArcaneVaultUser>>("ArcaneVaultUser");
 
             if (users == null)
             {
-                ModelState.AddModelError(string.Empty, "Unable to connect to the server. Please try again.");
+                ModelState.AddModelError(string.Empty, "Unable to connect to the server.");
                 return Page();
             }
 
-            // Find matching user — username match and not deleted
-            var user = users
-                .OrderBy(u => u.UserName)
-                .FirstOrDefault(u =>
+            // Check credentials match — including disabled accounts
+            var user = users.FirstOrDefault(u =>
                 u.UserName == Input.Username &&
-                u.Password == Input.Password &&
-                !u.IsDeleted);
+                u.Password == Input.Password);
 
             if (user == null)
             {
@@ -79,7 +71,14 @@ namespace ArcaneVaultRP.Pages
                 return Page();
             }
 
-            // Store user info in session
+            // Account disabled — return special flag to show re-enable prompt
+            if (user.IsDeleted)
+            {
+                TempData["DisabledUser"] = user.UserName;
+                return Page();
+            }
+
+            // Success
             HttpContext.Session.SetString(SessionKeys.LoggedInUser, JsonSerializer.Serialize(user));
             HttpContext.Session.SetString(SessionKeys.UserRole, user.RoleId.ToString());
 

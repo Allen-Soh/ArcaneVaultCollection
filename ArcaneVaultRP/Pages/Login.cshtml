@@ -40,7 +40,33 @@
                         <div class="d-grid mb-3">
                             <button type="submit" class="btn btn-primary btn-lg">Login</button>
                         </div>
-
+                        <!-- Disabled account modal -->
+                        @if (TempData["DisabledUser"] != null)
+                        {
+                            <div class="modal fade" id="disabledModal" tabindex="-1" data-bs-backdrop="static">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                        <div class="modal-body p-4 text-center">
+                                            <i class="bi bi-lock-fill text-warning fs-1 mb-3 d-block"></i>
+                                            <h5 class="fw-bold mb-2">Account disabled</h5>
+                                            <p class="text-muted mb-4" style="font-size:14px;">
+                                                This account has been disabled. Would you like to enable your account?
+                                            </p>
+                                            <div class="d-flex gap-2 justify-content-center">
+                                                <button type="button" class="btn btn-primary px-4"
+                                                        onclick="enableAccount('@TempData["DisabledUser"]')">
+                                                    Yes, enable it
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary px-4"
+                                                        data-bs-dismiss="modal">
+                                                    No
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </form>
 
                     <!-- Divider -->
@@ -91,5 +117,18 @@
                 eyeIcon.classList.add("bi-eye");
             }
         });
+
+        new bootstrap.Modal(document.getElementById('disabledModal')).show();
+
+        async function enableAccount(userName) {
+            const apiBase = 'https://localhost:7040/api';
+            const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/enable`, {
+                method: 'PATCH'
+            });
+            if (res.ok) {
+                // Submit login form again
+                document.querySelector('form').submit();
+            }
+        }
     </script>
 }
