@@ -96,6 +96,18 @@
     </div>
 </div>
 
+<!-- ── Success Toast ── -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+    <div id="successToast" class="toast align-items-center text-bg-success border-0"
+         role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg">Saved successfully.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
@@ -118,17 +130,30 @@
             }
         });
 
-        new bootstrap.Modal(document.getElementById('disabledModal')).show();
-
-        async function enableAccount(userName) {
-            const apiBase = 'https://localhost:7040/api';
-            const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/enable`, {
-                method: 'PATCH'
-            });
-            if (res.ok) {
-                // Submit login form again
-                document.querySelector('form').submit();
-            }
+        function showToast(msg) {
+            document.getElementById('toastMsg').textContent = msg;
+            new bootstrap.Toast(document.getElementById('successToast'), { delay: 3000 }).show();
         }
+
+        const disabledModalEl = document.getElementById('disabledModal');
+        if (disabledModalEl) {
+            new bootstrap.Modal(disabledModalEl).show();
+        }
+
+        @if (Model.Registered)
+            {
+                <text>showToast('Account created successfully. Please log in.'); </text>
+        }
+
+            async function enableAccount(userName) {
+                const apiBase = 'https://localhost:7040/api';
+                const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/enable`, {
+                    method: 'PATCH'
+                });
+                if (res.ok) {
+                    // Submit login form again
+                    document.querySelector('form').submit();
+                }
+            }
     </script>
 }

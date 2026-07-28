@@ -95,7 +95,7 @@ namespace ArcaneVaultRP.Pages
 
             if (response.IsSuccessStatusCode)
             {
-                return RedirectToPage("/Login");
+                return RedirectToPage("/Login", new { registered = true });
             }
             else
             {

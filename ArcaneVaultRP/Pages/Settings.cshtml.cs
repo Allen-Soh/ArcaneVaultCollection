@@ -28,13 +28,20 @@ public class SettingsModel : PageModel
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-        // Get fresh user data from API
+        // Always fetch fresh from API so country/avatar are current
         var freshUser = await httpClient
             .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{sessionUser.UserName}");
 
         if (freshUser == null) return RedirectToPage("/Login");
 
         CurrentUser = freshUser;
+
+        // Keep session in sync
+        HttpContext.Session.SetString(SessionKeys.LoggedInUser,
+            JsonSerializer.Serialize(freshUser));
+        HttpContext.Session.SetString(SessionKeys.UserRole,
+            freshUser.RoleId.ToString());
+
         return Page();
     }
 
@@ -44,8 +51,17 @@ public class SettingsModel : PageModel
             return BadRequest();
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-        var freshUser = await httpClient
-            .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{newUsername}");
+
+        ArcaneVaultUser? freshUser;
+        try
+        {
+            freshUser = await httpClient
+                .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{newUsername}");
+        }
+        catch (HttpRequestException)
+        {
+            return BadRequest();
+        }
 
         if (freshUser == null) return BadRequest();
 

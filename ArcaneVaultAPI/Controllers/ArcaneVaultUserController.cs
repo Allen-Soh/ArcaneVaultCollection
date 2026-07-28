@@ -19,7 +19,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password FROM ArcaneVaultUsers",
+            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl FROM ArcaneVaultUsers",
             connection);
 
         using var reader = command.ExecuteReader();
@@ -31,7 +31,9 @@ public class ArcaneVaultUserController : ControllerBase
                 Email = reader["Email"].ToString(),
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 RoleId = Convert.ToInt32(reader["RoleId"]),
-                Password = reader["Password"].ToString()
+                Password = reader["Password"].ToString(),
+                Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
+                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString()
             });
         }
 
@@ -49,7 +51,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl FROM ArcaneVaultUsers WHERE UserName = @UserName",
             connection);
         command.Parameters.AddWithValue("@UserName", username);
 
@@ -64,7 +66,9 @@ public class ArcaneVaultUserController : ControllerBase
                 Email = reader["Email"].ToString(),
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 RoleId = Convert.ToInt32(reader["RoleId"]),
-                Password = reader["Password"].ToString()
+                Password = reader["Password"].ToString(),
+                Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
+                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString()
             };
         }
 
@@ -124,12 +128,17 @@ public class ArcaneVaultUserController : ControllerBase
     [HttpPost]
     public ActionResult<ArcaneVaultUser> PostArcaneVaultUser(ArcaneVaultUserDTO dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Country))
+        {
+            return BadRequest("Country is required.");
+        }
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
         var command = new SqliteCommand(
-            @"INSERT INTO ArcaneVaultUsers (UserName, Email, IsDeleted, RoleId, Password) 
-              VALUES (@UserName, @Email, @IsDeleted, @RoleId, @Password)",
+            @"INSERT INTO ArcaneVaultUsers (UserName, Email, IsDeleted, RoleId, Password, Country) 
+          VALUES (@UserName, @Email, @IsDeleted, @RoleId, @Password, @Country)",
             connection);
 
         command.Parameters.AddWithValue("@UserName", dto.UserName);
@@ -137,6 +146,7 @@ public class ArcaneVaultUserController : ControllerBase
         command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
         command.Parameters.AddWithValue("@RoleId", dto.RoleId);
         command.Parameters.AddWithValue("@Password", dto.Password);
+        command.Parameters.AddWithValue("@Country", dto.Country);
 
         command.ExecuteNonQuery();
 
@@ -146,40 +156,13 @@ public class ArcaneVaultUserController : ControllerBase
             Email = dto.Email,
             IsDeleted = dto.IsDeleted,
             RoleId = dto.RoleId,
-            Password = dto.Password
+            Password = dto.Password,
+            Country = dto.Country
         };
 
         return CreatedAtAction("GetArcaneVaultUser",
             new { username = newUser.UserName },
             newUser);
-    }
-
-    // DELETE: api/ArcaneVaultUser/5
-    [HttpDelete("{username}")]
-    public IActionResult DeleteArcaneVaultUser(string? username)
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-
-        // Check if exists
-        var checkCommand = new SqliteCommand(
-            "SELECT COUNT(*) FROM ArcaneVaultUsers WHERE UserName = @UserName",
-            connection);
-        checkCommand.Parameters.AddWithValue("@UserName", username);
-        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
-
-        if (count == 0)
-        {
-            return NotFound();
-        }
-
-        var command = new SqliteCommand(
-            "DELETE FROM ArcaneVaultUsers WHERE UserName = @UserName",
-            connection);
-        command.Parameters.AddWithValue("@UserName", username);
-        command.ExecuteNonQuery();
-
-        return NoContent();
     }
 
     // PATCH: api/ArcaneVaultUser/{username}/username — change username

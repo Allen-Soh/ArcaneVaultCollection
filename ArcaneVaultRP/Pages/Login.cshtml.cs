@@ -18,6 +18,9 @@ namespace ArcaneVaultRP.Pages
         [BindProperty]
         public LoginInputModel Input { get; set; } = new();
 
+        [BindProperty(SupportsGet = true)]
+        public bool Registered { get; set; }
+
         // Input model — keeps login fields separate from page model
         public class LoginInputModel
         {
