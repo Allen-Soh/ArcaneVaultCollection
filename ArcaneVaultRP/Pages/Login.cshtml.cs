@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -47,6 +48,7 @@ namespace ArcaneVaultRP.Pages
             // Clear all session keys on logout
             HttpContext.Session.Remove(SessionKeys.LoggedInUser);
             HttpContext.Session.Remove(SessionKeys.UserRole);
+            HttpContext.Session.Remove(SessionKeys.JwtToken);
             return RedirectToPage("/Index");
         }
 
@@ -55,6 +57,11 @@ namespace ArcaneVaultRP.Pages
             if (!ModelState.IsValid) return Page();
 
             HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+            // Attach JWT token from session
+            var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+            HttpClientHelper.AttachJwtToken(httpClient, token);
+
             var users = await httpClient.GetFromJsonAsync<List<ArcaneVaultUser>>("ArcaneVaultUser");
 
             if (users == null)
@@ -63,7 +70,6 @@ namespace ArcaneVaultRP.Pages
                 return Page();
             }
 
-            // Check credentials match — including disabled accounts
             var user = users.FirstOrDefault(u =>
                 u.UserName == Input.Username &&
                 u.Password == Input.Password);
@@ -74,21 +80,50 @@ namespace ArcaneVaultRP.Pages
                 return Page();
             }
 
-            // Account disabled — return special flag to show re-enable prompt
             if (user.IsDeleted)
             {
                 TempData["DisabledUser"] = user.UserName;
                 return Page();
             }
 
-            // Success
-            HttpContext.Session.SetString(SessionKeys.LoggedInUser, JsonSerializer.Serialize(user));
-            HttpContext.Session.SetString(SessionKeys.UserRole, user.RoleId.ToString());
+            // Store user in session
+            HttpContext.Session.SetString(SessionKeys.LoggedInUser,
+                JsonSerializer.Serialize(user));
+            HttpContext.Session.SetString(SessionKeys.UserRole,
+                user.RoleId.ToString());
 
-            var loginHttpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-            await loginHttpClient.PostAsJsonAsync("LoginLog", user.UserName);
+            // ════════════════════════════════════════════
+            // REQUEST AND CACHE JWT TOKEN IN SESSION
+            // ════════════════════════════════════════════
+            var tokenRes = await httpClient.PostAsJsonAsync("JwtToken", new
+            {
+                UserName = user.UserName,
+                Password = Input.Password
+            });
+
+            if (tokenRes.IsSuccessStatusCode)
+            {
+                var tokenData = await tokenRes.Content.ReadFromJsonAsync<JwtTokenResponse>();
+                if (tokenData?.Token != null)
+                {
+                    HttpContext.Session.SetString(SessionKeys.JwtToken, tokenData.Token);
+                }
+            }
+
+            // Record login
+            await httpClient.PostAsJsonAsync("LoginLog", user.UserName);
 
             return RedirectToPage("/Index");
+        }
+
+        // Add this class at the bottom of Login.cshtml.cs
+        public class JwtTokenResponse
+        {
+            public string Token { get; set; }
+            public DateTime TokenExpiration { get; set; }
+            public string? UserName { get; set; }
+            public string? Email { get; set; }
+            public string? RoleName { get; set; }
         }
     }
 }

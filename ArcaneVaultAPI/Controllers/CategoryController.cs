@@ -1,9 +1,11 @@
+using ArcaneVaultAPI.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
-using ArcaneVaultAPI.Data;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class CategoryController : ControllerBase
 {
     private readonly string _connectionString = "Data Source=ArcaneVault.db";

@@ -44,6 +44,11 @@ public class CreateModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         var existingCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                                  ?? new List<Category>();
 

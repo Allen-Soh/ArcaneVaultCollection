@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -33,6 +34,10 @@ public class DetailsModel : PageModel
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         // LINQ — find item and verify ownership
         var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")

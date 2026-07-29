@@ -20,7 +20,7 @@
              style="background: linear-gradient(135deg, rgba(66, 72, 116, 0.3) 0%, rgba(27, 29, 46, 0.8) 100%); 
                     border: 1px solid var(--border-color) !important;">
             <div class="position-absolute top-0 end-0" style="opacity: 0.1; transform: translate(10%, -20%); pointer-events: none;">
-                <i class="bi bi-shield-shaded" style="font-size: 180px; color: var(--color-periwinkle);"></i>
+                <i class="bi bi-magic" style="font-size: 180px; color: var(--color-periwinkle);"></i>
             </div>
             
             <div class="position-relative" style="z-index: 1;">
@@ -53,7 +53,7 @@
                             <i class="bi bi-gem text-info fs-4"></i>
                         </div>
                         <h5 class="card-title fw-bold">My Collection</h5>
-                        <p class="card-text text-muted flex-grow-1">View and manage your collectible items, values, and details.</p>
+                        <p class="card-text text-muted flex-grow-1">View and manage your collectible items, and details.</p>
                         <a asp-page="/CollectionItemPages/Index" class="btn btn-primary w-100 mt-3 d-flex align-items-center justify-content-center gap-2">
                             <span>Go to Collection</span>
                             <i class="bi bi-arrow-right"></i>
@@ -105,7 +105,7 @@
         {
             <!-- Staff Notice -->
             <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3" role="alert">
-                <i class="bi bi-shield-lock-fill fs-4"></i>
+                <i class="bi bi-magic fs-4"></i>
                 <div>
                     <strong>Staff Access:</strong> You have administrative privileges to manage collection categories and oversee insights.
                 </div>
@@ -118,17 +118,17 @@
         <div class="row align-items-center py-5 min-vh-75 position-relative">
             <div class="col-lg-6 mb-5 mb-lg-0">
                 <div class="badge bg-primary mb-3 px-3 py-2 text-uppercase fw-bold letter-spacing-1" style="font-size: 11px; background-color: rgba(166, 177, 225, 0.1) !important; color: var(--color-periwinkle) !important; border: 1px solid rgba(166, 177, 225, 0.25);">
-                    Collect. Track. Vault.
+                    Collect. Show. Vault.
                 </div>
                 <h1 class="display-4 fw-extrabold mb-3" style="font-family: 'Outfit', sans-serif; font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1.1; letter-spacing: -1.5px;">
-                    Know what your <br />collection is <span style="background: linear-gradient(135deg, var(--color-lavender) 0%, var(--color-periwinkle) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">worth.</span>
+                    Know that your <br />collection is <span style="background: linear-gradient(135deg, var(--color-lavender) 0%, var(--color-periwinkle) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">precious.</span>
                 </h1>
                 <p class="lead text-muted mb-4 fs-5" style="max-width: 48ch; line-height: 1.6;">
-                    The premium vault for your trading cards, memorabilia, and collectibles. Catalog your collection, track estimated value, and showcase your items to the community.
+                    The premium vault for your trading cards, memorabilia, and other collectibles. Catalog your collection, showcase your items to the community, and check out theirs too.
                 </p>
                 <div class="d-flex flex-wrap gap-3 mb-5">
                     <a asp-page="/Registration" class="btn btn-primary btn-lg px-4 py-3 d-flex align-items-center gap-2">
-                        <span>Start tracking today</span>
+                        <span>Start today</span>
                         <i class="bi bi-arrow-right"></i>
                     </a>
                     <a asp-page="/Login" class="btn btn-outline-primary btn-lg px-4 py-3">
@@ -155,80 +155,46 @@
                 </div>
             </div>
             
-            <div class="col-lg-6 d-flex justify-content-center">
-                <!-- Floating Collectr Mock UI elements -->
-                <div class="position-relative" style="width: 100%; max-width: 440px;">
-                    <!-- Main Value Card -->
-                    <div class="card p-4 shadow-lg border-0 position-relative z-2" style="background-color: var(--bg-card) !important; border: 1px solid rgba(166, 177, 225, 0.25) !important; border-radius: 20px !important;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-secondary small fw-bold">PORTFOLIO · 30D</span>
-                            <span class="badge bg-success">▲ +17.3%</span>
-                        </div>
-                        <h2 class="display-6 fw-bold mb-2" style="font-family: 'Outfit', sans-serif; letter-spacing: -0.5px;">$12,452.00</h2>
-                        <div class="text-muted small mb-4">+$1,833.00 profit this month</div>
-                        
-                        <!-- Inline sparkline chart SVG -->
-                        <div style="height: 100px;">
-                            <svg viewBox="0 0 100 30" class="w-100 h-100" style="display: block; overflow: visible;">
-                                <defs>
-                                    <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="var(--color-periwinkle)" stop-opacity="0.3"></stop>
-                                        <stop offset="100%" stop-color="var(--color-periwinkle)" stop-opacity="0.0"></stop>
-                                    </linearGradient>
-                                </defs>
-                                <path d="M 0 25 Q 15 20 25 22 T 50 12 T 75 16 T 100 4 L 100 30 L 0 30 Z" fill="url(#sparkline-grad)"></path>
-                                <path d="M 0 25 Q 15 20 25 22 T 50 12 T 75 16 T 100 4" fill="none" stroke="var(--color-periwinkle)" stroke-width="1.8" stroke-linecap="round"></path>
-                                <circle cx="100" cy="4" r="2.5" fill="var(--color-lavender)" stroke="var(--color-indigo-dark)" stroke-width="0.8"></circle>
-                            </svg>
-                        </div>
+            <div class="col-lg-6 d-flex justify-content-center align-items-center" style="min-height: 600px;">
+                <!-- Animated Vault Container -->
+                <div class="vault-container position-relative overflow-visible" style="width: 440px; height: 440px;">
+                    
+                    <!-- The Vault Image -->
+                    <img src="/images/opened_vault.jpg" alt="Opened Vault" class="vault-img position-absolute w-100 h-100" style="object-fit: contain; z-index: 2; border-radius: 24px; filter: drop-shadow(0 0 20px rgba(166,177,225,0.25));" />
+                    
+                    <!-- Ambient Glow backdrop -->
+                    <div class="vault-glow position-absolute w-100 h-100 rounded-circle" style="background: radial-gradient(circle, rgba(166, 177, 225, 0.25) 0%, rgba(0,0,0,0) 70%); z-index: 1; transform: scale(1.3); filter: blur(10px); pointer-events: none;"></div>
+                    
+                    <!-- Item 1: Ronaldo Jersey (Left) -->
+                    <div class="popped-item left-item" id="itemLeft">
+                        <img src="/images/ronaldo.jpg" alt="Ronaldo Jersey" class="popped-img" />
                     </div>
                     
-                    <!-- Floating Card item 1 (behind) -->
-                    <div class="card p-3 shadow-sm position-absolute border-0 z-1" 
-                         style="background-color: var(--bg-card-hover) !important; 
-                                border: 1px solid rgba(166, 177, 225, 0.15) !important;
-                                border-radius: 14px !important;
-                                top: -35px; right: -25px; width: 180px; 
-                                transform: rotate(8deg); opacity: 0.85;">
-                        <div class="d-flex gap-2 align-items-center">
-                            <div class="rounded bg-dark" style="width: 40px; height: 40px; background-color: rgba(244, 238, 255, 0.05) !important; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-lightning text-warning"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <div class="text-truncate fw-bold text-light" style="font-size: 11px;">Charizard #4</div>
-                                <div class="text-muted" style="font-size: 9px;">Base Set Holo</div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-color">
-                            <span class="fw-bold" style="font-size: 12px; color: var(--color-lavender);">$420.00</span>
-                            <span class="text-success" style="font-size: 9px;">▲ +4.2%</span>
-                        </div>
+                    <!-- Item 2: Treekachu Pikachu Card (Middle) -->
+                    <div class="popped-item middle-item" id="itemMiddle">
+                        <img src="/images/treekachu.jpg" alt="Treekachu Card" class="popped-img" />
+                    </div>
+                    
+                    <!-- Item 3: Iron Man Figure (Right) -->
+                    <div class="popped-item right-item" id="itemRight">
+                        <img src="/images/ironman.png" alt="Iron Man" class="popped-img" />
                     </div>
 
-                    <!-- Floating Card item 2 (below) -->
-                    <div class="card p-3 shadow-sm position-absolute border-0 z-3" 
-                         style="background-color: var(--bg-card-hover) !important; 
-                                border: 1px solid rgba(166, 177, 225, 0.15) !important;
-                                border-radius: 14px !important;
-                                bottom: -35px; left: -25px; width: 190px; 
-                                transform: rotate(-5deg); opacity: 0.9;">
-                        <div class="d-flex gap-2 align-items-center">
-                            <div class="rounded bg-dark" style="width: 40px; height: 40px; background-color: rgba(244, 238, 255, 0.05) !important; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-star-fill text-info"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <div class="text-truncate fw-bold text-light" style="font-size: 11px;">Black Lotus</div>
-                                <div class="text-muted" style="font-size: 9px;">Vintage Magic</div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-color">
-                            <span class="fw-bold" style="font-size: 12px; color: var(--color-lavender);">$8,750.00</span>
-                            <span class="text-success" style="font-size: 9px;">▲ +12.8%</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     }
 
-</div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.getElementById('itemLeft')?.classList.add('popped');
+                document.getElementById('itemMiddle')?.classList.add('popped');
+                document.getElementById('itemRight')?.classList.add('popped');
+            }, 400);
+        });
+    </script>
+}

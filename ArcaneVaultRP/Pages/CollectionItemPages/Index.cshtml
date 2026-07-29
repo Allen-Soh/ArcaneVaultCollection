@@ -64,41 +64,33 @@
     <a asp-page="Create" class="btn btn-success">Create New</a>
 </p>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Item Name</th>
-            <th>Category</th>
-            <th>Current Quantity</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.CollectionItem)
-        {
-            var categoryDisplay = item.CategoryName != null
-                ? (isStaff
-                    ? Model.Truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
-                    : Model.Truncate(item.CategoryName))
-                : "No Category";
-
-            <tr>
-                <td>@Model.Truncate(item.ItemName)</td>
-                <td>@categoryDisplay</td>
-                <td>@item.CurrentQuantity</td>
-                <td>
-                    <a asp-page="./Edit" asp-route-itemid="@item.ItemId" class="btn btn-warning btn-sm">Edit</a>
-                    <a asp-page="./Details" asp-route-itemid="@item.ItemId" class="btn btn-info btn-sm">Details</a>
-                    <a asp-page="./Delete" asp-route-itemid="@item.ItemId" class="btn btn-danger btn-sm">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="border rounded overflow-hidden" style="position:relative;">
+    <div id="itemTableWrapper" style="overflow-y:auto;">
+        <table class="table mb-0" style="width:100%;">
+            <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                <tr>
+                    <th style="padding:12px;">Item Name</th>
+                    <th style="padding:12px;">Category</th>
+                    <th style="padding:12px;">Current Quantity</th>
+                    <th style="padding:12px; width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="itemTableBody"></tbody>
+        </table>
+    </div>
+    <div id="tableEmpty" style="display:none;" class="text-center text-muted py-4">
+        No items match your search.
+    </div>
+</div>
+<div class="d-flex justify-content-between mt-2 mb-4" id="itemTableIndicatorRow">
+    <p class="text-muted mb-0" id="itemScrollIndicator" style="font-size:12px;"></p>
+    <p class="text-muted mb-0" id="itemScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+</div>
 
 @section Scripts {
     <script>
         const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllItems));
+        const displayItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CollectionItem));
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
         const isStaff = @isStaff.ToString().ToLower();
 
@@ -224,5 +216,124 @@
                 itemNameSuggestions.style.display = 'none';
             }
         });
+
+        // ── Virtual Scroll Table Implementation (Copied from Insights) ──
+        const ROW_HEIGHT = 53;
+        const BUFFER = 5;
+        const THRESHOLD = 10;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    data.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+
+                const topSpacer = topPad > 0
+                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+                const bottomSpacer = bottomPad > 0
+                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+
+                tbody.innerHTML =
+                    topSpacer +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    bottomSpacer;
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function renderTable(data) {
+            const empty = document.getElementById('tableEmpty');
+            const wrapper = document.getElementById('itemTableWrapper');
+            const indicatorRow = document.getElementById('itemTableIndicatorRow');
+            const moreText = document.getElementById('itemScrollMoreText');
+
+            if (data.length === 0) {
+                empty.style.display = 'block';
+                document.getElementById('itemTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = data.length > THRESHOLD ? 'block' : 'none';
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(data.length, visStart + THRESHOLD - 1);
+                document.getElementById('itemScrollIndicator').textContent =
+                    data.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${data.length}`
+                        : `${data.length} item${data.length === 1 ? '' : 's'}`;
+            }
+
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
+
+            createVirtualTable('itemTableWrapper', 'itemTableBody', data, (item, idx) => {
+                const border = idx > 0 ? 'border-top:1px solid var(--border-color);' : '';
+                const categoryDisplay = item.CategoryName != null
+                    ? (isStaff
+                        ? truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
+                        : truncate(item.CategoryName))
+                    : "No Category";
+
+                return `
+                    <tr style="${border}height:${ROW_HEIGHT}px;">
+                        <td style="padding:12px;">${truncate(item.ItemName)}</td>
+                        <td style="padding:12px;">${categoryDisplay}</td>
+                        <td style="padding:12px;">${item.CurrentQuantity}</td>
+                        <td style="padding:12px; white-space:nowrap;">
+                            <div class="d-inline-flex gap-1">
+                                <a href="/CollectionItemPages/Edit?itemid=${item.ItemId}" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="/CollectionItemPages/Details?itemid=${item.ItemId}" class="btn btn-info btn-sm">Details</a>
+                                <a href="/CollectionItemPages/Delete?itemid=${item.ItemId}" class="btn btn-danger btn-sm">Delete</a>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            updateIndicator();
+        }
+
+        renderTable(displayItems);
     </script>
 }

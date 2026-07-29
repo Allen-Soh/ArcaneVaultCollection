@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -25,6 +26,10 @@ public class PopularItemsModel : PageModel
             return RedirectToPage("/Index");
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         Items = await httpClient
             .GetFromJsonAsync<List<PopularItemDetail>>("Insights/popularitems/detail")

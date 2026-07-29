@@ -35,35 +35,27 @@
     <a asp-page="Create" class="btn btn-success">Create New</a>
 </p>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Category Code</th>
-            <th>Category Name</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Category)
-        {
-            <tr>
-                <td>@item.CategoryCode</td>
-                <td>@item.CategoryName</td>
-                <td>
-                    <a asp-page="./Edit"
-                       asp-route-categorycode="@item.CategoryCode"
-                       class="btn btn-warning btn-sm">Edit</a>
-                    <a asp-page="./Details"
-                       asp-route-categorycode="@item.CategoryCode"
-                       class="btn btn-info btn-sm">Details</a>
-                    <a asp-page="./Delete"
-                       asp-route-categorycode="@item.CategoryCode"
-                       class="btn btn-danger btn-sm">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="border rounded overflow-hidden" style="position:relative;">
+    <div id="categoryTableWrapper" style="overflow-y:auto;">
+        <table class="table mb-0" style="width:100%;">
+            <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                <tr>
+                    <th style="padding:12px;">Category Code</th>
+                    <th style="padding:12px;">Category Name</th>
+                    <th style="padding:12px; width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="categoryTableBody"></tbody>
+        </table>
+    </div>
+    <div id="tableEmpty" style="display:none;" class="text-center text-muted py-4">
+        No categories match your search.
+    </div>
+</div>
+<div class="d-flex justify-content-between mt-2 mb-4" id="categoryTableIndicatorRow">
+    <p class="text-muted mb-0" id="categoryScrollIndicator" style="font-size:12px;"></p>
+    <p class="text-muted mb-0" id="categoryScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+</div>
 
 @section Scripts {
     <script>
@@ -109,5 +101,117 @@
         document.addEventListener('click', function (e) {
             if (!searchCategoryName.contains(e.target)) categoryNameSuggestions.innerHTML = '';
         });
+
+        // ── Virtual Scroll Table Implementation (Copied from Insights) ──
+        const ROW_HEIGHT = 53;
+        const BUFFER = 5;
+        const THRESHOLD = 7;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 15;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    data.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+
+                const topSpacer = topPad > 0
+                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+                const bottomSpacer = bottomPad > 0
+                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+
+                tbody.innerHTML =
+                    topSpacer +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    bottomSpacer;
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function renderTable(data) {
+            const empty = document.getElementById('tableEmpty');
+            const wrapper = document.getElementById('categoryTableWrapper');
+            const indicatorRow = document.getElementById('categoryTableIndicatorRow');
+            const moreText = document.getElementById('categoryScrollMoreText');
+
+            if (data.length === 0) {
+                empty.style.display = 'block';
+                document.getElementById('categoryTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = data.length > THRESHOLD ? 'block' : 'none';
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(data.length, visStart + THRESHOLD - 1);
+                document.getElementById('categoryScrollIndicator').textContent =
+                    data.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${data.length}`
+                        : `${data.length} categor${data.length === 1 ? 'y' : 'ies'}`;
+            }
+
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
+
+            createVirtualTable('categoryTableWrapper', 'categoryTableBody', data, (cat, idx) => {
+                const border = idx > 0 ? 'border-top:1px solid var(--border-color);' : '';
+                return `
+                    <tr style="${border}height:${ROW_HEIGHT}px;">
+                        <td style="padding:12px;">${cat.CategoryCode}</td>
+                        <td style="padding:12px;">${truncate(cat.CategoryName)}</td>
+                        <td style="padding:12px; white-space:nowrap;">
+                            <div class="d-inline-flex gap-1">
+                                <a href="/CategoryPages/Edit?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="/CategoryPages/Details?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-info btn-sm">Details</a>
+                                <a href="/CategoryPages/Delete?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-danger btn-sm">Delete</a>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            updateIndicator();
+        }
+
+        renderTable(categories);
     </script>
 }

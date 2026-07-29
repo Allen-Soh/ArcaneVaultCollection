@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -34,6 +35,10 @@ public class DeleteModel : PageModel
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         // LINQ — find category by code
         var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                             ?? new List<Category>();
@@ -53,6 +58,11 @@ public class DeleteModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         var response = await httpClient.DeleteAsync($"Category/{Category.CategoryCode}");
 
         if (response.IsSuccessStatusCode)

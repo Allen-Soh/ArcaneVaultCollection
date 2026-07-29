@@ -1,4 +1,5 @@
 using ArcaneVaultAPI.DataTransferObject;
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -29,6 +30,11 @@ public class CreateModel : PageModel
             return RedirectToPage("/Login");
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                      ?? new List<Category>();
 
@@ -44,6 +50,7 @@ public class CreateModel : PageModel
         if (!ModelState.IsValid)
         {
             HttpClient httpClientReload = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
             Categories = await httpClientReload.GetFromJsonAsync<List<Category>>("Category")
                          ?? new List<Category>();
             return Page();
@@ -56,6 +63,10 @@ public class CreateModel : PageModel
             return RedirectToPage("/Login");
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         // Get all active items for logged in user
         var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")

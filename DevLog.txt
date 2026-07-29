@@ -299,3 +299,11 @@
 
 [To Do]
 - Fix issue where the modals for settings and showoffs do not allow any interactions
+
+===== DEV LOG (29/7/2026) - Part 2 =====
+[Done]
+- Fixed issues mentioned previously
+- Fixed text font colour
+
+[To Do]
+- Start on reworking showoffs

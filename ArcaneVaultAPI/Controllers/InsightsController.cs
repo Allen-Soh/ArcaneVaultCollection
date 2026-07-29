@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class InsightsController : ControllerBase
 {
     private readonly string _connectionString = "Data Source=ArcaneVault.db";

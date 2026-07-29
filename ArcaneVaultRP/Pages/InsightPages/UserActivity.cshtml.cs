@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -30,6 +31,10 @@ public class UserActivityModel : PageModel
             return RedirectToPage("/Index");
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         var dauRes = await httpClient.GetFromJsonAsync<CountResult>("LoginLog/dau");
         var wauRes = await httpClient.GetFromJsonAsync<CountResult>("LoginLog/wau");

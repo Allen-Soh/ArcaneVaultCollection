@@ -12,7 +12,7 @@
 </head>
 <body>
     <!-- Background ambient glows -->
-    <div class="position-absolute top-0 start-0 w-100 h-100 overflow-hidden" style="pointer-events: none; z-index: 0; min-height: 100vh;">
+    <div class="position-fixed top-0 start-0 w-100 h-100 overflow-hidden" style="pointer-events: none; z-index: -1;">
         <div class="glow glow-indigo" style="width: 500px; height: 500px; top: -150px; left: -100px; opacity: 0.2;"></div>
         <div class="glow glow-periwinkle" style="width: 600px; height: 600px; top: 35%; right: -150px; opacity: 0.12;"></div>
         <div class="glow glow-lavender" style="width: 500px; height: 500px; bottom: -100px; left: 10%; opacity: 0.15;"></div>
@@ -22,7 +22,7 @@
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-4">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2" asp-area="" asp-page="/Index">
-                    <i class="bi bi-shield-shaded text-light"></i>
+                    <i class="bi bi-magic text-light"></i>
                     <span>Arcane Vault</span>
                 </a>
                 <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -103,7 +103,7 @@
             </div>
         </nav>
     </header>
-    <div class="container position-relative" style="z-index: 1;">
+    <div class="container">
         <main role="main" class="pb-5">
             @RenderBody()
         </main>

@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model ArcaneVaultRP.Pages.InsightPages.MarketDemandModel
 @{
     ViewData["Title"] = "Market Demand";
@@ -534,12 +534,12 @@
                 filtered.length > THRESHOLD ? 'block' : 'none';
 
             tbody.innerHTML = filtered.map((item, idx) => {
-                const isRising = item.pct > 0, isFlat = item.pct === 0;
-                const badgeBg = isFlat ? '#f8f9fa' : isRising ? '#E1F5EE' : '#FCEBEB';
-                const badgeColor = isFlat ? '#6c757d' : isRising ? '#0F6E56' : '#A32D2D';
-                const icon = isFlat ? 'bi-dash' : isRising ? 'bi-arrow-up' : 'bi-arrow-down';
-                const pctLabel = item.pct > 0 ? `+${item.pct}%` : `${item.pct}%`;
-                const pctColor = isFlat ? '#6c757d' : isRising ? '#0F6E56' : '#A32D2D';
+                 const isRising = item.pct > 0, isFlat = item.pct === 0;
+                 const badgeBg = isFlat ? 'rgba(166, 177, 225, 0.1)' : isRising ? 'rgba(126, 245, 166, 0.15)' : 'rgba(255, 133, 145, 0.15)';
+                 const badgeColor = isFlat ? '#8d94ba' : isRising ? '#7ef5a6' : '#ff8591';
+                 const icon = isFlat ? 'bi-dash' : isRising ? 'bi-arrow-up' : 'bi-arrow-down';
+                 const pctLabel = item.pct > 0 ? `+${item.pct}%` : `${item.pct}%`;
+                 const pctColor = isFlat ? '#8d94ba' : isRising ? '#7ef5a6' : '#ff8591';
                 const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
 
                 return `

@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model ArcaneVaultRP.Pages.InsightPages.CommunityInterestModel
 @{
     ViewData["Title"] = "Community Interest";
@@ -477,6 +477,15 @@
         const total  = filteredData.length;
         const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
         const endIdx   = Math.min(total, startIdx + VISIBLE_ROWS + 4);
+
+        const sc = document.getElementById('scrollContainer');
+        if (total <= VISIBLE_ROWS) {
+            sc.style.height = `${total * ROW_HEIGHT}px`;
+            sc.style.maxHeight = `${total * ROW_HEIGHT}px`;
+        } else {
+            sc.style.height = `${VISIBLE_ROWS * ROW_HEIGHT}px`;
+            sc.style.maxHeight = `${VISIBLE_ROWS * ROW_HEIGHT}px`;
+        }
 
         document.getElementById('spacerTop').style.height =
             `${startIdx * ROW_HEIGHT}px`;

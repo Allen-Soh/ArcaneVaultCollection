@@ -28,6 +28,10 @@ public class SettingsModel : PageModel
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         // Always fetch fresh from API so country/avatar are current
         var freshUser = await httpClient
             .GetFromJsonAsync<ArcaneVaultUser>($"ArcaneVaultUser/{sessionUser.UserName}");
@@ -51,6 +55,11 @@ public class SettingsModel : PageModel
             return BadRequest();
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
 
         ArcaneVaultUser? freshUser;
         try

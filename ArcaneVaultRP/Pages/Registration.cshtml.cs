@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -57,6 +58,10 @@ namespace ArcaneVaultRP.Pages
             }
 
             HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+            // Attach JWT token from session
+            var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+            HttpClientHelper.AttachJwtToken(httpClient, token);
 
             var existingUsers = await httpClient.GetFromJsonAsync<List<ArcaneVaultUser>>("ArcaneVaultUser");
 

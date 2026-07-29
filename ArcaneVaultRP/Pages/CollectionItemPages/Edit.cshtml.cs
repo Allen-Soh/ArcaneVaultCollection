@@ -1,4 +1,5 @@
 using ArcaneVaultAPI.DataTransferObject;
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -38,6 +39,10 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         // LINQ — find item by id
         var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")
@@ -100,6 +105,10 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         // Update CollectionItem
         var dto = new CollectionItemDTO

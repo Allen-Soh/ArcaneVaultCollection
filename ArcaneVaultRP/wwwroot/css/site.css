@@ -479,3 +479,156 @@ a:hover {
     color: var(--text-secondary) !important;
     background-color: rgba(18, 20, 34, 0.8) !important;
 }
+
+/* List Group & Search Suggestions Dropdowns Customization */
+.list-group {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+.list-group-item {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    font-family: 'Outfit', sans-serif !important;
+    transition: all 0.2s ease;
+}
+
+.list-group-item.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.list-group-item-action {
+    color: var(--text-secondary) !important;
+}
+
+.list-group-item-action:hover, .list-group-item-action:focus {
+    background-color: var(--bg-card-hover) !important;
+    color: var(--color-light) !important;
+}
+
+.list-group-item.active {
+    background-color: var(--color-indigo-dark) !important;
+    border-color: var(--color-periwinkle) !important;
+    color: var(--color-light) !important;
+}
+
+/* Custom action buttons overrides (Edit, Details, Delete, Cancel) */
+.btn-warning {
+    background-color: rgba(166, 177, 225, 0.1) !important;
+    border: 1px solid var(--color-periwinkle) !important;
+    color: var(--color-periwinkle) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+    background-color: var(--color-periwinkle) !important;
+    border-color: var(--color-lavender) !important;
+    color: var(--bg-darkest) !important;
+}
+
+.btn-info {
+    background-color: rgba(220, 214, 247, 0.1) !important;
+    border: 1px solid var(--color-lavender) !important;
+    color: var(--color-lavender) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-info:hover, .btn-info:focus, .btn-info:active {
+    background-color: var(--color-lavender) !important;
+    border-color: var(--color-light) !important;
+    color: var(--bg-darkest) !important;
+}
+
+.btn-danger {
+    background-color: rgba(255, 133, 145, 0.08) !important;
+    border: 1px solid #ff8591 !important;
+    color: #ff8591 !important;
+    transition: all 0.2s ease !important;
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+    background-color: #ff8591 !important;
+    border-color: #ff8591 !important;
+    color: var(--bg-darkest) !important;
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-secondary:hover {
+    background-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Color overrides for detail pages and showoff names to prevent blending with dark background */
+.form-control-plaintext, 
+[class*="form-control-plaintext"] {
+    color: var(--text-primary) !important;
+}
+
+.card-footer .fw-semibold,
+.card-footer span.fw-semibold,
+#manageModalBody .fw-semibold,
+strong[id*="Name"],
+#deleteShowoffName {
+    color: var(--text-primary) !important;
+}
+
+/* Popped items styling (opened vault pop-out animation) */
+.vault-container {
+    position: relative;
+    width: 440px;
+    height: 440px;
+}
+
+.popped-item {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 220px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1) rotate(0deg);
+    transition: all 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1; /* starts inside/behind vault */
+    pointer-events: none;
+}
+
+.popped-item img {
+    width: 100%;
+    height: 220px;
+    object-fit: contain;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    /* Clean 3D drop-shadow around image shape boundaries for premium depth */
+    filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.65)) drop-shadow(0 5px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* Popped active states with distinct 3D perspective angles */
+.popped-item.left-item.popped {
+    opacity: 1;
+    transform: translate(-125%, -85%) scale(0.95) perspective(800px) rotateY(18deg) rotateZ(-6deg);
+    z-index: 3;
+    pointer-events: auto;
+}
+
+.popped-item.middle-item.popped {
+    opacity: 1;
+    transform: translate(-50%, -130%) scale(1.2) perspective(800px) rotateX(12deg);
+    z-index: 4; /* highlighted middle element (Treekachu) */
+    pointer-events: auto;
+}
+
+.popped-item.right-item.popped {
+    opacity: 1;
+    transform: translate(25%, -85%) scale(0.95) perspective(800px) rotateY(-18deg) rotateZ(6deg);
+    z-index: 3;
+    pointer-events: auto;
+}

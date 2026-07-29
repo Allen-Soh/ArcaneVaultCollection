@@ -1,7 +1,9 @@
-
 using ArcaneVaultAPI.Data;
 using CloudinaryDotNet;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace ArcaneVaultAPI
 {
@@ -10,41 +12,62 @@ namespace ArcaneVaultAPI
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            var connectionString = builder.Configuration.GetConnectionString("ArcaneDbContext") ?? throw new InvalidOperationException("Connection string 'ArcaneDbContext' not found.");
 
-            // Add services to the container.
-
+            // Add services to the container
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
+            // Cloudinary
             builder.Services.AddSingleton(new Cloudinary(new Account(
                 "nyj7a9za",
                 "***REMOVED-CLOUDINARY-APIKEY***",
                 "***REMOVED-CLOUDINARY-APISECRET***"
             )));
 
-            //Poll
+            // CORS — allow RP to communicate with API
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy.WithOrigins("https://localhost:7051")
                           .AllowAnyHeader()
-                          .AllowAnyMethod();
-                    // .AllowCredentials() // only if you're sending cookies/auth
+                          .AllowAnyMethod()
+                          .AllowCredentials();
                 });
             });
-            //Poll
 
+            // DbContext
             builder.Services.AddDbContext<ArcaneDbContext>(options =>
             {
                 options.UseSqlite("Data Source=ArcaneVault.db");
             });
 
+            // ════════════════════════════════════════════
+            // JWT AUTHENTICATION SERVICE REGISTRATION
+            // ════════════════════════════════════════════
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+                };
+            });
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -52,20 +75,21 @@ namespace ArcaneVaultAPI
 
             app.UseHttpsRedirection();
 
-            app.UseCors("AllowFrontend");
-
+            // ════════════════════════════════════════════
+            // MIDDLEWARE ORDER — MUST BE IN THIS EXACT ORDER
+            // ════════════════════════════════════════════
+            app.UseCors("AllowFrontend");        // before Authentication
+            app.UseAuthentication();             // identify who is sending requests
             app.UseAuthorization();
 
             app.MapControllers();
 
-            // Ensure database and tables are created first
+            // Ensure DB + run seeder
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ArcaneDbContext>();
-                context.Database.EnsureCreated();  // ← creates all tables first
+                context.Database.EnsureCreated();
             }
-
-            // Then run seeder
             ArcaneDbSeeder.Seed(app.Services);
 
             app.Run();

@@ -27,6 +27,11 @@ public class EditModel : PageModel
             return NotFound();
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                             ?? new List<Category>();
 
@@ -54,6 +59,11 @@ public class EditModel : PageModel
         }
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         var allCategories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                             ?? new List<Category>();
 

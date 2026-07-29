@@ -1,3 +1,4 @@
+using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -48,6 +49,10 @@ public class IndexModel : PageModel
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
+
         UserShowoffs = await httpClient
             .GetFromJsonAsync<List<Showoff>>($"Showoff/user/{loggedInUser.UserName}")
             ?? new List<Showoff>();
@@ -83,6 +88,10 @@ public class IndexModel : PageModel
         ActiveTab = tab;
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+
+        // Attach JWT token from session
+        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
+        HttpClientHelper.AttachJwtToken(httpClient, token);
 
         await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
 
