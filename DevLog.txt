@@ -292,3 +292,10 @@
 [To Do]
 - Work on overall design in Figma Make
 - After working on Figma Make, then work on Showoffs
+
+===== DEV LOG (29/7/2026) =====
+[Done]
+- Reworked most of the css except for showoffs and Edit/Details for items and categories
+
+[To Do]
+- Fix issue where the modals for settings and showoffs do not allow any interactions

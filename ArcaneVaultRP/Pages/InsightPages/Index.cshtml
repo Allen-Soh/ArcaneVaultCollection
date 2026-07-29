@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model ArcaneVaultRP.Pages.InsightPages.IndexModel
 @{
     ViewData["Title"] = "Insights";
@@ -7,24 +7,24 @@
 <div class="container mt-4" style="max-width:860px;">
 
     <!-- Header -->
-    <div class="mb-4">
-        <h2 class="fw-500 mb-1" style="font-size:22px;">Insights</h2>
+    <div class="mb-4 animate-fade-in">
+        <h2 class="fw-500 mb-1" style="font-size:24px; font-family: 'Outfit', sans-serif;">Insights Dashboard</h2>
         <p class="text-muted" style="font-size:13px;">Staff only · Data refreshes on each page load</p>
     </div>
 
     <!-- Rows -->
-    <div class="border-top">
+    <div class="animate-fade-in" style="border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background-color: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
 
         <!-- Popular Items -->
         <a asp-page="./PopularItems"
-           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
-           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
-           onmouseenter="this.style.background='#f8f9fa'"
+           class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
+           style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
+           onmouseenter="this.style.background='var(--bg-card-hover)'"
            onmouseleave="this.style.background='transparent'">
             <div style="flex:1;">
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <i class="bi bi-trophy-fill text-warning" style="font-size:15px;"></i>
-                    <span class="fw-500" style="font-size:16px;color:#212529;">Popular items</span>
+                    <i class="bi bi-trophy-fill text-warning" style="font-size:16px;"></i>
+                    <span class="fw-bold" style="font-size:16px; color: var(--text-primary);">Popular items</span>
                 </div>
                 @{
                     var topItem = Model.PopularItems.FirstOrDefault();
@@ -32,8 +32,8 @@
                 }
                 @if (topItem != null)
                 {
-                    <p class="mb-1" style="font-size:14px;color:#212529;">
-                        Most owned: <strong>@topItem.ItemName</strong>
+                    <p class="mb-1 text-light" style="font-size:14px;">
+                        Most owned: <strong class="text-white">@topItem.ItemName</strong>
                         <span class="text-muted">(@topItem.OwnerCount owners)</span>
                     </p>
                     <p class="mb-0 text-muted" style="font-size:13px;">
@@ -51,21 +51,21 @@
 
         <!-- User Activity -->
         <a asp-page="./UserActivity"
-           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
-           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
-           onmouseenter="this.style.background='#f8f9fa'"
+           class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
+           style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
+           onmouseenter="this.style.background='var(--bg-card-hover)'"
            onmouseleave="this.style.background='transparent'">
             <div style="flex:1;">
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <i class="bi bi-people-fill text-primary" style="font-size:15px;"></i>
-                    <span class="fw-500" style="font-size:16px;color:#212529;">User activity and engagement</span>
+                    <i class="bi bi-people-fill text-primary" style="font-size:16px; color: var(--color-periwinkle) !important;"></i>
+                    <span class="fw-bold" style="font-size:16px; color: var(--text-primary);">User activity and engagement</span>
                 </div>
                 @{
                     var mostActive = Model.UserActivities
                         .OrderByDescending(u => u.TotalLogins)
                         .FirstOrDefault();
                 }
-                <p class="mb-1" style="font-size:14px;color:#212529;">
+                <p class="mb-1 text-light" style="font-size:14px;">
                     Active today: <strong>@Model.DAU</strong> ·
                     This week: <strong>@Model.WAU</strong> ·
                     This month: <strong>@Model.MAU</strong>
@@ -82,14 +82,14 @@
 
         <!-- Market Demand -->
         <a asp-page="./MarketDemand"
-           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
-           style="border-top:0.5px solid #e5e5e5; transition:background 0.15s;"
-           onmouseenter="this.style.background='#f8f9fa'"
+           class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
+           style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
+           onmouseenter="this.style.background='var(--bg-card-hover)'"
            onmouseleave="this.style.background='transparent'">
             <div style="flex:1;">
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <i class="bi bi-graph-up-arrow text-success" style="font-size:15px;"></i>
-                    <span class="fw-500" style="font-size:16px;color:#212529;">Market demand and trends</span>
+                    <i class="bi bi-graph-up-arrow text-success" style="font-size:16px; color: var(--color-lavender) !important;"></i>
+                    <span class="fw-bold" style="font-size:16px; color: var(--text-primary);">Market demand and trends</span>
                 </div>
                 @{
                     var topMarket = Model.MarketDemand
@@ -102,8 +102,8 @@
                 }
                 @if (topMarket != null)
                 {
-                    <p class="mb-1" style="font-size:14px;color:#212529;">
-                        Trending: <strong>@topMarket.ItemName</strong>
+                    <p class="mb-1 text-light" style="font-size:14px;">
+                        Trending: <strong class="text-white">@topMarket.ItemName</strong>
                         <span class="text-muted">(@topMarket.CurrentOwners owners in the last @Model.MarketDays days)</span>
                     </p>
                     <p class="mb-0 text-muted" style="font-size:13px;">
@@ -120,14 +120,14 @@
 
         <!-- Community Interest -->
         <a asp-page="./CommunityInterest"
-           class="d-flex justify-content-between align-items-start py-3 px-2 text-decoration-none rounded"
-           style="border-top:0.5px solid #e5e5e5;border-bottom:0.5px solid #e5e5e5; transition:background 0.15s;"
-           onmouseenter="this.style.background='#f8f9fa'"
+           class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
+           style="transition: background 0.2s;"
+           onmouseenter="this.style.background='var(--bg-card-hover)'"
            onmouseleave="this.style.background='transparent'">
             <div style="flex:1;">
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <i class="bi bi-heart-fill text-danger" style="font-size:15px;"></i>
-                    <span class="fw-500" style="font-size:16px;color:#212529;">Community interest</span>
+                    <i class="bi bi-heart-fill text-danger" style="font-size:16px;"></i>
+                    <span class="fw-bold" style="font-size:16px; color: var(--text-primary);">Community interest</span>
                 </div>
                 @{
                     var totalViews = Model.CommunityInterest.MostViewed.Sum(s => s.ViewCount);
@@ -135,7 +135,7 @@
                     var topSearch  = Model.SearchTrends.FirstOrDefault();
                     var topShowoff = Model.CommunityInterest.MostViewed.FirstOrDefault();
                 }
-                <p class="mb-1" style="font-size:14px;color:#212529;">
+                <p class="mb-1 text-light" style="font-size:14px;">
                     <strong>@totalViews</strong> showoff views this week ·
                     <strong>@totalLikes</strong> likes this week
                 </p>

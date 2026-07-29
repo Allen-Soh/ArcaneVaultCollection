@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
-
 namespace ArcaneVaultRP
 {
     public class Program

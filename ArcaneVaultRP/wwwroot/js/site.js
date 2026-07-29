@@ -1,4 +1,5 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
-
-// Write your JavaScript code.
+// Chart.js Global Overrides for Dark Space Theme
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#8d94ba'; // var(--text-muted)
+    Chart.defaults.borderColor = 'rgba(166, 177, 225, 0.1)'; // var(--border-color)
+}
