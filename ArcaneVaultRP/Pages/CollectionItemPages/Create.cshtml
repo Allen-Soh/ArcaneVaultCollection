@@ -2,95 +2,154 @@
 @model ArcaneVaultRP.Pages.CollectionItemPages.CreateModel
 @{
     ViewData["Title"] = "Create Collection Item";
-    var isStaff = HttpContext.Session.GetString(SessionKeys.UserRole) == "1";
 }
 
-<h1>Add Collection Item</h1>
-<hr />
-
-<div class="row">
-    <div class="col-md-5">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-            <!-- Item Name -->
-            <div class="mb-3">
-                <label asp-for="CollectionItem.ItemName" class="form-label fw-semibold">Item Name</label>
-                <input asp-for="CollectionItem.ItemName" class="form-control" placeholder="Enter item name" />
-                <span asp-validation-for="CollectionItem.ItemName" class="text-danger small"></span>
-            </div>
-
-            <!-- Category smart dropdown -->
-            <div class="mb-3 position-relative">
-                <label class="form-label fw-semibold">Category</label>
-                <input type="text"
-                       id="categorySearch"
-                       class="form-control"
-                       placeholder="Click to browse or type to search..."
-                       autocomplete="off" />
-                <input type="hidden"
-                       id="selectedCategoryCode"
-                       name="SelectedCategoryCode" />
-                <div id="categorySuggestions"
-                     class="list-group position-absolute z-3"
-                     style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
-                <small class="text-muted">Select a category for your item</small>
-            </div>
-
-            <!-- Item Quantity -->
-            <div class="mb-3">
-                <label class="form-label fw-semibold" for="CollectionItem_StartingQuantity">Item Quantity</label>
-                <div class="input-group">
-                    <button type="button" class="btn btn-outline-secondary" id="decreaseBtn">-</button>
-                    <input asp-for="CollectionItem.StartingQuantity"
-                           class="form-control text-center"
-                           id="CollectionItem_StartingQuantity"
-                           min="0"
-                           placeholder="0" />
-                    <button type="button" class="btn btn-outline-secondary" id="increaseBtn">+</button>
-                </div>
-                <span asp-validation-for="CollectionItem.StartingQuantity" class="text-danger small"></span>
-            </div>
-
-            <div class="mt-4">
-                <input type="submit" value="Create" class="btn btn-primary me-2" />
-                <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-            </div>
-        </form>
+<div class="container mt-4" style="max-width:580px;">
+    <div class="mb-1">
+        <a asp-page="./Index"
+           class="text-decoration-none d-inline-flex align-items-center gap-1"
+           style="font-size:13px;">
+            <i class="bi bi-arrow-left" style="font-size:13px;"></i> My Collection
+        </a>
     </div>
+    <h1 style="font-size:22px;font-weight:500;margin:0 0 24px;">Add Collection Item</h1>
+
+    <form method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <!-- Item image upload -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold" style="font-size:13px;">
+                Item Photo <span class="text-muted fw-normal">(optional)</span>
+            </label>
+
+            <!-- Image preview / upload trigger -->
+            <div id="itemImageContainer"
+                 style="width:100%;min-height:250px;max-height:450px;border:2px dashed var(--border-color);
+                border-radius:10px;overflow:hidden;cursor:pointer;
+                display:flex;align-items:center;justify-content:center;
+                background:rgba(166, 177, 225, 0.03);position:relative;"
+                 onclick="openItemUploadModal()">
+                <img id="itemImagePreview" src="" alt=""
+                     style="display:none;max-width:100%;max-height:450px;object-fit:contain;" />
+                <div id="itemImagePlaceholder"
+                     style="text-align:center;pointer-events:none;">
+                    <i class="bi bi-image"
+                       style="font-size:32px;color:var(--text-secondary);display:block;margin-bottom:6px;"></i>
+                    <span style="font-size:13px;color:var(--text-secondary);">Click to add photo</span>
+                </div>
+                <!-- Remove button — shown when image is set -->
+                <button type="button" id="removeImageBtn"
+                        onclick="removeItemImage(event)"
+                        style="display:none;position:absolute;top:8px;right:8px;
+                    width:28px;height:28px;border-radius:50%;
+                    background:rgba(0,0,0,0.6);border:none;
+                    align-items:center;justify-content:center;
+                    cursor:pointer;">
+                    <i class="bi bi-x" style="color:#fff;font-size:14px;"></i>
+                </button>
+            </div>
+
+            <!-- Dedicated Delete Image Button -->
+            <button type="button" 
+                    id="btnDeleteImage" 
+                    class="btn btn-danger btn-sm mt-2 w-100 align-items-center justify-content-center gap-2"
+                    style="display: none;"
+                    onclick="removeItemImage(event)">
+                <i class="bi bi-trash-fill"></i> Delete Image
+            </button>
+
+            <!-- Hidden fields for image data -->
+            <input type="hidden" id="itemImageUrl" name="ImageUrl" />
+            <input type="hidden" id="itemImagePublicId" name="ImagePublicId" />
+        </div>
+
+        <!-- Item Name -->
+        <div class="mb-3">
+            <label asp-for="CollectionItem.ItemName" class="form-label fw-semibold">Item Name</label>
+            <input asp-for="CollectionItem.ItemName" class="form-control"
+                   placeholder="Enter item name" />
+            <span asp-validation-for="CollectionItem.ItemName" class="text-danger small"></span>
+        </div>
+
+        <!-- Category smart dropdown -->
+        <div class="mb-3 position-relative">
+            <label class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="text"
+                   id="categorySearch"
+                   class="form-control"
+                   placeholder="Click to browse or type to search..."
+                   autocomplete="off" />
+            <input type="hidden"
+                   id="selectedCategoryCode"
+                   name="SelectedCategoryCode" />
+            <div id="categorySuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+        </div>
+
+        <!-- Item Quantity -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold"
+                   for="CollectionItem_StartingQuantity">Item Quantity</label>
+            <div class="input-group">
+                <button type="button" class="btn btn-outline-secondary"
+                        id="decreaseBtn">
+                    -
+                </button>
+                <input asp-for="CollectionItem.StartingQuantity"
+                       class="form-control text-center"
+                       id="CollectionItem_StartingQuantity"
+                       min="0" placeholder="0" />
+                <button type="button" class="btn btn-outline-secondary"
+                        id="increaseBtn">
+                    +
+                </button>
+            </div>
+            <span asp-validation-for="CollectionItem.StartingQuantity"
+                  class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <input type="submit" value="Create" class="btn btn-primary" />
+            <a asp-page="./Index" class="btn btn-outline-secondary">Back</a>
+        </div>
+    </form>
 </div>
+
+@await Html.PartialAsync("_ImageCropModal")
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
+        // ── Category smart search (same as before) ──
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
-        const isStaff = @isStaff.ToString().ToLower();
+        const isStaff = @((HttpContext.Session.GetString(SessionKeys.UserRole) == "1").ToString().ToLower());
+
+        function buildSuggestionText(cat) {
+            return isStaff
+                ? truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')'
+                : truncate(cat.CategoryName);
+        }
 
         function truncate(text) {
             if (!text) return '';
-            return text.length <= 40 ? text : text.substring(0, 40) + '...';
-        }
-
-        function buildSuggestionText(cat) {
-            if (isStaff) {
-                return truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
-            }
-            return truncate(cat.CategoryName);
+            return text.length <= 15 ? text : text.substring(0, 15) + '...';
         }
 
         const categorySearch = document.getElementById('categorySearch');
         const categorySuggestions = document.getElementById('categorySuggestions');
         const selectedCategoryCode = document.getElementById('selectedCategoryCode');
 
-        function renderSuggestions(filtered) {
+        function renderCategorySuggestions(filtered) {
             categorySuggestions.innerHTML = '';
             if (filtered.length === 0) {
-                const noResult = document.createElement('div');
-                noResult.className = 'list-group-item text-muted';
-                noResult.textContent = 'No categories found';
-                categorySuggestions.appendChild(noResult);
+                const el = document.createElement('div');
+                el.className = 'list-group-item text-muted';
+                el.textContent = 'No categories found';
+                categorySuggestions.appendChild(el);
                 return;
             }
             filtered.forEach(cat => {
@@ -108,56 +167,44 @@
             });
         }
 
-        // Show all on focus
         categorySearch.addEventListener('focus', function () {
-            renderSuggestions(categories);
+            renderCategorySuggestions(categories);
             categorySuggestions.style.display = 'block';
         });
 
-        // Filter on input
         categorySearch.addEventListener('input', function () {
             const query = this.value.trim().toLowerCase();
-            if (query.length === 0) {
-                renderSuggestions(categories);
-                return;
-            }
-
-            const filtered = categories.filter(c => {
-                const nameMatch = c.CategoryName && c.CategoryName.toLowerCase().includes(query);
-                // Staff can also search by code
-                const codeMatch = isStaff && c.CategoryCode && c.CategoryCode.toLowerCase().includes(query);
-                return nameMatch || codeMatch;
-            });
-
-            renderSuggestions(filtered);
+            selectedCategoryCode.value = '';
+            const filtered = query
+                ? categories.filter(c => {
+                    const nameMatch = c.CategoryName?.toLowerCase().includes(query);
+                    const codeMatch = isStaff && c.CategoryCode?.toLowerCase().includes(query);
+                    return nameMatch || codeMatch;
+                })
+                : categories;
+            renderCategorySuggestions(filtered);
         });
 
-        // Close on outside click
         document.addEventListener('click', function (e) {
-            if (!categorySearch.contains(e.target) && !categorySuggestions.contains(e.target)) {
+            if (!categorySearch.contains(e.target) && !categorySuggestions.contains(e.target))
                 categorySuggestions.style.display = 'none';
-            }
         });
 
-        // Quantity buttons
-        const quantityInput = document.getElementById("CollectionItem_StartingQuantity");
-        const increaseBtn = document.getElementById("increaseBtn");
-        const decreaseBtn = document.getElementById("decreaseBtn");
-
-        if (quantityInput.value === "") quantityInput.value = 0;
-
-        increaseBtn.addEventListener("click", function () {
+        // ── Quantity +/- ──
+        const quantityInput = document.getElementById('CollectionItem_StartingQuantity');
+        document.getElementById('increaseBtn').addEventListener('click', () => {
             quantityInput.value = parseInt(quantityInput.value || 0) + 1;
         });
-
-        decreaseBtn.addEventListener("click", function () {
-            const current = parseInt(quantityInput.value || 0);
-            if (current > 0) quantityInput.value = current - 1;
+        document.getElementById('decreaseBtn').addEventListener('click', () => {
+            const v = parseInt(quantityInput.value || 0);
+            if (v > 0) quantityInput.value = v - 1;
         });
-
-        quantityInput.addEventListener("input", function () {
-            this.value = this.value.replace(/[^0-9]/g, "");
-            if (this.value === "") this.value = 0;
+        quantityInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value === '') this.value = 0;
         });
     </script>
+
+    @* Shared item image crop script *@
+    <script src="~/js/itemImageCrop.js"></script>
 }

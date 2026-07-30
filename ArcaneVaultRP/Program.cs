@@ -1,3 +1,5 @@
+using ArcaneVaultRP.Helpers;
+
 namespace ArcaneVaultRP
 {
     public class Program
@@ -9,8 +11,11 @@ namespace ArcaneVaultRP
             // Add services to the container.
             builder.Services.AddRazorPages();
 
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddTransient<JwtAuthHandler>();
+
             builder.Services.AddHttpClient("ArcaneVaultAPI",
-                client => { client.BaseAddress = new Uri("https://localhost:7040/api/"); });
+                client => { client.BaseAddress = new Uri("https://localhost:7040/api/"); }).AddHttpMessageHandler<JwtAuthHandler>();
 
             builder.Services.AddDistributedMemoryCache();
 

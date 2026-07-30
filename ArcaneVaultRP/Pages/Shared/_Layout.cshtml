@@ -34,9 +34,6 @@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
                         @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)
                         {
                             @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
@@ -128,5 +125,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <!-- API base for shared JS — hidden -->
+    <input type="hidden" id="apiBaseInput" value="https://localhost:7040/api" />
 </body>
 </html>

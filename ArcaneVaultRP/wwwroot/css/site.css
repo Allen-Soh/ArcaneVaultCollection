@@ -614,21 +614,21 @@ strong[id*="Name"],
 /* Popped active states with distinct 3D perspective angles */
 .popped-item.left-item.popped {
     opacity: 1;
-    transform: translate(-125%, -85%) scale(0.95) perspective(800px) rotateY(18deg) rotateZ(-6deg);
+    transform: translate(-125%, -55%) scale(1.30) perspective(800px) rotateY(30deg) rotateZ(-6deg);
     z-index: 3;
     pointer-events: auto;
 }
 
 .popped-item.middle-item.popped {
     opacity: 1;
-    transform: translate(-50%, -130%) scale(1.2) perspective(800px) rotateX(12deg);
+    transform: translate(-50%, -80%) scale(1.2) perspective(800px) rotateX(12deg);
     z-index: 4; /* highlighted middle element (Treekachu) */
     pointer-events: auto;
 }
 
 .popped-item.right-item.popped {
     opacity: 1;
-    transform: translate(25%, -85%) scale(0.95) perspective(800px) rotateY(-18deg) rotateZ(6deg);
+    transform: translate(25%, -55%) scale(1.10) perspective(800px) rotateY(-18deg) rotateZ(6deg);
     z-index: 3;
     pointer-events: auto;
 }

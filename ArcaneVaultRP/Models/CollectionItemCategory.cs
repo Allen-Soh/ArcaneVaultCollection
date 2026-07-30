@@ -1,4 +1,4 @@
-﻿namespace ArcaneVaultRP.Models
+namespace ArcaneVaultRP.Models
 {
     public class CollectionItemCategory
     {
@@ -10,5 +10,7 @@
         public string UserName { get; set; }
         public string? CategoryCode { get; set; }
         public string? CategoryName { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? ImagePublicId { get; set; }
     }
 }

@@ -19,7 +19,7 @@ public class CollectionItemController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT ItemId, ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName FROM CollectionItems",
+            "SELECT ItemId, ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName, ImageUrl, ImagePublicId FROM CollectionItems",
             connection);
 
         using var reader = command.ExecuteReader();
@@ -34,7 +34,9 @@ public class CollectionItemController : ControllerBase
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 StartingQuantity = Convert.ToInt32(reader["StartingQuantity"]),
                 CurrentQuantity = Convert.ToInt32(reader["CurrentQuantity"]),
-                UserName = reader["UserName"].ToString()
+                UserName = reader["UserName"].ToString(),
+                ImageUrl = reader["ImageUrl"] == DBNull.Value ? null : reader["ImageUrl"].ToString(),
+                ImagePublicId = reader["ImagePublicId"] == DBNull.Value ? null : reader["ImagePublicId"].ToString()
             });
         }
 
@@ -55,7 +57,7 @@ public class CollectionItemController : ControllerBase
 
         var command = new SqliteCommand(
             @"SELECT ci.ItemId, ci.ItemName, ci.IsDeleted, ci.StartingQuantity, 
-                 ci.CurrentQuantity, ci.UserName,
+                 ci.CurrentQuantity, ci.UserName, ci.ImageUrl, ci.ImagePublicId,
                  cic.CategoryCode, c.CategoryName
           FROM CollectionItems ci
           LEFT JOIN CollectionItemCategories cic ON ci.ItemId = cic.ItemId
@@ -73,6 +75,8 @@ public class CollectionItemController : ControllerBase
                 StartingQuantity = Convert.ToInt32(reader["StartingQuantity"]),
                 CurrentQuantity = Convert.ToInt32(reader["CurrentQuantity"]),
                 UserName = reader["UserName"].ToString(),
+                ImageUrl = reader["ImageUrl"] == DBNull.Value ? null : reader["ImageUrl"].ToString(),
+                ImagePublicId = reader["ImagePublicId"] == DBNull.Value ? null : reader["ImagePublicId"].ToString(),
                 CategoryCode = reader["CategoryCode"] == DBNull.Value ? null : reader["CategoryCode"].ToString(),
                 CategoryName = reader["CategoryName"] == DBNull.Value ? null : reader["CategoryName"].ToString()
             });
@@ -85,43 +89,35 @@ public class CollectionItemController : ControllerBase
     [HttpPut("{itemid}")]
     public IActionResult PutCollectionItem(int? itemid, CollectionItemDTO dto)
     {
-        if (itemid != dto.ItemId)
-        {
-            return BadRequest();
-        }
+        if (itemid != dto.ItemId) return BadRequest();
 
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        // Check if exists using LINQ-style check
         var checkCommand = new SqliteCommand(
-            "SELECT COUNT(*) FROM CollectionItems WHERE ItemId = @ItemId",
-            connection);
+            "SELECT COUNT(*) FROM CollectionItems WHERE ItemId = @ItemId", connection);
         checkCommand.Parameters.AddWithValue("@ItemId", itemid);
-        var count = Convert.ToInt32(checkCommand.ExecuteScalar());
-
-        if (count == 0)
-        {
-            return NotFound();
-        }
+        if (Convert.ToInt32(checkCommand.ExecuteScalar()) == 0) return NotFound();
 
         var command = new SqliteCommand(
-            @"UPDATE CollectionItems 
-              SET ItemName = @ItemName, 
-                  IsDeleted = @IsDeleted, 
-                  StartingQuantity = @StartingQuantity, 
-                  CurrentQuantity = @CurrentQuantity, 
-                  UserName = @UserName 
-              WHERE ItemId = @ItemId",
+            @"UPDATE CollectionItems
+          SET ItemName        = @ItemName,
+              IsDeleted       = @IsDeleted,
+              StartingQuantity= @StartingQuantity,
+              CurrentQuantity = @CurrentQuantity,
+              UserName        = @UserName,
+              ImageUrl        = @ImageUrl,
+              ImagePublicId   = @ImagePublicId
+          WHERE ItemId = @ItemId",
             connection);
-
         command.Parameters.AddWithValue("@ItemId", dto.ItemId);
         command.Parameters.AddWithValue("@ItemName", dto.ItemName);
         command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
         command.Parameters.AddWithValue("@StartingQuantity", dto.StartingQuantity);
         command.Parameters.AddWithValue("@CurrentQuantity", dto.CurrentQuantity);
         command.Parameters.AddWithValue("@UserName", dto.UserName);
-
+        command.Parameters.AddWithValue("@ImageUrl", dto.ImageUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@ImagePublicId", dto.ImagePublicId ?? (object)DBNull.Value);
         command.ExecuteNonQuery();
 
         return NoContent();
@@ -135,31 +131,33 @@ public class CollectionItemController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            @"INSERT INTO CollectionItems (ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName) 
-              VALUES (@ItemName, @IsDeleted, @StartingQuantity, @CurrentQuantity, @UserName);
-              SELECT last_insert_rowid();",
+            @"INSERT INTO CollectionItems
+          (ItemName, IsDeleted, StartingQuantity, CurrentQuantity, UserName, ImageUrl, ImagePublicId)
+          VALUES
+          (@ItemName, @IsDeleted, @StartingQuantity, @CurrentQuantity, @UserName, @ImageUrl, @ImagePublicId);
+          SELECT last_insert_rowid();",
             connection);
-
         command.Parameters.AddWithValue("@ItemName", dto.ItemName);
         command.Parameters.AddWithValue("@IsDeleted", dto.IsDeleted);
         command.Parameters.AddWithValue("@StartingQuantity", dto.StartingQuantity);
         command.Parameters.AddWithValue("@CurrentQuantity", dto.CurrentQuantity);
         command.Parameters.AddWithValue("@UserName", dto.UserName);
+        command.Parameters.AddWithValue("@ImageUrl", dto.ImageUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@ImagePublicId", dto.ImagePublicId ?? (object)DBNull.Value);
 
-        // Get the auto-generated ItemId
         var newId = Convert.ToInt32(command.ExecuteScalar());
 
-        var newItem = new CollectionItem
+        return CreatedAtAction("GetCollectionItem", new { itemid = newId }, new CollectionItem
         {
             ItemId = newId,
             ItemName = dto.ItemName,
             IsDeleted = dto.IsDeleted,
             StartingQuantity = dto.StartingQuantity,
             CurrentQuantity = dto.CurrentQuantity,
-            UserName = dto.UserName
-        };
-
-        return CreatedAtAction("GetCollectionItem", new { itemid = newId }, newItem);
+            UserName = dto.UserName,
+            ImageUrl = dto.ImageUrl,
+            ImagePublicId = dto.ImagePublicId
+        });
     }
 
     // DELETE: api/CollectionItem/5

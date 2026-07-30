@@ -307,3 +307,10 @@
 
 [To Do]
 - Start on reworking showoffs
+
+===== DEV LOG (31/7/2026) =====
+[Done]
+= Added Image upload to collection items so that when selecting item in showoff, it will automatically take the image from the saved database
+
+[To Do]
+- Start on reworking showoffs

@@ -1,5 +1,4 @@
 using ArcaneVaultAPI.DataTransferObject;
-using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -22,6 +21,15 @@ public class EditModel : PageModel
     [BindProperty]
     public string? SelectedCategoryCode { get; set; }
 
+    [BindProperty]
+    public string? ImageUrl { get; set; }
+
+    [BindProperty]
+    public string? ImagePublicId { get; set; }
+
+    [BindProperty]
+    public string? DeletePublicId { get; set; }
+
     public IList<Category> Categories { get; set; } = default!;
     public string? CurrentCategoryCode { get; set; }
     public string? CurrentCategoryName { get; set; }
@@ -29,56 +37,34 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnGetAsync(int? itemid)
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
-        {
             return RedirectToPage("/Login");
-        }
-
-        if (itemid is null)
-        {
-            return NotFound();
-        }
+        if (itemid is null) return NotFound();
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-        // Attach JWT token from session
-        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
-        HttpClientHelper.AttachJwtToken(httpClient, token);
-
-        // LINQ — find item by id
-        var allItems = await httpClient.GetFromJsonAsync<List<CollectionItem>>("CollectionItem")
-                       ?? new List<CollectionItem>();
-
+        var allItems = await httpClient
+            .GetFromJsonAsync<List<CollectionItem>>("CollectionItem")
+            ?? new List<CollectionItem>();
         var collectionitem = allItems.FirstOrDefault(c => c.ItemId == itemid);
-
-        if (collectionitem is null)
-        {
-            return NotFound();
-        }
+        if (collectionitem is null) return NotFound();
 
         CollectionItem = collectionitem;
+        ImageUrl = collectionitem.ImageUrl;
+        ImagePublicId = collectionitem.ImagePublicId;
 
-        // Load categories
         Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                      ?? new List<Category>();
-
-        // LINQ — sort categories by name
         Categories = Categories.OrderBy(c => c.CategoryName).ToList();
 
-        // Get current category for this item
         var allItemCategories = await httpClient
             .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItemCategory")
             ?? new List<CollectionItemCategory>();
-
-        // LINQ — find existing category link
-        var itemCategory = allItemCategories.FirstOrDefault(c => c.ItemId == itemid);
-
-        if (itemCategory != null)
+        var existingLink = allItemCategories.FirstOrDefault(c => c.ItemId == itemid);
+        if (existingLink != null)
         {
-            CurrentCategoryCode = itemCategory.CategoryCode;
-
-            // LINQ — get category name
-            var category = Categories.FirstOrDefault(c => c.CategoryCode == CurrentCategoryCode);
-            CurrentCategoryName = category?.CategoryName;
+            CurrentCategoryCode = existingLink.CategoryCode;
+            var cat = Categories.FirstOrDefault(c => c.CategoryCode == CurrentCategoryCode);
+            CurrentCategoryName = cat?.CategoryName;
         }
 
         return Page();
@@ -90,27 +76,28 @@ public class EditModel : PageModel
 
         if (!ModelState.IsValid)
         {
-            HttpClient httpClientReload = _httpClientFactory.CreateClient("ArcaneVaultAPI");
-            Categories = await httpClientReload.GetFromJsonAsync<List<Category>>("Category")
+            HttpClient reload = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+            Categories = await reload.GetFromJsonAsync<List<Category>>("Category")
                          ?? new List<Category>();
             return Page();
         }
 
         var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
-
-        if (loggedInUser == null)
-        {
-            return RedirectToPage("/Login");
-        }
+        if (loggedInUser == null) return RedirectToPage("/Login");
 
         HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-        // Attach JWT token from session
-        var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
-        HttpClientHelper.AttachJwtToken(httpClient, token);
+        // Delete old image from Cloudinary if marked for deletion
+        if (!string.IsNullOrEmpty(DeletePublicId))
+        {
+            await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Delete,
+                $"{httpClient.BaseAddress}ImageUpload")
+            {
+                Content = JsonContent.Create(DeletePublicId)
+            });
+        }
 
-        // Update CollectionItem
         var dto = new CollectionItemDTO
         {
             ItemId = CollectionItem.ItemId,
@@ -118,15 +105,18 @@ public class EditModel : PageModel
             IsDeleted = CollectionItem.IsDeleted,
             StartingQuantity = CollectionItem.StartingQuantity,
             CurrentQuantity = CollectionItem.CurrentQuantity,
-            UserName = loggedInUser.UserName
+            UserName = loggedInUser.UserName,
+            ImageUrl = string.IsNullOrEmpty(ImageUrl) ? null : ImageUrl,
+            ImagePublicId = string.IsNullOrEmpty(ImagePublicId) ? null : ImagePublicId
         };
 
-        var response = await httpClient.PutAsJsonAsync($"CollectionItem/{CollectionItem.ItemId}", dto);
+        var response = await httpClient
+            .PutAsJsonAsync($"CollectionItem/{CollectionItem.ItemId}", dto);
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            ModelState.AddModelError(string.Empty, $"Error {response.StatusCode}: {errorContent}");
+            var error = await response.Content.ReadAsStringAsync();
+            ModelState.AddModelError(string.Empty, $"Error {response.StatusCode}: {error}");
             Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                          ?? new List<Category>();
             return Page();
@@ -136,26 +126,18 @@ public class EditModel : PageModel
         var allItemCategories = await httpClient
             .GetFromJsonAsync<List<CollectionItemCategory>>("CollectionItemCategory")
             ?? new List<CollectionItemCategory>();
-
-        // LINQ — find existing category link
-        var existingLink = allItemCategories.FirstOrDefault(c => c.ItemId == CollectionItem.ItemId);
-
+        var existingLink = allItemCategories
+            .FirstOrDefault(c => c.ItemId == CollectionItem.ItemId);
         if (existingLink != null)
-        {
-            // Delete old category link
-            await httpClient.DeleteAsync($"CollectionItemCategory/{CollectionItem.ItemId}/{existingLink.CategoryCode}");
-        }
-
-        // Add new category link if selected
+            await httpClient.DeleteAsync(
+                $"CollectionItemCategory/{CollectionItem.ItemId}/{existingLink.CategoryCode}");
         if (!string.IsNullOrEmpty(SelectedCategoryCode))
-        {
-            var categoryLink = new CollectionItemCategory
-            {
-                ItemId = CollectionItem.ItemId,
-                CategoryCode = SelectedCategoryCode
-            };
-            await httpClient.PostAsJsonAsync("CollectionItemCategory", categoryLink);
-        }
+            await httpClient.PostAsJsonAsync("CollectionItemCategory",
+                new CollectionItemCategory
+                {
+                    ItemId = CollectionItem.ItemId,
+                    CategoryCode = SelectedCategoryCode
+                });
 
         return RedirectToPage("./Index");
     }
