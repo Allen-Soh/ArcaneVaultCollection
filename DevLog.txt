@@ -314,3 +314,10 @@
 
 [To Do]
 - Start on reworking showoffs
+
+===== DEV LOG (1/8/2026) =====
+[Done]
+- Reworked showoffs plan
+
+[To Do]
+- Convert Figma file into Claude to apply to the website
