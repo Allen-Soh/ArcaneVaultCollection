@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArcaneVaultAPI.Data
 {
@@ -15,6 +15,9 @@ namespace ArcaneVaultAPI.Data
         public DbSet<ShowoffItem> ShowoffItems { get; set; }
         public DbSet<ShowoffLike> ShowoffLikes { get; set; }
         public DbSet<ShowoffView> ShowoffViews { get; set; }
+        public DbSet<ShowoffComment> ShowoffComments { get; set; }
+        public DbSet<ShowoffReport> ShowoffReports { get; set; }
+        public DbSet<ReportAssignmentCounter> ReportAssignmentCounters { get; set; }
         public DbSet<LoginLog> LoginLogs { get; set; }
         public DbSet<SearchLog> SearchLogs { get; set; }
 

@@ -1,4 +1,4 @@
-﻿@model ArcaneVaultRP.Pages.Showoffs.IndexModel
+@model ArcaneVaultRP.Pages.Showoffs.IndexModel
 
 <div class="row row-cols-1 row-cols-md-4 g-3 mb-4" id="showoffGridInner">
     @foreach (var showoff in Model.PagedShowoffs)
@@ -35,6 +35,7 @@
                     <span class="fw-semibold text-truncate" style="max-width:120px;">@showoff.ShowoffName</span>
                     <span class="text-muted small">
                         <i class="bi bi-heart-fill text-danger"></i> @showoff.LikeCount
+                        <i class="bi bi-eye-fill ms-2"></i> @showoff.ViewCount
                     </span>
                 </div>
             </div>

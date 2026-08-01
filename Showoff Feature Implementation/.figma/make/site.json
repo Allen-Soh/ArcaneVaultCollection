@@ -1,0 +1,10 @@
+{
+  "description": "Create, customize, and share personalized visual showcases with interactive features like likes, comments, and moderation for a vibrant user community.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

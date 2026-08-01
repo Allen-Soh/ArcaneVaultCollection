@@ -54,7 +54,7 @@ public class IndexModel : PageModel
         HttpClientHelper.AttachJwtToken(httpClient, token);
 
         UserShowoffs = await httpClient
-            .GetFromJsonAsync<List<Showoff>>($"Showoff/user/{loggedInUser.UserName}")
+            .GetFromJsonAsync<List<Showoff>>($"Showoff/user/{loggedInUser.UserName}?requester={loggedInUser.UserName}")
             ?? new List<Showoff>();
 
         UserCollectionItems = await httpClient

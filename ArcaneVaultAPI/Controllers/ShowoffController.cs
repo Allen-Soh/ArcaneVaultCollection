@@ -15,41 +15,30 @@ public class ShowoffController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Showoff — all public non-deleted showoffs with items and like count
+    // GET: api/Showoff — all public non-deleted non-disabled showoffs with items and like count
     [HttpGet]
     public ActionResult<IEnumerable<ShowoffDTO>> GetShowoffs()
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        // ADO.NET — get all public non-deleted showoffs
+        // ADO.NET — get all public non-deleted non-disabled showoffs
         var showoffCommand = new SqliteCommand(
             @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
-                     s.IsDeleted, s.UserName, s.CreatedAt,
-                     COUNT(sl.UserName) as LikeCount
+                     s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
+                     s.IsDisabled, s.DisabledAt,
+                     COUNT(sl.UserName) as LikeCount,
+                     (SELECT COUNT(*) FROM ShowoffViews sv WHERE sv.ShowoffId = s.ShowoffId) as ViewCount,
+                     (SELECT COUNT(*) FROM ShowoffComments sc WHERE sc.ShowoffId = s.ShowoffId) as CommentCount,
+                     (SELECT COUNT(*) FROM ShowoffReports sr WHERE sr.ShowoffId = s.ShowoffId) as ReportCount
               FROM Showoffs s
               LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
-              WHERE s.IsDeleted = 0 AND s.IsPrivate = 0
+              WHERE s.IsDeleted = 0 AND s.IsPrivate = 0 AND s.IsDisabled = 0
               GROUP BY s.ShowoffId
               ORDER BY s.CreatedAt DESC",
             connection);
 
-        var showoffs = new List<ShowoffDTO>();
-        using var reader = showoffCommand.ExecuteReader();
-        while (reader.Read())
-        {
-            showoffs.Add(new ShowoffDTO
-            {
-                ShowoffId = Convert.ToInt32(reader["ShowoffId"]),
-                ShowoffName = reader["ShowoffName"].ToString(),
-                BackgroundColor = reader["BackgroundColor"].ToString(),
-                IsPrivate = Convert.ToBoolean(reader["IsPrivate"]),
-                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
-                UserName = reader["UserName"].ToString(),
-                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
-                LikeCount = Convert.ToInt32(reader["LikeCount"])
-            });
-        }
+        var showoffs = ReadShowoffDTOs(showoffCommand);
 
         // LINQ — attach items to each showoff
         foreach (var showoff in showoffs)
@@ -61,40 +50,38 @@ public class ShowoffController : ControllerBase
     }
 
     // GET: api/Showoff/user/{username} — all non-deleted showoffs for a user
+    // Query param ?requester= controls disabled visibility
     [HttpGet("user/{username}")]
-    public ActionResult<IEnumerable<ShowoffDTO>> GetUserShowoffs(string username)
+    public ActionResult<IEnumerable<ShowoffDTO>> GetUserShowoffs(string username, [FromQuery] string? requester = null)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        var command = new SqliteCommand(
-            @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
-                     s.IsDeleted, s.UserName, s.CreatedAt,
-                     COUNT(sl.UserName) as LikeCount
+        // If requester is the owner, show all (including disabled). Otherwise hide disabled.
+        bool isOwner = !string.IsNullOrEmpty(requester) &&
+                       requester.Equals(username, StringComparison.OrdinalIgnoreCase);
+
+        var sql = @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
+                     s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
+                     s.IsDisabled, s.DisabledAt,
+                     COUNT(sl.UserName) as LikeCount,
+                     (SELECT COUNT(*) FROM ShowoffViews sv WHERE sv.ShowoffId = s.ShowoffId) as ViewCount,
+                     (SELECT COUNT(*) FROM ShowoffComments sc WHERE sc.ShowoffId = s.ShowoffId) as CommentCount,
+                     (SELECT COUNT(*) FROM ShowoffReports sr WHERE sr.ShowoffId = s.ShowoffId) as ReportCount
               FROM Showoffs s
               LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
-              WHERE s.IsDeleted = 0 AND s.UserName = @UserName
-              GROUP BY s.ShowoffId
-              ORDER BY s.CreatedAt DESC",
-            connection);
+              WHERE s.IsDeleted = 0 AND s.UserName = @UserName";
+
+        if (!isOwner)
+            sql += " AND s.IsDisabled = 0";
+
+        sql += @" GROUP BY s.ShowoffId
+                  ORDER BY s.CreatedAt DESC";
+
+        var command = new SqliteCommand(sql, connection);
         command.Parameters.AddWithValue("@UserName", username);
 
-        var showoffs = new List<ShowoffDTO>();
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            showoffs.Add(new ShowoffDTO
-            {
-                ShowoffId = Convert.ToInt32(reader["ShowoffId"]),
-                ShowoffName = reader["ShowoffName"].ToString(),
-                BackgroundColor = reader["BackgroundColor"].ToString(),
-                IsPrivate = Convert.ToBoolean(reader["IsPrivate"]),
-                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
-                UserName = reader["UserName"].ToString(),
-                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
-                LikeCount = Convert.ToInt32(reader["LikeCount"])
-            });
-        }
+        var showoffs = ReadShowoffDTOs(command);
 
         foreach (var showoff in showoffs)
         {
@@ -113,8 +100,12 @@ public class ShowoffController : ControllerBase
 
         var command = new SqliteCommand(
             @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
-                     s.IsDeleted, s.UserName, s.CreatedAt,
-                     COUNT(sl.UserName) as LikeCount
+                     s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
+                     s.IsDisabled, s.DisabledAt,
+                     COUNT(sl.UserName) as LikeCount,
+                     (SELECT COUNT(*) FROM ShowoffViews sv WHERE sv.ShowoffId = s.ShowoffId) as ViewCount,
+                     (SELECT COUNT(*) FROM ShowoffComments sc WHERE sc.ShowoffId = s.ShowoffId) as CommentCount,
+                     (SELECT COUNT(*) FROM ShowoffReports sr WHERE sr.ShowoffId = s.ShowoffId) as ReportCount
               FROM Showoffs s
               LEFT JOIN ShowoffLikes sl ON s.ShowoffId = sl.ShowoffId
               WHERE s.ShowoffId = @ShowoffId AND s.IsDeleted = 0
@@ -122,25 +113,12 @@ public class ShowoffController : ControllerBase
             connection);
         command.Parameters.AddWithValue("@ShowoffId", id);
 
-        ShowoffDTO? showoff = null;
-        using var reader = command.ExecuteReader();
-        if (reader.Read())
-        {
-            showoff = new ShowoffDTO
-            {
-                ShowoffId = Convert.ToInt32(reader["ShowoffId"]),
-                ShowoffName = reader["ShowoffName"].ToString(),
-                BackgroundColor = reader["BackgroundColor"].ToString(),
-                IsPrivate = Convert.ToBoolean(reader["IsPrivate"]),
-                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
-                UserName = reader["UserName"].ToString(),
-                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
-                LikeCount = Convert.ToInt32(reader["LikeCount"])
-            };
-            showoff.Items = GetShowoffItems(connection, showoff.ShowoffId);
-        }
+        var showoffs = ReadShowoffDTOs(command);
+        var showoff = showoffs.FirstOrDefault();
 
         if (showoff == null) return NotFound();
+
+        showoff.Items = GetShowoffItems(connection, showoff.ShowoffId);
         return Ok(showoff);
     }
 
@@ -163,8 +141,8 @@ public class ShowoffController : ControllerBase
 
         // Insert showoff
         var insertCommand = new SqliteCommand(
-            @"INSERT INTO Showoffs (ShowoffName, BackgroundColor, IsPrivate, IsDeleted, UserName, CreatedAt)
-              VALUES (@ShowoffName, @BackgroundColor, @IsPrivate, 0, @UserName, @CreatedAt);
+            @"INSERT INTO Showoffs (ShowoffName, BackgroundColor, IsPrivate, IsDeleted, UserName, CreatedAt, Description, IsDisabled)
+              VALUES (@ShowoffName, @BackgroundColor, @IsPrivate, 0, @UserName, @CreatedAt, @Description, 0);
               SELECT last_insert_rowid();",
             connection);
         insertCommand.Parameters.AddWithValue("@ShowoffName", dto.ShowoffName);
@@ -172,6 +150,7 @@ public class ShowoffController : ControllerBase
         insertCommand.Parameters.AddWithValue("@IsPrivate", dto.IsPrivate);
         insertCommand.Parameters.AddWithValue("@UserName", dto.UserName);
         insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+        insertCommand.Parameters.AddWithValue("@Description", dto.Description ?? (object)DBNull.Value);
 
         var newId = Convert.ToInt32(insertCommand.ExecuteScalar());
 
@@ -213,12 +192,14 @@ public class ShowoffController : ControllerBase
             @"UPDATE Showoffs
               SET ShowoffName = @ShowoffName,
                   BackgroundColor = @BackgroundColor,
-                  IsPrivate = @IsPrivate
+                  IsPrivate = @IsPrivate,
+                  Description = @Description
               WHERE ShowoffId = @ShowoffId",
             connection);
         updateCommand.Parameters.AddWithValue("@ShowoffName", dto.ShowoffName);
         updateCommand.Parameters.AddWithValue("@BackgroundColor", dto.BackgroundColor);
         updateCommand.Parameters.AddWithValue("@IsPrivate", dto.IsPrivate);
+        updateCommand.Parameters.AddWithValue("@Description", dto.Description ?? (object)DBNull.Value);
         updateCommand.Parameters.AddWithValue("@ShowoffId", id);
         updateCommand.ExecuteNonQuery();
 
@@ -268,6 +249,71 @@ public class ShowoffController : ControllerBase
         deleteCommand.ExecuteNonQuery();
 
         return NoContent();
+    }
+
+    // PUT: api/Showoff/{id}/disable — staff disables a showoff
+    [HttpPut("{id}/disable")]
+    public IActionResult DisableShowoff(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"UPDATE Showoffs SET IsDisabled = 1, DisabledAt = @DisabledAt
+              WHERE ShowoffId = @ShowoffId AND IsDeleted = 0",
+            connection);
+        command.Parameters.AddWithValue("@ShowoffId", id);
+        command.Parameters.AddWithValue("@DisabledAt", DateTime.UtcNow);
+        var rows = command.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound();
+        return NoContent();
+    }
+
+    // PUT: api/Showoff/{id}/enable — staff re-enables a showoff
+    [HttpPut("{id}/enable")]
+    public IActionResult EnableShowoff(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"UPDATE Showoffs SET IsDisabled = 0, DisabledAt = NULL
+              WHERE ShowoffId = @ShowoffId AND IsDeleted = 0",
+            connection);
+        command.Parameters.AddWithValue("@ShowoffId", id);
+        var rows = command.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound();
+        return NoContent();
+    }
+
+    // Helper — read ShowoffDTOs from a command
+    private List<ShowoffDTO> ReadShowoffDTOs(SqliteCommand command)
+    {
+        var showoffs = new List<ShowoffDTO>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            showoffs.Add(new ShowoffDTO
+            {
+                ShowoffId = Convert.ToInt32(reader["ShowoffId"]),
+                ShowoffName = reader["ShowoffName"].ToString(),
+                BackgroundColor = reader["BackgroundColor"].ToString(),
+                IsPrivate = Convert.ToBoolean(reader["IsPrivate"]),
+                IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
+                UserName = reader["UserName"].ToString(),
+                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                Description = reader["Description"] == DBNull.Value ? null : reader["Description"].ToString(),
+                IsDisabled = Convert.ToBoolean(reader["IsDisabled"]),
+                DisabledAt = reader["DisabledAt"] == DBNull.Value ? null : Convert.ToDateTime(reader["DisabledAt"]),
+                LikeCount = Convert.ToInt32(reader["LikeCount"]),
+                ViewCount = Convert.ToInt32(reader["ViewCount"]),
+                CommentCount = Convert.ToInt32(reader["CommentCount"]),
+                ReportCount = Convert.ToInt32(reader["ReportCount"])
+            });
+        }
+        return showoffs;
     }
 
     // Helper — get showoff items with item name and category

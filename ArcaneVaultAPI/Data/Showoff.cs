@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ArcaneVaultAPI.Data
@@ -15,6 +15,11 @@ namespace ArcaneVaultAPI.Data
         public bool IsPrivate { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        [MaxLength(500)]
+        public string? Description { get; set; }
+        public bool IsDisabled { get; set; }
+        public DateTime? DisabledAt { get; set; }
 
         public string UserName { get; set; }
 

@@ -1,0 +1,409 @@
+@page
+@model ArcaneVaultRP.Pages.ShowoffPages.ReportsModel
+@{
+    ViewData["Title"] = "Showoff Reports";
+    var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+    var loggedInUser = userJson != null ? System.Text.Json.JsonSerializer.Deserialize<Models.ArcaneVaultUser>(userJson) : null;
+}
+
+<div class="container mt-4">
+    <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1">Showoff Reports</h4>
+            <p class="text-muted small mb-0" id="reportCountText"></p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted small" style="white-space:nowrap;">Filter by reason:</label>
+            <select id="filterCategory" class="form-select form-select-sm" style="width:auto;" onchange="applyFilter()">
+                <option value="All">All</option>
+                <option value="Counterfeit / Fake item">Counterfeit / Fake item</option>
+                <option value="Inappropriate content">Inappropriate content</option>
+                <option value="Spam or self-promotion">Spam or self-promotion</option>
+                <option value="Copyright infringement">Copyright infringement</option>
+                <option value="Misleading information">Misleading information</option>
+                <option value="Harassment or hate speech">Harassment or hate speech</option>
+                <option value="Other reasons">Other reasons</option>
+            </select>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "all" ? "active" : "")"
+               asp-page="./Reports" asp-route-tab="all">All Reports</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "my" ? "active" : "")"
+               asp-page="./Reports" asp-route-tab="my">My Reports</a>
+        </li>
+    </ul>
+
+    <!-- Action message -->
+    <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
+
+    <!-- Virtual scroll table -->
+    <div class="border rounded overflow-hidden" style="position:relative;">
+        <div id="reportTableWrapper" style="overflow-y:auto;">
+            <table class="table mb-0" style="width:100%;">
+                <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                    <tr>
+                        <th style="padding:12px;">Report Details</th>
+                        <th style="padding:12px; width:160px; text-align:right;">Status / Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody"></tbody>
+            </table>
+        </div>
+        <div id="tableEmpty" style="display:none;" class="text-center text-muted py-5">
+            <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
+            <span id="emptyText">No reported showoffs — all clear!</span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-2 mb-4" id="reportTableIndicatorRow">
+        <p class="text-muted mb-0" id="reportScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id="reportScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+    </div>
+</div>
+
+<!-- View Showoff Modal -->
+<div class="modal fade" id="viewShowoffModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="min-height:80vh;">
+        <div class="modal-content" style="min-height:80vh; display:flex; flex-direction:column;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="viewShowoffName"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body flex-grow-1 d-flex align-items-center justify-content-center" id="viewShowoffBody"></div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disable Confirmation Modal -->
+<div class="modal fade" id="disableConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="disableModalTitle">Disable Showoff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="disableModalText"></p>
+                <p class="text-danger small">This will hide the showoff from the public feed and other users.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="disableConfirmBtn" onclick="confirmDisableToggle()">Disable</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const currentStaff = '@Model.CurrentStaffUserName';
+        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+
+        const allReports = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveTab == "my" ? Model.MyReports : Model.AllReports));
+        const activeTab = '@Model.ActiveTab';
+
+        const CATEGORY_COLORS = {
+            'Counterfeit / Fake item':    { bg: 'rgba(255,193,7,0.1)',  border: 'rgba(255,193,7,0.3)',  color: '#ffe082' },
+            'Inappropriate content':      { bg: 'rgba(220,53,69,0.1)',  border: 'rgba(220,53,69,0.3)',  color: '#ff8591' },
+            'Spam or self-promotion':     { bg: 'rgba(166,177,225,0.1)',border: 'rgba(166,177,225,0.3)',color: '#A6B1E1' },
+            'Copyright infringement':     { bg: 'rgba(163,113,247,0.1)',border: 'rgba(163,113,247,0.3)',color: '#a371f7' },
+            'Misleading information':     { bg: 'rgba(25,135,84,0.1)', border: 'rgba(25,135,84,0.3)',  color: '#7ef5a6' },
+            'Harassment or hate speech':  { bg: 'rgba(240,112,58,0.1)',border: 'rgba(240,112,58,0.3)', color: '#f0703a' },
+            'Other reasons':              { bg: 'var(--bg-card-hover)', border: 'var(--border-color)',  color: 'var(--text-muted)' }
+        };
+
+        let filteredReports = [...allReports];
+        let pendingToggleShowoffId = null;
+        let pendingToggleIsDisabled = false;
+        let pendingToggleName = '';
+
+        // Group reports by ShowoffId
+        function groupByShowoff(reports) {
+            const map = new Map();
+            reports.forEach(r => {
+                if (!map.has(r.ShowoffId)) {
+                    map.set(r.ShowoffId, {
+                        ShowoffId: r.ShowoffId,
+                        ShowoffName: r.ShowoffName,
+                        OwnerUserName: r.OwnerUserName,
+                        IsDisabled: r.IsDisabled,
+                        LikeCount: r.LikeCount,
+                        ViewCount: r.ViewCount,
+                        AssignedStaffUserName: r.AssignedStaffUserName,
+                        reports: []
+                    });
+                }
+                map.get(r.ShowoffId).reports.push(r);
+            });
+            return Array.from(map.values());
+        }
+
+        function applyFilter() {
+            const cat = document.getElementById('filterCategory').value;
+            filteredReports = cat === 'All'
+                ? [...allReports]
+                : allReports.filter(r => r.Category === cat);
+            renderReportTable(groupByShowoff(filteredReports));
+        }
+
+        // ── Virtual Scroll Implementation ──
+        const ROW_HEIGHT = 180;
+        const BUFFER = 3;
+        const THRESHOLD = 5;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(data.length, Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER);
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="2"></td></tr>` : '') +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="2"></td></tr>` : '');
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function renderReportTable(grouped) {
+            const empty = document.getElementById('tableEmpty');
+            const wrapper = document.getElementById('reportTableWrapper');
+            const indicatorRow = document.getElementById('reportTableIndicatorRow');
+            const moreText = document.getElementById('reportScrollMoreText');
+
+            document.getElementById('reportCountText').textContent =
+                `${grouped.length} showoff${grouped.length !== 1 ? 's' : ''} with pending reports`;
+
+            if (grouped.length === 0) {
+                empty.style.display = 'block';
+                document.getElementById('emptyText').textContent =
+                    document.getElementById('filterCategory').value === 'All'
+                        ? 'No reported showoffs — all clear!'
+                        : `No reports matching "${document.getElementById('filterCategory').value}"`;
+                document.getElementById('reportTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = grouped.length > THRESHOLD ? 'block' : 'none';
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(grouped.length, visStart + THRESHOLD - 1);
+                document.getElementById('reportScrollIndicator').textContent =
+                    grouped.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${grouped.length}`
+                        : `${grouped.length} report${grouped.length === 1 ? '' : 's'}`;
+            }
+
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
+
+            createVirtualTable('reportTableWrapper', 'reportTableBody', grouped, (group, idx) => {
+                const filterCat = document.getElementById('filterCategory').value;
+                const displayReports = filterCat === 'All'
+                    ? group.reports
+                    : group.reports.filter(r => r.Category === filterCat);
+
+                const reportsHtml = displayReports.map(r => {
+                    const cs = CATEGORY_COLORS[r.Category] || CATEGORY_COLORS['Other reasons'];
+                    const dateStr = new Date(r.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    return `
+                        <div style="background:var(--bg-card-hover);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:4px;">
+                            <div class="d-flex align-items-center gap-2 flex-wrap" style="${r.Reason ? 'margin-bottom:4px;' : ''}">
+                                <span class="text-muted">Reported by</span>
+                                <span class="fw-semibold" style="color:var(--text-primary);">${r.ReporterUserName}</span>
+                                <span style="color:var(--text-muted);font-size:11px;">${dateStr}</span>
+                                <span style="background:${cs.bg};border:1px solid ${cs.border};color:${cs.color};border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;">
+                                    ${r.Category}
+                                </span>
+                            </div>
+                            ${r.Reason ? `<p class="mb-0" style="color:var(--text-secondary);">${r.Reason}</p>` : ''}
+                        </div>`;
+                }).join('');
+
+                // Determine if current staff is assigned (use first report's assignment for the showoff)
+                const isAssigned = group.reports.some(r => r.AssignedStaffUserName === currentStaff);
+                const assignedStaff = group.AssignedStaffUserName || group.reports[0]?.AssignedStaffUserName || 'Unknown';
+
+                const statusBadge = group.IsDisabled
+                    ? `<span class="badge" style="background:rgba(220,53,69,0.15);color:#ff8591;border:1px solid rgba(220,53,69,0.3);font-size:10px;">DISABLED</span>`
+                    : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
+
+                const disableBtn = (isAssigned || activeTab === 'my')
+                    ? `<button class="btn btn-sm ${group.IsDisabled ? 'btn-success' : 'btn-danger'}" style="font-size:11px;padding:4px 12px;"
+                               onclick="openDisableToggle(${group.ShowoffId}, ${group.IsDisabled}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
+                           ${group.IsDisabled ? 'Re-enable' : 'Disable'}
+                       </button>`
+                    : '';
+
+                const border = group.IsDisabled ? 'border-left:3px solid rgba(220,53,69,0.5);' : '';
+
+                return `
+                    <tr style="height:${ROW_HEIGHT}px;${border}">
+                        <td style="padding:16px;vertical-align:top;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <button onclick="viewShowoff(${group.ShowoffId})" class="fw-bold" style="background:none;border:none;padding:0;cursor:pointer;color:var(--text-primary);font-size:15px;font-family:inherit;">
+                                    ${group.ShowoffName}
+                                </button>
+                                ${group.IsDisabled ? '<span style="font-size:10px;color:#ff8591;background:rgba(220,53,69,0.15);padding:2px 7px;border-radius:4px;font-weight:600;">DISABLED</span>' : ''}
+                                <span style="font-size:10px;color:var(--text-muted);background:var(--bg-card-hover);padding:2px 7px;border-radius:4px;">
+                                    ${group.reports.length} report${group.reports.length !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px;">
+                                <span style="color:var(--color-periwinkle);">${group.OwnerUserName}</span>
+                                <span class="text-muted">· ❤️ ${group.LikeCount} · 👁 ${group.ViewCount}</span>
+                            </div>
+                            <div style="max-height:90px;overflow-y:auto;">
+                                ${reportsHtml}
+                            </div>
+                        </td>
+                        <td style="padding:16px;vertical-align:top;text-align:right;">
+                            <div class="d-flex flex-column align-items-end justify-content-between h-100" style="min-height:${ROW_HEIGHT - 32}px;">
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge" style="background:var(--color-indigo-dark);color:var(--color-light);font-size:10px;padding:3px 8px;">
+                                        <i class="bi bi-person-fill"></i> ${assignedStaff}
+                                    </span>
+                                    ${statusBadge}
+                                </div>
+                                <div class="d-flex flex-column gap-1 mt-auto">
+                                    <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="viewShowoff(${group.ShowoffId})">View</button>
+                                    ${disableBtn}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            updateIndicator();
+        }
+
+        // View showoff in modal
+        async function viewShowoff(showoffId) {
+            const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
+            if (!res.ok) { alert('Could not load showoff.'); return; }
+            const showoff = await res.json();
+
+            document.getElementById('viewShowoffName').textContent = showoff.showoffName || showoff.ShowoffName;
+            const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
+            const items = showoff.items || showoff.Items || [];
+
+            const itemCount = items.length;
+            const imageSize = itemCount === 1 ? 260 : itemCount === 2 ? 190 : 140;
+            const cellWidth = itemCount === 1 ? 280 : itemCount === 2 ? 210 : 160;
+
+            const body = document.getElementById('viewShowoffBody');
+            body.innerHTML = `
+                <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
+                     style="background-color:${bgColor}; min-height:60vh;">
+                    <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
+                        ${items.map(item => {
+                            const imgPath = item.imagePath || item.ImagePath;
+                            const itemName = item.itemName || item.ItemName;
+                            const catName = item.categoryName || item.CategoryName;
+                            return `
+                                <div class="text-center d-flex flex-column align-items-center" style="width:${cellWidth}px;">
+                                    ${imgPath
+                                        ? `<img src="${imgPath}" style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
+                                        : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
+                                    <div class="mt-3 fw-bold fs-5 text-center" style="width:100%;word-wrap:break-word;">${itemName || ''}</div>
+                                    ${catName ? `<div class="text-muted fs-6 text-center" style="width:100%;word-wrap:break-word;">${catName}</div>` : ''}
+                                </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
+                    </div>
+                </div>`;
+
+            new bootstrap.Modal(document.getElementById('viewShowoffModal')).show();
+        }
+
+        // Disable/Enable toggle
+        function openDisableToggle(showoffId, isDisabled, showoffName) {
+            pendingToggleShowoffId = showoffId;
+            pendingToggleIsDisabled = isDisabled;
+            pendingToggleName = showoffName;
+
+            const title = document.getElementById('disableModalTitle');
+            const text = document.getElementById('disableModalText');
+            const btn = document.getElementById('disableConfirmBtn');
+
+            if (isDisabled) {
+                title.textContent = 'Re-enable Showoff';
+                text.innerHTML = `Are you sure you want to re-enable <strong>${showoffName}</strong>?`;
+                btn.textContent = 'Re-enable';
+                btn.className = 'btn btn-success';
+            } else {
+                title.textContent = 'Disable Showoff';
+                text.innerHTML = `Are you sure you want to disable <strong>${showoffName}</strong>?`;
+                btn.textContent = 'Disable';
+                btn.className = 'btn btn-danger';
+            }
+
+            new bootstrap.Modal(document.getElementById('disableConfirmModal')).show();
+        }
+
+        async function confirmDisableToggle() {
+            const action = pendingToggleIsDisabled ? 'enable' : 'disable';
+            const res = await fetch(`${apiBase}/Showoff/${pendingToggleShowoffId}/${action}`, { method: 'PUT' });
+
+            bootstrap.Modal.getInstance(document.getElementById('disableConfirmModal'))?.hide();
+
+            if (res.ok) {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = pendingToggleIsDisabled
+                    ? `"${pendingToggleName}" has been re-enabled.`
+                    : `"${pendingToggleName}" has been disabled.`;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                window.location.reload();
+            } else {
+                alert('Action failed. Please try again.');
+            }
+        }
+
+        // Initial render
+        renderReportTable(groupByShowoff(filteredReports));
+    </script>
+}

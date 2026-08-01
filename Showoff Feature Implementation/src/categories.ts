@@ -1,0 +1,17 @@
+export const SITE_CATEGORIES = [
+  'Pokemon',
+  'Vinyl',
+  'Comics',
+  'Sneakers',
+  'Cameras',
+  'Gaming',
+  'Art',
+  'Trading Cards',
+  'Figures',
+  'Stamps',
+  'Coins',
+  'Sports Memorabilia',
+  'Books',
+  'Toys',
+  'Watches',
+];

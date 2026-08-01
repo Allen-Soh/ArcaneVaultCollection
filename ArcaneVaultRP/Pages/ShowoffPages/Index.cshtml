@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model ArcaneVaultRP.Pages.Showoffs.IndexModel
 @{
     ViewData["Title"] = "Showoffs";
@@ -11,11 +11,15 @@
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "feed" ? "active" : "")"
-               asp-page="./Index" asp-route-tab="feed">Feed</a>
+               asp-page="./Index" asp-route-tab="feed">
+                Feed
+            </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "profile" ? "active" : "")"
-               asp-page="./Index" asp-route-tab="profile">My Profile</a>
+               asp-page="./Index" asp-route-tab="profile">
+                My Profile
+            </a>
         </li>
     </ul>
 
@@ -36,25 +40,31 @@
             <div class="col-md-4 position-relative">
                 <input type="text" id="searchUsers" class="form-control"
                        placeholder="Search users..." autocomplete="off"
-                       value="@Model.SearchUser" />
+                       value="@Model.SearchUser"/>
                 <div id="userSuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
+                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                </div>
             </div>
             <div class="col-md-4 position-relative">
                 <input type="text" id="searchItems" class="form-control"
                        placeholder="Search items..." autocomplete="off"
-                       value="@Model.SearchItem" />
+                       value="@Model.SearchItem"/>
                 <div id="itemSuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
+                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                </div>
             </div>
             <div class="col-md-4 position-relative">
                 <input type="text" id="searchCategories" class="form-control"
                        placeholder="Search categories..." autocomplete="off"
-                       value="@Model.SearchCategory" />
+                       value="@Model.SearchCategory"/>
                 <div id="categorySuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
+                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                </div>
             </div>
         </div>
+
+        <!-- Recent category bubbles: only shown when there are recent searches -->
+        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center" id="recentCatBubbles" style="display:none;"></div>
 
         <div id="showoffGridContainer">
 
@@ -83,7 +93,7 @@
                                         {
                                             <img src="@item.ImagePath"
                                                  alt="@item.ItemName"
-                                                 style="width:70px;height:70px;object-fit:cover;border-radius:8px;" />
+                                                 style="width:70px;height:70px;object-fit:cover;border-radius:8px;"/>
                                         }
                                         else
                                         {
@@ -97,6 +107,7 @@
                                 <span class="fw-semibold text-truncate" style="max-width:120px;">@showoff.ShowoffName</span>
                                 <span class="text-muted small">
                                     <i class="bi bi-heart-fill text-danger"></i> @showoff.LikeCount
+                                    <i class="bi bi-eye-fill ms-2"></i> @showoff.ViewCount
                                 </span>
                             </div>
                         </div>
@@ -139,7 +150,9 @@
 
                         @if (endPage < Model.TotalPages)
                         {
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
                             <li class="page-item">
                                 <a class="page-link ajax-page-link" href="#" data-page="@Model.TotalPages">@Model.TotalPages</a>
                             </li>
@@ -156,73 +169,114 @@
     }
     else
     {
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- Profile header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
             <div class="d-flex align-items-center gap-3">
-                <div style="width:60px;height:60px;border-radius:50%;background:#dee2e6;display:flex;align-items:center;justify-content:center;">
-                    <i class="bi bi-person-fill fs-4 text-muted"></i>
+                <div style="width:48px;height:48px;border-radius:50%;background:var(--bg-card-hover,#2a3f4a);border:2px solid var(--border-color,#30363d);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--text-secondary,#c9d1d9);">
+                    @(loggedInUser?.UserName?.Length > 0 ? loggedInUser.UserName[0].ToString().ToUpper() : "?")
                 </div>
                 <div>
                     <h5 class="fw-bold mb-0">@loggedInUser?.UserName</h5>
-                    <small class="text-muted">@Model.UserShowoffs.Count showoff(s)</small>
+                    <small class="text-muted">@Model.UserShowoffs.Count showoff@(Model.UserShowoffs.Count != 1 ? "s" : "")</small>
                 </div>
             </div>
-            <button class="btn btn-outline-secondary btn-sm" onclick="openManageModal()">
-                Manage Showoffs
-            </button>
         </div>
 
-        <div class="row row-cols-1 row-cols-md-4 g-3">
+        <!-- Showoff rows — single column -->
+        <div class="d-flex flex-column gap-3">
             @foreach (var showoff in Model.UserShowoffs)
             {
-                <div class="col">
-                    <div class="card border-0 shadow-sm h-100"
-                         style="background-color: @showoff.BackgroundColor;">
-                        <div class="card-body d-flex justify-content-center align-items-center gap-2 p-3"
-                             style="min-height:160px;">
+                <div class="card border-0 shadow-sm" style="background:var(--bg-card,#161b22);border:1px solid var(--border-color,#21262d) !important;border-radius:10px;">
+                    <div class="card-body d-flex gap-3 p-3">
+                        <!-- Thumbnail preview -->
+                        <div onclick="viewShowoff(@showoff.ShowoffId, '@showoff.UserName')" style="cursor:pointer;flex-shrink:0;width:160px;height:90px;border-radius:8px;overflow:hidden;background-color:@showoff.BackgroundColor;display:flex;align-items:center;justify-content:center;gap:6px;">
                             @foreach (var item in showoff.Items.OrderBy(i => i.DisplayOrder))
                             {
-                                <div>
-                                    @if (!string.IsNullOrEmpty(item.ImagePath))
-                                    {
-                                        <img src="@item.ImagePath"
-                                             style="width:70px;height:70px;object-fit:cover;border-radius:8px;" />
-                                    }
-                                    else
-                                    {
-                                        <div style="width:70px;height:70px;background:rgba(255,255,255,0.3);border-radius:8px;"></div>
-                                    }
-                                </div>
+                                @if (!string.IsNullOrEmpty(item.ImagePath))
+                                {
+                                    <img src="@item.ImagePath" style="width:45px;height:45px;object-fit:cover;border-radius:6px;"/>
+                                }
+                                else
+                                {
+                                    <div style="width:45px;height:45px;background:rgba(255,255,255,0.3);border-radius:6px;"></div>
+                                }
                             }
                         </div>
-                        <div class="card-footer bg-transparent border-0 d-flex justify-content-between">
-                            <span class="fw-semibold text-truncate" style="max-width:120px;">@showoff.ShowoffName</span>
-                            <span class="badge @(showoff.IsPrivate ? "bg-secondary" : "bg-success")">
-                                @(showoff.IsPrivate ? "Private" : "Public")
-                            </span>
+
+                        <!-- Details -->
+                        <div class="d-flex flex-column gap-1" style="flex:1;min-width:0;">
+                            <div class="d-flex align-items-center gap-2">
+                                <button onclick="viewShowoff(@showoff.ShowoffId, '@showoff.UserName')" class="fw-bold" style="background:none;border:none;padding:0;cursor:pointer;font-size:15px;font-family:inherit;color:var(--text-primary,#e6edf3);text-align:left;">
+                                    @showoff.ShowoffName
+                                </button>
+                                @if (showoff.IsDisabled)
+                                {
+                                    <span style="font-size:10px;font-weight:600;color:#f85149;background:#2a1f1d;padding:2px 7px;border-radius:4px;">DISABLED</span>
+                                }
+                                else if (showoff.IsPrivate)
+                                {
+                                    <span style="font-size:10px;font-weight:600;color:#7d8590;background:var(--bg-card-hover,#21262d);padding:2px 7px;border-radius:4px;">Private</span>
+                                }
+                                else
+                                {
+                                    <span style="font-size:10px;font-weight:600;color:#3fb950;background:#122016;padding:2px 7px;border-radius:4px;">Public</span>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(showoff.Description))
+                            {
+                                <p class="mb-0 text-muted" style="font-size:13px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">@showoff.Description</p>
+                            }
+
+                            <!-- Stats -->
+                            <div class="d-flex flex-wrap gap-3 text-muted" style="font-size:12px;">
+                                <span>❤️ @showoff.LikeCount likes</span>
+                                <span>👁 @showoff.ViewCount views</span>
+                                <span>💬 @showoff.CommentCount</span>
+                                <span>Created @showoff.CreatedAt.ToString("MMM dd, yyyy")</span>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="d-flex gap-2 mt-auto">
+                                <button class="btn btn-sm" style="background:var(--bg-card-hover,#21262d);border:1px solid var(--border-color,#30363d);color:var(--text-primary,#e6edf3);font-size:12px;padding:5px 10px;" onclick="viewShowoff(@showoff.ShowoffId, '@showoff.UserName')">
+                                    View
+                                </button>
+                                <a class="btn btn-sm" style="background:var(--bg-card-hover,#21262d);border:1px solid var(--border-color,#30363d);color:var(--text-primary,#e6edf3);font-size:12px;padding:5px 10px;" asp-page="./Edit" asp-route-id="@showoff.ShowoffId">
+                                    Edit
+                                </a>
+                                <button class="btn btn-sm" style="background:#2a1f1d;border:1px solid #5a2030;color:#f85149;font-size:12px;padding:5px 10px;" onclick="openDeleteConfirm(@showoff.ShowoffId, '@showoff.ShowoffName')">
+                                    Delete
+                                </button>
+                                @if (!showoff.IsPrivate)
+                                {
+                                    <button class="btn btn-sm" style="background:none;border:1px solid var(--border-color,#21262d);color:var(--text-muted,#7d8590);font-size:12px;padding:5px 10px;" onclick="navigator.clipboard.writeText(window.location.origin + '/ShowoffPages/Index?tab=feed')">
+                                        Share
+                                    </button>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
             }
 
+            <!-- Create new showoff -->
             @if (Model.UserShowoffs.Count < 3)
             {
-                <div class="col">
-                    <div class="card border-dashed h-100"
-                         style="border:2px dashed #dee2e6;cursor:pointer;min-height:200px;"
-                         onclick="openCreateModal()">
-                        <div class="card-body d-flex justify-content-center align-items-center gap-3">
+                <a asp-page="./Create" class="text-decoration-none">
+                    <div style="background:var(--bg-card,#161b22);border:2px dashed var(--border-color,#30363d);border-radius:10px;padding:28px 20px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;color:var(--text-muted,#484f58);font-size:14px;transition:border-color 0.15s,color 0.15s;"
+                         onmouseenter="this.style.borderColor='var(--color-teal,#2dd4bf)';this.style.color='var(--color-teal,#2dd4bf)';"
+                         onmouseleave="this.style.borderColor='var(--border-color,#30363d)';this.style.color='var(--text-muted,#484f58)';">
+                        <div class="d-flex gap-2">
                             @for (int i = 0; i < 3; i++)
                             {
-                                <div style="width:60px;height:60px;border:2px dashed #adb5bd;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-                                    <i class="bi bi-plus fs-4 text-muted"></i>
+                                <div style="width:36px;height:36px;border:2px dashed currentColor;border-radius:6px;display:flex;align-items:center;justify-content:center;opacity:0.6;">
+                                    <i class="bi bi-plus"></i>
                                 </div>
                             }
                         </div>
-                        <div class="card-footer bg-transparent border-0 text-center text-muted small">
-                            Create new showoff
-                        </div>
+                        <span>Create new showoff</span>
                     </div>
-                </div>
+                </a>
             }
         </div>
     }
@@ -230,56 +284,96 @@
 
 <div class="modal fade" id="viewShowoffModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered" style="min-height: 80vh;">
-        <div class="modal-content" style="min-height: 80vh; display: flex; flex-direction: column;">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="viewShowoffName"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content" style="min-height: 80vh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-card, #161b22); border: 1px solid var(--border-color, #30363d); border-radius: 14px;">
+            <!-- Header -->
+            <div class="modal-header border-bottom" style="border-color:var(--border-color,#21262d) !important;">
+                <div>
+                    <h5 class="modal-title fw-bold" id="viewShowoffName"></h5>
+                    <span id="viewDisabledBadge" style="display:none;font-size:11px;color:#f85149;background:#2a1f1d;padding:2px 8px;border-radius:4px;font-weight:600;">
+                        DISABLED BY STAFF
+                    </span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body flex-grow-1 d-flex align-items-center justify-content-center" id="viewShowoffBody">
-            </div>
-            <div class="modal-footer border-0 d-flex justify-content-between w-100">
-                <button type="button" class="btn btn-outline-secondary" id="likeBtn" onclick="toggleLike()">
-                    <i class="bi bi-heart text-secondary" id="likeIcon"></i>
-                    <span id="likeCount">0</span>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="modal fade" id="manageModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Manage Showoffs</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="manageModalBody">
-                @foreach (var showoff in Model.UserShowoffs)
-                {
-                    <div class="d-flex align-items-center justify-content-between p-2 border-bottom">
-                        <div>
-                            <div class="fw-semibold">@showoff.ShowoffName</div>
-                            <small class="text-muted">
-                                @(showoff.IsPrivate ? "Private" : "Public") · @showoff.Items.Count item(s)
-                            </small>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-warning btn-sm"
-                                    onclick="openEditModal(@showoff.ShowoffId)">
-                                Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm"
-                                    onclick="openDeleteConfirm(@showoff.ShowoffId, '@showoff.ShowoffName')">
-                                Delete
-                            </button>
-                        </div>
+            <!-- Scrollable body -->
+            <div style="overflow-y:auto;flex:1;">
+                <!-- Canvas display -->
+                <div class="d-flex justify-content-center p-3 pb-0" id="viewShowoffBody">
+                </div>
+
+                <!-- Details section -->
+                <div class="d-flex flex-column gap-2 p-3">
+                    <!-- Description -->
+                    <p id="viewDescription" class="mb-0" style="font-size:14px;color:var(--text-secondary,#c9d1d9);line-height:1.6;display:none;"></p>
+
+                    <!-- Item name chips -->
+                    <div id="viewItemChips" class="d-flex flex-wrap gap-2" style="display:none;"></div>
+
+                    <!-- Category tags -->
+                    <div id="viewCategoryTags" class="d-flex flex-wrap gap-1" style="display:none;"></div>
+
+                    <!-- Meta row -->
+                    <div class="d-flex flex-wrap gap-3" style="font-size:12px;color:var(--text-muted,#7d8590);">
+                        <span>❤️ <span id="likeCount">0</span> likes</span>
+                        <span>👁 <span id="viewCountDisplay">0</span> views</span>
+                        <span id="viewCreatedAt"></span>
                     </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+                    <!-- Owner -->
+                    <div class="d-flex align-items-center gap-2" id="viewOwnerInfo">
+                        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2a3f4a,#1a3a5c);border:2px solid var(--border-color,#30363d);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary,#c9d1d9);" id="viewOwnerAvatar"></div>
+                        <span style="font-size:13px;color:#58a6ff;font-weight:600;" id="viewOwnerName"></span>
+                    </div>
+
+                    <!-- Disabled notice for owner -->
+                    <div id="viewDisabledNotice" style="display:none;background:#2a1f1d;border:1px solid #5a2030;border-radius:8px;padding:14px;">
+                        <p style="margin:0 0 8px;font-size:13px;color:#f85149;font-weight:600;">This showoff has been disabled by staff.</p>
+                        <p style="margin:0 0 10px;font-size:13px;color:var(--text-secondary,#c9d1d9);">To appeal this decision, please contact our support team.</p>
+                        <a id="appealLink" href="#" style="display:inline-block;background:#f85149;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;color:#fff;text-decoration:none;">
+                            Appeal
+                        </a>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm" id="likeBtn" onclick="toggleLike()"
+                                style="display:flex;align-items:center;gap:6px;background:var(--bg-card-hover,#21262d);border:1px solid var(--border-color,#30363d);border-radius:7px;padding:7px 14px;font-size:13px;color:var(--text-muted,#7d8590);">
+                            <i class="bi bi-heart" id="likeIcon"></i>
+                            <span id="likeBtnText">Like</span>
+                        </button>
+                        <button type="button" class="btn btn-sm" onclick="shareShowoff()"
+                                style="display:flex;align-items:center;gap:6px;background:var(--bg-card-hover,#21262d);border:1px solid var(--border-color,#30363d);border-radius:7px;padding:7px 14px;font-size:13px;color:var(--text-muted,#7d8590);">
+                            <i class="bi bi-share"></i>
+                            <span id="shareText">Share</span>
+                        </button>
+                        <button type="button" class="btn btn-sm" onclick="openReportModal()" id="reportBtn"
+                                style="display:flex;align-items:center;gap:6px;background:var(--bg-card-hover,#21262d);border:1px solid var(--border-color,#30363d);border-radius:7px;padding:7px 14px;font-size:13px;color:var(--text-muted,#7d8590);">
+                            <i class="bi bi-flag"></i> Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comments section -->
+                <div class="p-3 pt-0" style="border-top:1px solid var(--border-color,#21262d);" id="commentsSection">
+                    <h6 class="fw-bold mb-3 pt-3" style="font-size:14px;">
+                        Comments (<span id="commentCountDisplay">0</span>)
+                    </h6>
+                    <div class="d-flex gap-2 mb-3">
+                        <input type="text" id="commentInput" class="form-control form-control-sm"
+                               placeholder="Write a comment..." maxlength="500"
+                               onkeydown="if(event.key==='Enter')postComment()"/>
+                        <button class="btn btn-sm" onclick="postComment()"
+                                style="background:#2dd4bf;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;color:#0d1117;">
+                            Post
+                        </button>
+                    </div>
+                    <div id="commentsList"></div>
+                    <button id="loadMoreComments" class="btn btn-sm btn-outline-secondary w-100 mt-2"
+                            style="display:none;" onclick="loadMoreComments()">
+                        Load more comments
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -297,144 +391,47 @@
                 <p class="text-danger small">This cannot be undone.</p>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" onclick="reopenManage()">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" onclick="confirmDelete()">Yes, delete</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="createEditModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="createEditTitle">Create Showoff</h5>
-                <button type="button" class="btn-close" onclick="closeCreateEdit()"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-4">
-
-                    <div class="col-md-5">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Showoff Name</label>
-                            <input type="text" id="showoffName" class="form-control"
-                                   maxlength="40" placeholder="Enter showoff name"
-                                   oninput="updatePreview()" />
-                            <small class="text-muted"><span id="nameCharCount">0</span>/40</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Background Color</label>
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="color" id="bgColor" class="form-control form-control-color"
-                                       value="#ffffff" oninput="updatePreview()" />
-                                <span id="bgColorHex" class="text-muted small">#ffffff</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Visibility</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio"
-                                           name="visibility" id="visPublic" value="false"
-                                           checked onchange="updatePreview()" />
-                                    <label class="form-check-label" for="visPublic">Public</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio"
-                                           name="visibility" id="visPrivate" value="true"
-                                           onchange="updatePreview()" />
-                                    <label class="form-check-label" for="visPrivate">Private</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Items (max 3)</label>
-                            <div id="selectedItemsList">
-                                <p class="text-muted small">Click a cell in the preview to add items.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-7">
-                        <label class="form-label fw-semibold">Preview</label>
-                        <div id="showoffPreview"
-                             class="card border-0 shadow"
-                             style="background-color:#ffffff;min-height:200px;">
-                            <div class="card-body d-flex justify-content-center align-items-center gap-3 p-4"
-                                 style="min-height:160px;">
-                                <div class="preview-cell"
-                                     onclick="openItemPicker(0)"
-                                     style="width:80px;height:80px;border:2px dashed #adb5bd;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;"
-                                     id="previewCell0">
-                                    <i class="bi bi-plus text-muted fs-4"></i>
-                                </div>
-                                <div class="preview-cell"
-                                     onclick="openItemPicker(1)"
-                                     style="width:80px;height:80px;border:2px dashed #adb5bd;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;"
-                                     id="previewCell1">
-                                    <i class="bi bi-plus text-muted fs-4"></i>
-                                </div>
-                                <div class="preview-cell"
-                                     onclick="openItemPicker(2)"
-                                     style="width:80px;height:80px;border:2px dashed #adb5bd;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;"
-                                     id="previewCell2">
-                                    <i class="bi bi-plus text-muted fs-4"></i>
-                                </div>
-                            </div>
-                            <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
-                                <span id="previewName" class="fw-semibold text-truncate" style="max-width:150px;">Showoff Name</span>
-                                <span id="previewBadge" class="badge bg-success">Public</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" onclick="closeCreateEdit()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveShowoff()">Save</button>
-            </div>
-        </div>
-    </div>
+</div>
+</div>
 </div>
 
-<div class="modal fade" id="itemPickerModal" tabindex="-1" data-bs-backdrop="static">
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold">Select Item</h5>
+                <h5 class="modal-title fw-bold">Report Showoff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="position-relative mb-3">
-                    <input type="text" id="itemPickerSearch" class="form-control"
-                           placeholder="Search your collection items..."
-                           autocomplete="off" />
-                    <div id="itemPickerSuggestions"
-                         class="list-group position-absolute z-3"
-                         style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
-                </div>
-
-                <hr />
-
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Item Image</label>
-                    <input type="file" id="itemImageUpload" class="form-control"
-                           accept=".jpg,.jpeg,.png" />
-                    <small class="text-muted">JPG or PNG, max 5MB</small>
-                    <div id="imagePreviewContainer" class="mt-2" style="display:none;">
-                        <img id="imagePreview" src="" style="max-width:100%;max-height:150px;border-radius:8px;" />
-                        <button type="button" class="btn btn-sm btn-outline-danger mt-1"
-                                onclick="removeImage()">
-                            Remove
-                        </button>
-                    </div>
+                    <label class="form-label fw-semibold">Reason</label>
+                    <select id="reportCategory" class="form-select">
+                        <option value="" disabled selected>Select a reason...</option>
+                        <option value="Counterfeit / Fake item">Counterfeit / Fake item</option>
+                        <option value="Inappropriate content">Inappropriate content</option>
+                        <option value="Spam or self-promotion">Spam or self-promotion</option>
+                        <option value="Copyright infringement">Copyright infringement</option>
+                        <option value="Misleading information">Misleading information</option>
+                        <option value="Harassment or hate speech">Harassment or hate speech</option>
+                        <option value="Other reasons">Other reasons</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Additional Details (optional)</label>
+                    <textarea id="reportReason" class="form-control" rows="3" maxlength="500" placeholder="Describe the issue..."></textarea>
                 </div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" onclick="closeItemPicker()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmItemPick()">Add Item</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="submitReport()">Submit Report</button>
             </div>
         </div>
     </div>
@@ -460,17 +457,13 @@
         const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
 
         // State
-        let selectedItems = [null, null, null]; // 3 cells
-        let currentPickerCell = 0;
-        let currentShowoffId = null;
         let pendingDeleteId = null;
         let pendingDeleteName = null;
-        let selectedItemForPicker = null;
-        let uploadedImageData = null;
 
         // ── View Showoff ──
         // Fix 2 — handle both camelCase and PascalCase API payloads, guard against failed fetch
         async function viewShowoff(showoffId, ownerName) {
+            currentViewShowoffId = showoffId;
 
             // Fetch showoff details
             const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
@@ -493,45 +486,103 @@
 
             const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
             const items = showoff.items || showoff.Items || [];
+            const userName = showoff.userName || showoff.UserName;
+            const description = showoff.description || showoff.Description || '';
+            const isDisabled = showoff.isDisabled ?? showoff.IsDisabled ?? false;
+            const viewCount = showoff.viewCount ?? showoff.ViewCount ?? 0;
+            const createdAt = showoff.createdAt || showoff.CreatedAt || '';
+            const commentCount = showoff.commentCount ?? showoff.CommentCount ?? 0;
 
             const body = document.getElementById('viewShowoffBody');
 
-            // Determine image size based on item count — 1 item = largest, 3 items = smallest
+            // Determine image size based on item count
             const itemCount = items.length;
             const imageSize = itemCount === 1 ? 260 : itemCount === 2 ? 190 : 140;
             const cellWidth = itemCount === 1 ? 280 : itemCount === 2 ? 210 : 160;
 
             body.innerHTML = `
-                        <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
-                             style="background-color:${bgColor}; min-height:60vh;">
-                            <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
-                                ${items.map(item => {
+                    <div class="rounded-3 p-4 d-flex justify-content-center align-items-center w-100"
+                         style="background-color:${bgColor}; min-height:280px; max-height:360px;">
+                        <div class="d-flex justify-content-center align-items-start flex-wrap gap-4">
+                            ${items.map(item => {
                 const imgPath = item.imagePath || item.ImagePath;
                 const itemName = item.itemName || item.ItemName;
-                const catName = item.categoryName || item.CategoryName;
                 return `
-                                        <div class="text-center d-flex flex-column align-items-center"
-                                             style="width:${cellWidth}px;">
-                                            ${imgPath
-                        ? `<img src="${imgPath}"
-                                                        style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
+                                <div class="text-center" style="width:${cellWidth}px;">
+                                    ${imgPath
+                        ? `<img src="${imgPath}" style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
                         : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
-                                            <div class="mt-3 fw-bold fs-5 text-center"
-                                                 style="width:100%; word-wrap:break-word; overflow-wrap:break-word;">
-                                                ${itemName || ''}
-                                            </div>
-                                            ${catName ? `
-                                            <div class="text-muted fs-6 text-center"
-                                                 style="width:100%; word-wrap:break-word; overflow-wrap:break-word;">
-                                                ${catName}
-                                            </div>` : ''}
-                                        </div>`;
+                                </div>`;
             }).join('')}
-                            </div>
-                            <div class="mt-4 text-center">
-                                <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
-                            </div>
-                        </div>`;
+                        </div>
+                    </div>`;
+
+            // Description
+            const descEl = document.getElementById('viewDescription');
+            if (description) {
+                descEl.textContent = description;
+                descEl.style.display = 'block';
+            } else {
+                descEl.style.display = 'none';
+            }
+
+            // Item name chips
+            const chipsEl = document.getElementById('viewItemChips');
+            if (items.length > 0) {
+                chipsEl.innerHTML = items.map(i => {
+                    const name = i.itemName || i.ItemName || '';
+                    return `<span style="font-size:12px;color:var(--text-secondary,#a6b1e1);background:rgba(166,177,225,0.05);border:1px solid var(--border-color);padding:3px 10px;border-radius:6px;">${name}</span>`;
+                }).join('');
+                chipsEl.style.display = 'flex';
+            } else {
+                chipsEl.style.display = 'none';
+            }
+
+            // Category tags
+            const tagsEl = document.getElementById('viewCategoryTags');
+            const uniqueCats = [];
+            items.forEach(i => {
+                const cat = i.categoryName || i.CategoryName;
+                if (cat && !uniqueCats.includes(cat)) uniqueCats.push(cat);
+            });
+
+            if (uniqueCats.length > 0) {
+                tagsEl.innerHTML = uniqueCats.map(cat => `
+                    <button class="btn btn-sm rounded-pill px-3 py-1" style="font-size:11px; font-family:inherit; color:#58a6ff; background:#0d1f35; border:1px solid #1c3a5e;"
+                            onclick="bootstrap.Modal.getInstance(document.getElementById('viewShowoffModal'))?.hide(); refreshGrid({ searchCategory: '${cat.replace(/'/g, "\\'")}', page: 1 }); document.getElementById('searchCategories').value = '${cat.replace(/'/g, "\\'")}'; addRecentCategory('${cat.replace(/'/g, "\\'")}');">
+                        #${cat}
+                    </button>
+                `).join('');
+                tagsEl.style.display = 'flex';
+            } else {
+                tagsEl.style.display = 'none';
+            }
+
+            // Meta stats
+            document.getElementById('viewCountDisplay').textContent = viewCount;
+            document.getElementById('viewCreatedAt').textContent = createdAt ? `Created ${new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : '';
+            document.getElementById('commentCountDisplay').textContent = commentCount;
+
+            // Owner
+            document.getElementById('viewOwnerAvatar').textContent = userName ? userName[0].toUpperCase() : '?';
+            document.getElementById('viewOwnerName').textContent = userName || '';
+
+            // Disabled badge & notice
+            document.getElementById('viewDisabledBadge').style.display = isDisabled ? 'inline-block' : 'none';
+            const isOwner = currentUser && currentUser === userName;
+            if (isDisabled && isOwner) {
+                document.getElementById('viewDisabledNotice').style.display = 'block';
+                // mailto: appeal link with user's email context
+                const userEmail = '@(loggedInUser?.Email ?? "")';
+                const subject = encodeURIComponent(`Appeal: Disabled Showoff "${showoff.showoffName || showoff.ShowoffName}"`);
+                const bodyText = encodeURIComponent(`Hi,\n\nI would like to appeal the disabling of my showoff "${showoff.showoffName || showoff.ShowoffName}" (ID: ${showoffId}).\n\nReason for appeal:\n\n\nThank you.`);
+                document.getElementById('appealLink').href = `mailto:allen@example.com?subject=${subject}&body=${bodyText}`;
+            } else {
+                document.getElementById('viewDisabledNotice').style.display = 'none';
+            }
+
+            // Like button text
+            document.getElementById('likeBtnText').textContent = liked ? `Liked · ${likeData.likeCount ?? likeData.LikeCount ?? 0}` : `Like · ${likeData.likeCount ?? likeData.LikeCount ?? 0}`;
 
             const modal = new bootstrap.Modal(document.getElementById('viewShowoffModal'));
 
@@ -545,6 +596,9 @@
             }, { once: true });
 
             modal.show();
+
+            // Load comments
+            loadComments(1);
         }
 
         // ── Like / Unlike ──
@@ -622,328 +676,109 @@
             window.location.reload();
         }
 
-        // ── Create/Edit Modal ──
-        function openCreateModal() {
-            currentShowoffId = null;
-            selectedItems = [null, null, null];
-            document.getElementById('createEditTitle').textContent = 'Create Showoff';
-            document.getElementById('showoffName').value = '';
-            document.getElementById('bgColor').value = '#ffffff';
-            document.getElementById('nameCharCount').textContent = '0';
-            document.getElementById('visPublic').checked = true;
-            resetPreviewCells();
-            updatePreview();
-            new bootstrap.Modal(document.getElementById('createEditModal')).show();
-        }
+        // ── Create/Edit now use separate pages — link from manage modal ──
 
-        async function openEditModal(showoffId) {
-            currentShowoffId = showoffId;
-            bootstrap.Modal.getInstance(document.getElementById('manageModal'))?.hide();
+        // ── Share ──
+        let currentViewShowoffId = null;
 
-            const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
-            const showoff = await res.json();
-
-            document.getElementById('createEditTitle').textContent = 'Edit Showoff';
-            document.getElementById('showoffName').value = showoff.showoffName;
-            document.getElementById('nameCharCount').textContent = showoff.showoffName.length;
-            document.getElementById('bgColor').value = showoff.backgroundColor;
-            document.getElementById(showoff.isPrivate ? 'visPrivate' : 'visPublic').checked = true;
-
-            selectedItems = [null, null, null];
-            showoff.items.forEach(item => {
-                selectedItems[item.displayOrder] = {
-                    itemId: item.itemId,
-                    itemName: item.itemName,
-                    imagePath: item.imagePath,
-                    imagePublicId: item.imagePublicId,
-                    displayOrder: item.displayOrder
-                };
-            });
-
-            updatePreview();
-            updateSelectedItemsList();
-            new bootstrap.Modal(document.getElementById('createEditModal')).show();
-        }
-
-        // Fix 1 — Cancel from Create card should not reopen Manage; Cancel from Edit should
-        function closeCreateEdit() {
-            bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-            if (currentShowoffId !== null) {
-                // Came from Edit in Manage — reopen Manage
-                new bootstrap.Modal(document.getElementById('manageModal')).show();
-            }
-            // Came from Create card — just close, no Manage
-        }
-
-        function resetPreviewCells() {
-            for (let i = 0; i < 3; i++) {
-                const cell = document.getElementById(`previewCell${i}`);
-                cell.innerHTML = '<i class="bi bi-plus text-muted fs-4"></i>';
-                cell.style.border = '2px dashed #adb5bd';
-            }
-        }
-
-        function updatePreview() {
-            const name = document.getElementById('showoffName').value;
-            const color = document.getElementById('bgColor').value;
-            const isPrivate = document.getElementById('visPrivate').checked;
-
-            document.getElementById('showoffPreview').style.backgroundColor = color;
-            document.getElementById('previewName').textContent = name || 'Showoff Name';
-            document.getElementById('bgColorHex').textContent = color;
-            document.getElementById('nameCharCount').textContent = name.length;
-
-            const badge = document.getElementById('previewBadge');
-            badge.textContent = isPrivate ? 'Private' : 'Public';
-            badge.className = `badge ${isPrivate ? 'bg-secondary' : 'bg-success'}`;
-
-            // Update cells
-            for (let i = 0; i < 3; i++) {
-                const cell = document.getElementById(`previewCell${i}`);
-                const item = selectedItems[i];
-                if (item) {
-                    if (item.imagePath) {
-                        cell.innerHTML = `<img src="${item.imagePath}" style="width:76px;height:76px;object-fit:cover;border-radius:6px;" />`;
-                    } else {
-                        cell.innerHTML = `<span class="small text-center px-1" style="font-size:10px;">${item.itemName}</span>`;
-                    }
-                    cell.style.border = 'none';
-                } else {
-                    cell.innerHTML = '<i class="bi bi-plus text-muted fs-4"></i>';
-                    cell.style.border = '2px dashed #adb5bd';
-                }
-            }
-        }
-
-        function updateSelectedItemsList() {
-            const list = document.getElementById('selectedItemsList');
-            const activeItems = selectedItems.filter(i => i !== null);
-            if (activeItems.length === 0) {
-                list.innerHTML = '<p class="text-muted small">Click a cell in the preview to add items.</p>';
-                return;
-            }
-            list.innerHTML = activeItems.map((item, idx) => `
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="small">${item.itemName}</span>
-                                <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${item.displayOrder})">×</button>
-                            </div>
-                        `).join('');
-        }
-
-        function removeItem(displayOrder) {
-            const existing = selectedItems[displayOrder];
-
-            // Mark old image for deletion if it exists
-            if (existing?.imagePublicId) {
-                window.pendingImageDeletes = window.pendingImageDeletes || [];
-                window.pendingImageDeletes.push(existing.imagePublicId);
-            }
-
-            selectedItems[displayOrder] = null;
-            updatePreview();
-            updateSelectedItemsList();
-        }
-
-        // ── Item Picker ──
-        function openItemPicker(cellIndex) {
-            currentPickerCell = cellIndex;
-            selectedItemForPicker = null;
-            uploadedImageData = null;
-            document.getElementById('itemPickerSearch').value = '';
-            document.getElementById('itemPickerSuggestions').style.display = 'none';
-            document.getElementById('itemImageUpload').value = '';
-            document.getElementById('imagePreviewContainer').style.display = 'none';
-
-            bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-            new bootstrap.Modal(document.getElementById('itemPickerModal')).show();
-        }
-
-        function closeItemPicker() {
-            bootstrap.Modal.getInstance(document.getElementById('itemPickerModal'))?.hide();
-            new bootstrap.Modal(document.getElementById('createEditModal')).show();
-        }
-
-        // Item picker search
-        const itemPickerSearch = document.getElementById('itemPickerSearch');
-        const itemPickerSuggestions = document.getElementById('itemPickerSuggestions');
-
-        itemPickerSearch.addEventListener('focus', function () {
-            renderItemPickerSuggestions(userCollectionItems);
-            itemPickerSuggestions.style.display = 'block';
-        });
-
-        itemPickerSearch.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
-            if (query.length === 0) {
-                renderItemPickerSuggestions(userCollectionItems);
-                return;
-            }
-            const filtered = userCollectionItems.filter(i =>
-                i.ItemName && i.ItemName.toLowerCase().includes(query)
-            );
-            renderItemPickerSuggestions(filtered);
-        });
-
-        function renderItemPickerSuggestions(items) {
-            itemPickerSuggestions.innerHTML = '';
-            if (items.length === 0) {
-                itemPickerSuggestions.innerHTML = '<div class="list-group-item text-muted">No items found</div>';
-                return;
-            }
-            items.forEach(item => {
-                const el = document.createElement('a');
-                el.href = '#';
-                el.className = 'list-group-item list-group-item-action';
-                el.textContent = item.ItemName + (item.CategoryName ? ` — ${item.CategoryName}` : '');
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    selectedItemForPicker = item;
-                    itemPickerSearch.value = item.ItemName;
-                    itemPickerSuggestions.style.display = 'none';
-                });
-                itemPickerSuggestions.appendChild(el);
+        function shareShowoff() {
+            const url = `${window.location.origin}/ShowoffPages/Index?tab=feed`;
+            navigator.clipboard.writeText(url).then(() => {
+                const span = document.getElementById('shareText');
+                span.textContent = 'Copied!';
+                setTimeout(() => span.textContent = 'Share', 2000);
             });
         }
 
-        // Image upload preview
-        document.getElementById('itemImageUpload').addEventListener('change', function () {
-            const file = this.files[0];
-            if (!file) return;
-
-            if (!['image/jpeg', 'image/png'].includes(file.type)) {
-                alert('Only JPG and PNG files are allowed.');
-                this.value = '';
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must not exceed 5MB.');
-                this.value = '';
-                return;
-            }
-
-            uploadedImageData = file;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('imagePreview').src = e.target.result;
-                document.getElementById('imagePreviewContainer').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        function removeImage() {
-            uploadedImageData = null;
-            document.getElementById('itemImageUpload').value = '';
-            document.getElementById('imagePreviewContainer').style.display = 'none';
+        // ── Report ──
+        function openReportModal() {
+            if (!currentUser) { alert('Please log in to report.'); return; }
+            document.getElementById('reportCategory').selectedIndex = 0;
+            document.getElementById('reportReason').value = '';
+            new bootstrap.Modal(document.getElementById('reportModal')).show();
         }
 
-        async function confirmItemPick() {
-            if (!selectedItemForPicker) {
-                alert('Please select an item.');
-                return;
-            }
+        async function submitReport() {
+            const cat = document.getElementById('reportCategory').value;
+            if (!cat) { alert('Please select a reason.'); return; }
+            const reason = document.getElementById('reportReason').value.trim();
 
-            let imagePath = null;
-            let imagePublicId = null;
+            const res = await fetch(`${apiBase}/ShowoffReport`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    showoffId: currentViewShowoffId,
+                    reporterUserName: currentUser,
+                    category: cat,
+                    reason: reason || null
+                })
+            });
 
-            // Upload image if provided
-            if (uploadedImageData) {
-                const formData = new FormData();
-                formData.append('file', uploadedImageData);
-
-                const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!uploadRes.ok) {
-                    alert('Image upload failed. Please try again.');
-                    return;
-                }
-
-                const uploadData = await uploadRes.json();
-                imagePath = uploadData.imagePath;
-                imagePublicId = uploadData.imagePublicId;
-            }
-
-            // Remove existing item at this cell if replacing
-            const existing = selectedItems[currentPickerCell];
-            if (existing?.imagePublicId) {
-                // Mark for deletion on save
-                window.pendingImageDeletes = window.pendingImageDeletes || [];
-                window.pendingImageDeletes.push(existing.imagePublicId);
-            }
-
-            selectedItems[currentPickerCell] = {
-                itemId: selectedItemForPicker.ItemId,
-                itemName: selectedItemForPicker.ItemName,
-                imagePath,
-                imagePublicId,
-                displayOrder: currentPickerCell
-            };
-
-            updatePreview();
-            updateSelectedItemsList();
-            closeItemPicker();
-        }
-
-        // ── Save Showoff ──
-        async function saveShowoff() {
-            const name = document.getElementById('showoffName').value.trim();
-            if (!name) { alert('Please enter a showoff name.'); return; }
-
-            const activeItems = selectedItems.filter(i => i !== null);
-            if (activeItems.length === 0) { alert('Please add at least 1 item.'); return; }
-
-            const isPrivate = document.getElementById('visPrivate').checked;
-            const bgColor = document.getElementById('bgColor').value;
-
-            const payload = {
-                showoffName: name,
-                backgroundColor: bgColor,
-                isPrivate,
-                userName: currentUser,
-                items: activeItems.map(i => ({
-                    itemId: i.itemId,
-                    imagePath: i.imagePath,
-                    imagePublicId: i.imagePublicId,
-                    displayOrder: i.displayOrder
-                }))
-            };
-
-            // Delete pending images if editing
-            if (window.pendingImageDeletes?.length) {
-                for (const publicId of window.pendingImageDeletes) {
-                    await fetch(`${apiBase}/ImageUpload`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(publicId)
-                    });
-                }
-                window.pendingImageDeletes = [];
-            }
-
-            let res;
-            if (currentShowoffId) {
-                res = await fetch(`${apiBase}/Showoff/${currentShowoffId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                res = await fetch(`${apiBase}/Showoff`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            }
-
+            bootstrap.Modal.getInstance(document.getElementById('reportModal'))?.hide();
             if (res.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('createEditModal'))?.hide();
-                window.location.reload();
+                alert('Report submitted. A staff member will review it.');
             } else {
-                const err = await res.text();
-                alert(`Failed to save: ${err}`);
+                alert('Failed to submit report. Please try again.');
             }
+        }
+
+        // ── Comments ──
+        let commentPage = 1;
+        let commentTotalPages = 1;
+
+        async function loadComments(page) {
+            if (!currentViewShowoffId) return;
+            const res = await fetch(`${apiBase}/ShowoffComment/${currentViewShowoffId}?page=${page}&pageSize=5`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const comments = data.comments || data.Comments || [];
+            commentTotalPages = data.totalPages || data.TotalPages || 1;
+            commentPage = data.page || data.Page || 1;
+
+            const list = document.getElementById('commentsList');
+            if (page === 1) list.innerHTML = '';
+
+            comments.forEach(c => {
+                const dateStr = new Date(c.createdAt || c.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const userName = c.userName || c.UserName;
+                const text = c.text || c.Text;
+                list.innerHTML += `
+                        <div class="d-flex gap-2 mb-2 p-2 rounded" style="background:rgba(166,177,225,0.02); border:1px solid var(--border-color);">
+                            <div style="width:28px;height:28px;border-radius:50%;background:rgba(166,177,225,0.1);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="bi bi-person-fill small"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold small">${userName}</span>
+                                    <span class="text-muted" style="font-size:11px;">${dateStr}</span>
+                                </div>
+                                <p class="mb-0 small text-white">${text}</p>
+                            </div>
+                        </div>`;
+            });
+
+            document.getElementById('loadMoreComments').style.display =
+                commentPage < commentTotalPages ? 'block' : 'none';
+        }
+
+        function loadMoreComments() {
+            loadComments(commentPage + 1);
+        }
+
+        async function postComment() {
+            if (!currentUser) { alert('Please log in to comment.'); return; }
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            await fetch(`${apiBase}/ShowoffComment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ showoffId: currentViewShowoffId, userName: currentUser, text })
+            });
+
+            input.value = '';
+            loadComments(1);
         }
 
         function renderSearchSuggestions(container, data, keyField, onSelect, query) {
@@ -1102,5 +937,104 @@
         setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', 'searchCategory', 'Category');
         // Initial attach for the server-rendered grid on first page load
         attachGridListeners();
+
+        // ── Recent Category Bubbles ──
+        let recentCats = JSON.parse(sessionStorage.getItem('recentCats') || '[]');
+        let selectedCat = 'All';
+
+        function addRecentCategory(catName) {
+            if (!catName || catName === 'All') return;
+            // Move to front, dedupe, cap at 4
+            recentCats = [catName, ...recentCats.filter(c => c !== catName)].slice(0, 4);
+            sessionStorage.setItem('recentCats', JSON.stringify(recentCats));
+            renderCatBubbles();
+        }
+
+        function selectCategoryBubble(catName) {
+            selectedCat = catName;
+            renderCatBubbles();
+            if (catName === 'All') {
+                refreshGrid({ searchCategory: '', page: 1 });
+                document.getElementById('searchCategories').value = '';
+            } else {
+                refreshGrid({ searchCategory: catName, page: 1 });
+                document.getElementById('searchCategories').value = catName;
+            }
+        }
+
+        function renderCatBubbles() {
+            const container = document.getElementById('recentCatBubbles');
+            if (!container) return;
+
+            // Hide entirely when no recent categories
+            if (recentCats.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'flex';
+
+            // "All" button + only filled recent bubbles (max 4)
+            let html = `<button class="btn btn-sm rounded-pill recent-cat-btn ${selectedCat === 'All' ? 'active' : ''}" onclick="selectCategoryBubble('All')">All</button>`;
+
+            recentCats.slice(0, 4).forEach(cat => {
+                const isActive = selectedCat === cat;
+                html += `<button class="btn btn-sm rounded-pill recent-cat-btn ${isActive ? 'active' : ''}" onclick="selectCategoryBubble('${cat.replace(/'/g, "\\'")}')">` + cat + `</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Hook into category search — when a category is selected from suggestions, add to recent
+        const origCatSetup = document.getElementById('searchCategories');
+        if (origCatSetup) {
+            const origInput = origCatSetup;
+            origInput.addEventListener('change', () => {
+                const val = origInput.value.trim();
+                if (val) addRecentCategory(val);
+            });
+            // Also hook the suggestion click — override the onSelect in setupSearch
+            const catSuggestions = document.getElementById('categorySuggestions');
+            if (catSuggestions) {
+                const origClickHandler = catSuggestions.onclick;
+                catSuggestions.addEventListener('click', (e) => {
+                    const target = e.target.closest('.list-group-item-action');
+                    if (target) {
+                        const catName = target.textContent.trim();
+                        setTimeout(() => addRecentCategory(catName), 100);
+                    }
+                });
+            }
+        }
+
+        // Render initial state
+        renderCatBubbles();
     </script>
+    <style>
+        .recent-cat-btn {
+            font-size: 12px;
+            padding: 4px 14px;
+            border: 1px solid var(--border-color, #21262d);
+            background: var(--bg-card, #161b22);
+            color: var(--text-muted, #7d8590);
+            transition: all 0.15s;
+            min-width: 100px;
+            text-align: center;
+        }
+    
+        .recent-cat-btn.active {
+            background: #1a3a2a;
+            border-color: #3fb950;
+            color: #3fb950;
+        }
+    
+        .recent-cat-btn.empty {
+            border-color: var(--bg-card-hover, #1a1f26);
+            color: var(--bg-card-hover, #2a3040);
+            cursor: default;
+        }
+    
+        .recent-cat-btn:not(.empty):not(.active):hover {
+            border-color: var(--text-muted, #484f58);
+            color: var(--text-secondary, #c9d1d9);
+        }
+    </style>
 }

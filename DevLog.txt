@@ -321,3 +321,12 @@
 
 [To Do]
 - Convert Figma file into Claude to apply to the website
+
+===== DEV LOG (2/8/2026) =====
+[Done]
+- Converted Figma file into Claude to apply to the website
+
+[To Do]
+- Make profile photo show up in viewShowoff and My Profile page
+- Fix share issue where it does not the copied link will not show the specific showoff because the showoff is a modal, not a page, so it will not be able to show the specific showoff when the link is shared
+- In Reports, add a "Resolve" button which will still store the report in the database, but will be sent to the bottom of the table. Add filter for Ongoing report cases.
