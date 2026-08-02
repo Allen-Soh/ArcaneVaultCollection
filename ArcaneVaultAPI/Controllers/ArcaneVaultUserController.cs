@@ -359,6 +359,24 @@ public class ArcaneVaultUserController : ControllerBase
         return Ok();
     }
 
+    // PATCH: api/ArcaneVaultUser/{username}/active-status — staff only
+    [HttpPatch("{username}/active-status")]
+    public IActionResult UpdateActiveStatus(string username, UpdateActiveStatusDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "UPDATE ArcaneVaultUsers SET IsActive = @IsActive WHERE UserName = @UserName",
+            connection);
+        command.Parameters.AddWithValue("@IsActive", dto.IsActive);
+        command.Parameters.AddWithValue("@UserName", username);
+        var rows = command.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound();
+        return NoContent();
+    }
+
     // DELETE: api/ArcaneVaultUser/{username}/delete — hard delete
     [HttpDelete("{username}/delete")]
     public async Task<IActionResult> DeleteAccountPermanent(string username)

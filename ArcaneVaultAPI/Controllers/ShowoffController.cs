@@ -15,8 +15,8 @@ public class ShowoffController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Showoff — all public non-deleted non-disabled showoffs with items and like count
-    [HttpGet]
+// GET: api/Showoff — all public non-deleted non-disabled showoffs with items and like count
+[HttpGet]
     public ActionResult<IEnumerable<ShowoffDTO>> GetShowoffs()
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -24,7 +24,7 @@ public class ShowoffController : ControllerBase
 
         // ADO.NET — get all public non-deleted non-disabled showoffs
         var showoffCommand = new SqliteCommand(
-            @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
+            @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.BackgroundImagePath, s.BackgroundImagePublicId, s.IsPrivate,
                      s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
                      s.IsDisabled, s.DisabledAt,
                      COUNT(sl.UserName) as LikeCount,
@@ -61,7 +61,7 @@ public class ShowoffController : ControllerBase
         bool isOwner = !string.IsNullOrEmpty(requester) &&
                        requester.Equals(username, StringComparison.OrdinalIgnoreCase);
 
-        var sql = @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
+        var sql = @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.BackgroundImagePath, s.BackgroundImagePublicId,s.IsPrivate,
                      s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
                      s.IsDisabled, s.DisabledAt,
                      COUNT(sl.UserName) as LikeCount,
@@ -99,7 +99,7 @@ public class ShowoffController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.IsPrivate,
+            @"SELECT s.ShowoffId, s.ShowoffName, s.BackgroundColor, s.BackgroundImagePath, s.BackgroundImagePublicId, s.IsPrivate,
                      s.IsDeleted, s.UserName, s.CreatedAt, s.Description,
                      s.IsDisabled, s.DisabledAt,
                      COUNT(sl.UserName) as LikeCount,
@@ -122,8 +122,8 @@ public class ShowoffController : ControllerBase
         return Ok(showoff);
     }
 
-    // POST: api/Showoff
-    [HttpPost]
+// POST: api/Showoff
+[HttpPost]
     public async Task<ActionResult<ShowoffDTO>> PostShowoff(CreateShowoffDTO dto)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -136,17 +136,16 @@ public class ShowoffController : ControllerBase
         countCommand.Parameters.AddWithValue("@UserName", dto.UserName);
         var count = Convert.ToInt32(countCommand.ExecuteScalar());
 
-        if (count >= 3)
-            return BadRequest("Maximum of 3 showoffs per user reached.");
-
         // Insert showoff
         var insertCommand = new SqliteCommand(
-            @"INSERT INTO Showoffs (ShowoffName, BackgroundColor, IsPrivate, IsDeleted, UserName, CreatedAt, Description, IsDisabled)
-              VALUES (@ShowoffName, @BackgroundColor, @IsPrivate, 0, @UserName, @CreatedAt, @Description, 0);
-              SELECT last_insert_rowid();",
+            @"INSERT INTO Showoffs (ShowoffName, BackgroundColor, BackgroundImagePath, BackgroundImagePublicId, IsPrivate, IsDeleted, UserName, CreatedAt, Description, IsDisabled)
+                VALUES (@ShowoffName, @BackgroundColor, @BackgroundImagePath, @BackgroundImagePublicId, @IsPrivate, 0, @UserName, @CreatedAt, @Description, 0);
+                SELECT last_insert_rowid();",
             connection);
         insertCommand.Parameters.AddWithValue("@ShowoffName", dto.ShowoffName);
         insertCommand.Parameters.AddWithValue("@BackgroundColor", dto.BackgroundColor);
+        insertCommand.Parameters.AddWithValue("@BackgroundImagePath", dto.BackgroundImagePath ?? (object)DBNull.Value);
+        insertCommand.Parameters.AddWithValue("@BackgroundImagePublicId", dto.BackgroundImagePublicId ?? (object)DBNull.Value);
         insertCommand.Parameters.AddWithValue("@IsPrivate", dto.IsPrivate);
         insertCommand.Parameters.AddWithValue("@UserName", dto.UserName);
         insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
@@ -192,12 +191,16 @@ public class ShowoffController : ControllerBase
             @"UPDATE Showoffs
               SET ShowoffName = @ShowoffName,
                   BackgroundColor = @BackgroundColor,
+                  BackgroundImagePath = @BackgroundImagePath,
+                  BackgroundImagePublicId = @BackgroundImagePublicId,
                   IsPrivate = @IsPrivate,
                   Description = @Description
               WHERE ShowoffId = @ShowoffId",
             connection);
         updateCommand.Parameters.AddWithValue("@ShowoffName", dto.ShowoffName);
         updateCommand.Parameters.AddWithValue("@BackgroundColor", dto.BackgroundColor);
+        updateCommand.Parameters.AddWithValue("@BackgroundImagePath", dto.BackgroundImagePath ?? (object)DBNull.Value);
+        updateCommand.Parameters.AddWithValue("@BackgroundImagePublicId", dto.BackgroundImagePublicId ?? (object)DBNull.Value);
         updateCommand.Parameters.AddWithValue("@IsPrivate", dto.IsPrivate);
         updateCommand.Parameters.AddWithValue("@Description", dto.Description ?? (object)DBNull.Value);
         updateCommand.Parameters.AddWithValue("@ShowoffId", id);
@@ -300,6 +303,8 @@ public class ShowoffController : ControllerBase
                 ShowoffId = Convert.ToInt32(reader["ShowoffId"]),
                 ShowoffName = reader["ShowoffName"].ToString(),
                 BackgroundColor = reader["BackgroundColor"].ToString(),
+                BackgroundImagePath = reader["BackgroundImagePath"] == DBNull.Value ? null : reader["BackgroundImagePath"].ToString(),
+                BackgroundImagePublicId = reader["BackgroundImagePublicId"] == DBNull.Value ? null : reader["BackgroundImagePublicId"].ToString(),
                 IsPrivate = Convert.ToBoolean(reader["IsPrivate"]),
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 UserName = reader["UserName"].ToString(),

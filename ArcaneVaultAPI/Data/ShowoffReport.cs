@@ -20,6 +20,8 @@ namespace ArcaneVaultAPI.Data
 
         public DateTime CreatedAt { get; set; }
 
+        public bool IsResolved { get; set; }
+
         [ForeignKey("ShowoffId")]
         public Showoff? Showoff { get; set; }
 

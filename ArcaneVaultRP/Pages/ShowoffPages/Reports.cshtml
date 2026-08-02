@@ -12,9 +12,17 @@
             <h4 class="fw-bold mb-1">Showoff Reports</h4>
             <p class="text-muted small mb-0" id="reportCountText"></p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="text" id="searchInput" class="form-control form-control-sm"
+                   placeholder="Search username or showoff..." style="width:220px;" oninput="applyFilters()" />
+            <label class="text-muted small" style="white-space:nowrap;">Status:</label>
+            <select id="filterStatus" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Resolved">Resolved</option>
+            </select>
             <label class="text-muted small" style="white-space:nowrap;">Filter by reason:</label>
-            <select id="filterCategory" class="form-select form-select-sm" style="width:auto;" onchange="applyFilter()">
+            <select id="filterCategory" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
                 <option value="All">All</option>
                 <option value="Counterfeit / Fake item">Counterfeit / Fake item</option>
                 <option value="Inappropriate content">Inappropriate content</option>
@@ -101,6 +109,25 @@
     </div>
 </div>
 
+<!-- Resolve Confirmation Modal -->
+<div class="modal fade" id="resolveConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="resolveModalTitle">Resolve Reports</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="resolveModalText"></p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="resolveConfirmBtn" onclick="confirmResolveToggle()">Resolve</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         const currentStaff = '@Model.CurrentStaffUserName';
@@ -110,19 +137,23 @@
         const activeTab = '@Model.ActiveTab';
 
         const CATEGORY_COLORS = {
-            'Counterfeit / Fake item':    { bg: 'rgba(255,193,7,0.1)',  border: 'rgba(255,193,7,0.3)',  color: '#ffe082' },
-            'Inappropriate content':      { bg: 'rgba(220,53,69,0.1)',  border: 'rgba(220,53,69,0.3)',  color: '#ff8591' },
-            'Spam or self-promotion':     { bg: 'rgba(166,177,225,0.1)',border: 'rgba(166,177,225,0.3)',color: '#A6B1E1' },
-            'Copyright infringement':     { bg: 'rgba(163,113,247,0.1)',border: 'rgba(163,113,247,0.3)',color: '#a371f7' },
-            'Misleading information':     { bg: 'rgba(25,135,84,0.1)', border: 'rgba(25,135,84,0.3)',  color: '#7ef5a6' },
-            'Harassment or hate speech':  { bg: 'rgba(240,112,58,0.1)',border: 'rgba(240,112,58,0.3)', color: '#f0703a' },
-            'Other reasons':              { bg: 'var(--bg-card-hover)', border: 'var(--border-color)',  color: 'var(--text-muted)' }
+            'Counterfeit / Fake item': { bg: 'rgba(255,193,7,0.1)', border: 'rgba(255,193,7,0.3)', color: '#ffe082' },
+            'Inappropriate content': { bg: 'rgba(220,53,69,0.1)', border: 'rgba(220,53,69,0.3)', color: '#ff8591' },
+            'Spam or self-promotion': { bg: 'rgba(166,177,225,0.1)', border: 'rgba(166,177,225,0.3)', color: '#A6B1E1' },
+            'Copyright infringement': { bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.3)', color: '#a371f7' },
+            'Misleading information': { bg: 'rgba(25,135,84,0.1)', border: 'rgba(25,135,84,0.3)', color: '#7ef5a6' },
+            'Harassment or hate speech': { bg: 'rgba(240,112,58,0.1)', border: 'rgba(240,112,58,0.3)', color: '#f0703a' },
+            'Other reasons': { bg: 'var(--bg-card-hover)', border: 'var(--border-color)', color: 'var(--text-muted)' }
         };
 
         let filteredReports = [...allReports];
         let pendingToggleShowoffId = null;
         let pendingToggleIsDisabled = false;
         let pendingToggleName = '';
+
+        let pendingResolveShowoffId = null;
+        let pendingResolveIsResolved = false;
+        let pendingResolveName = '';
 
         // Group reports by ShowoffId
         function groupByShowoff(reports) {
@@ -134,23 +165,53 @@
                         ShowoffName: r.ShowoffName,
                         OwnerUserName: r.OwnerUserName,
                         IsDisabled: r.IsDisabled,
+                        IsResolved: r.IsResolved,
                         LikeCount: r.LikeCount,
                         ViewCount: r.ViewCount,
                         AssignedStaffUserName: r.AssignedStaffUserName,
                         reports: []
                     });
                 }
-                map.get(r.ShowoffId).reports.push(r);
+                const g = map.get(r.ShowoffId);
+                g.reports.push(r);
+                // A group is only "resolved" once every report tied to it is resolved
+                g.IsResolved = g.reports.every(x => x.IsResolved);
             });
             return Array.from(map.values());
         }
 
-        function applyFilter() {
+        // Combined filter: category + status + search (username / showoff name)
+        function applyFilters() {
             const cat = document.getElementById('filterCategory').value;
-            filteredReports = cat === 'All'
-                ? [...allReports]
-                : allReports.filter(r => r.Category === cat);
-            renderReportTable(groupByShowoff(filteredReports));
+            const status = document.getElementById('filterStatus').value;
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            filteredReports = allReports.filter(r => {
+                if (cat !== 'All' && r.Category !== cat) return false;
+                return true;
+            });
+
+            let grouped = groupByShowoff(filteredReports);
+
+            if (query) {
+                grouped = grouped.filter(g =>
+                    g.OwnerUserName.toLowerCase().includes(query) ||
+                    g.ShowoffName.toLowerCase().includes(query));
+            }
+
+            // Pending count always reflects genuinely unresolved reports (category + search
+            // filters applied, but independent of the status dropdown) — so it doesn't get
+            // stuck showing stale counts once something is resolved while "All" is selected.
+            const pendingCount = grouped.filter(g => !g.IsResolved).length;
+
+            if (status !== 'All') {
+                grouped = grouped.filter(g => status === 'Resolved' ? g.IsResolved : !g.IsResolved);
+            }
+
+            // Sink resolved rows to the bottom, keep original relative order otherwise
+            grouped.sort((a, b) => (a.IsResolved === b.IsResolved) ? 0 : (a.IsResolved ? 1 : -1));
+
+            renderReportTable(grouped, pendingCount);
         }
 
         // ── Virtual Scroll Implementation ──
@@ -199,21 +260,24 @@
             render();
         }
 
-        function renderReportTable(grouped) {
+        function renderReportTable(grouped, pendingCount) {
             const empty = document.getElementById('tableEmpty');
             const wrapper = document.getElementById('reportTableWrapper');
             const indicatorRow = document.getElementById('reportTableIndicatorRow');
             const moreText = document.getElementById('reportScrollMoreText');
 
             document.getElementById('reportCountText').textContent =
-                `${grouped.length} showoff${grouped.length !== 1 ? 's' : ''} with pending reports`;
+                `${pendingCount} showoff${pendingCount !== 1 ? 's' : ''} with pending reports`;
 
             if (grouped.length === 0) {
                 empty.style.display = 'block';
+                const status = document.getElementById('filterStatus').value;
+                const cat = document.getElementById('filterCategory').value;
+                const query = document.getElementById('searchInput').value.trim();
                 document.getElementById('emptyText').textContent =
-                    document.getElementById('filterCategory').value === 'All'
+                    (status === 'All' && cat === 'All' && !query)
                         ? 'No reported showoffs — all clear!'
-                        : `No reports matching "${document.getElementById('filterCategory').value}"`;
+                        : 'No reports matching your filters.';
                 document.getElementById('reportTableBody').innerHTML = '';
                 wrapper.style.height = '';
                 wrapper.style.maxHeight = '';
@@ -249,17 +313,17 @@
                     const cs = CATEGORY_COLORS[r.Category] || CATEGORY_COLORS['Other reasons'];
                     const dateStr = new Date(r.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     return `
-                        <div style="background:var(--bg-card-hover);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:4px;">
-                            <div class="d-flex align-items-center gap-2 flex-wrap" style="${r.Reason ? 'margin-bottom:4px;' : ''}">
-                                <span class="text-muted">Reported by</span>
-                                <span class="fw-semibold" style="color:var(--text-primary);">${r.ReporterUserName}</span>
-                                <span style="color:var(--text-muted);font-size:11px;">${dateStr}</span>
-                                <span style="background:${cs.bg};border:1px solid ${cs.border};color:${cs.color};border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;">
-                                    ${r.Category}
-                                </span>
-                            </div>
-                            ${r.Reason ? `<p class="mb-0" style="color:var(--text-secondary);">${r.Reason}</p>` : ''}
-                        </div>`;
+                                <div style="background:var(--bg-card-hover);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:4px;">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap" style="${r.Reason ? 'margin-bottom:4px;' : ''}">
+                                        <span class="text-muted">Reported by</span>
+                                        <span class="fw-semibold" style="color:var(--text-primary);">${r.ReporterUserName}</span>
+                                        <span style="color:var(--text-muted);font-size:11px;">${dateStr}</span>
+                                        <span style="background:${cs.bg};border:1px solid ${cs.border};color:${cs.color};border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;">
+                                            ${r.Category}
+                                        </span>
+                                    </div>
+                                    ${r.Reason ? `<p class="mb-0" style="color:var(--text-secondary);">${r.Reason}</p>` : ''}
+                                </div>`;
                 }).join('');
 
                 // Determine if current staff is assigned (use first report's assignment for the showoff)
@@ -270,50 +334,65 @@
                     ? `<span class="badge" style="background:rgba(220,53,69,0.15);color:#ff8591;border:1px solid rgba(220,53,69,0.3);font-size:10px;">DISABLED</span>`
                     : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
 
+                const resolvedBadge = group.IsResolved
+                    ? `<span class="badge" style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);font-size:10px;">RESOLVED</span>`
+                    : '';
+
                 const disableBtn = (isAssigned || activeTab === 'my')
                     ? `<button class="btn btn-sm ${group.IsDisabled ? 'btn-success' : 'btn-danger'}" style="font-size:11px;padding:4px 12px;"
-                               onclick="openDisableToggle(${group.ShowoffId}, ${group.IsDisabled}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
-                           ${group.IsDisabled ? 'Re-enable' : 'Disable'}
-                       </button>`
+                                       onclick="openDisableToggle(${group.ShowoffId}, ${group.IsDisabled}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
+                                   ${group.IsDisabled ? 'Re-enable' : 'Disable'}
+                               </button>`
+                    : '';
+
+                const resolveBtn = (isAssigned || activeTab === 'my')
+                    ? `<button class="btn btn-sm ${group.IsResolved ? 'btn-outline-secondary' : 'btn-primary'}" style="font-size:11px;padding:4px 12px;"
+                                       onclick="openResolveToggle(${group.ShowoffId}, ${group.IsResolved}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
+                                   ${group.IsResolved ? 'Reopen' : 'Resolve'}
+                               </button>`
                     : '';
 
                 const border = group.IsDisabled ? 'border-left:3px solid rgba(220,53,69,0.5);' : '';
+                const opacity = group.IsResolved ? 'opacity:0.6;' : '';
 
                 return `
-                    <tr style="height:${ROW_HEIGHT}px;${border}">
-                        <td style="padding:16px;vertical-align:top;">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <button onclick="viewShowoff(${group.ShowoffId})" class="fw-bold" style="background:none;border:none;padding:0;cursor:pointer;color:var(--text-primary);font-size:15px;font-family:inherit;">
-                                    ${group.ShowoffName}
-                                </button>
-                                ${group.IsDisabled ? '<span style="font-size:10px;color:#ff8591;background:rgba(220,53,69,0.15);padding:2px 7px;border-radius:4px;font-weight:600;">DISABLED</span>' : ''}
-                                <span style="font-size:10px;color:var(--text-muted);background:var(--bg-card-hover);padding:2px 7px;border-radius:4px;">
-                                    ${group.reports.length} report${group.reports.length !== 1 ? 's' : ''}
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px;">
-                                <span style="color:var(--color-periwinkle);">${group.OwnerUserName}</span>
-                                <span class="text-muted">· ❤️ ${group.LikeCount} · 👁 ${group.ViewCount}</span>
-                            </div>
-                            <div style="max-height:90px;overflow-y:auto;">
-                                ${reportsHtml}
-                            </div>
-                        </td>
-                        <td style="padding:16px;vertical-align:top;text-align:right;">
-                            <div class="d-flex flex-column align-items-end justify-content-between h-100" style="min-height:${ROW_HEIGHT - 32}px;">
-                                <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge" style="background:var(--color-indigo-dark);color:var(--color-light);font-size:10px;padding:3px 8px;">
-                                        <i class="bi bi-person-fill"></i> ${assignedStaff}
-                                    </span>
-                                    ${statusBadge}
-                                </div>
-                                <div class="d-flex flex-column gap-1 mt-auto">
-                                    <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="viewShowoff(${group.ShowoffId})">View</button>
-                                    ${disableBtn}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>`;
+                            <tr style="height:${ROW_HEIGHT}px;${border}${opacity}">
+                                <td style="padding:16px;vertical-align:top;">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <button onclick="viewShowoff(${group.ShowoffId})" class="fw-bold" style="background:none;border:none;padding:0;cursor:pointer;color:var(--text-primary);font-size:15px;font-family:inherit;">
+                                            ${group.ShowoffName}
+                                        </button>
+                                        ${group.IsDisabled ? '<span style="font-size:10px;color:#ff8591;background:rgba(220,53,69,0.15);padding:2px 7px;border-radius:4px;font-weight:600;">DISABLED</span>' : ''}
+                                        ${group.IsResolved ? '<span style="font-size:10px;color:#58a6ff;background:rgba(88,166,255,0.15);padding:2px 7px;border-radius:4px;font-weight:600;">RESOLVED</span>' : ''}
+                                        <span style="font-size:10px;color:var(--text-muted);background:var(--bg-card-hover);padding:2px 7px;border-radius:4px;">
+                                            ${group.reports.length} report${group.reports.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px;">
+                                        <span style="color:var(--color-periwinkle);">${group.OwnerUserName}</span>
+                                        <span class="text-muted">· ❤️ ${group.LikeCount} · 👁 ${group.ViewCount}</span>
+                                    </div>
+                                    <div style="max-height:90px;overflow-y:auto;">
+                                        ${reportsHtml}
+                                    </div>
+                                </td>
+                                <td style="padding:16px;vertical-align:top;text-align:right;">
+                                    <div class="d-flex flex-column align-items-end justify-content-between h-100" style="min-height:${ROW_HEIGHT - 32}px;">
+                                        <div class="d-flex flex-column align-items-end gap-1">
+                                            <span class="badge" style="background:var(--color-indigo-dark);color:var(--color-light);font-size:10px;padding:3px 8px;">
+                                                <i class="bi bi-person-fill"></i> ${assignedStaff}
+                                            </span>
+                                            ${statusBadge}
+                                            ${resolvedBadge}
+                                        </div>
+                                        <div class="d-flex flex-column gap-1 mt-auto">
+                                            <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="viewShowoff(${group.ShowoffId})">View</button>
+                                            ${disableBtn}
+                                            ${resolveBtn}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>`;
             });
             updateIndicator();
         }
@@ -326,6 +405,7 @@
 
             document.getElementById('viewShowoffName').textContent = showoff.showoffName || showoff.ShowoffName;
             const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
+            const bgImagePath = showoff.backgroundImagePath || showoff.BackgroundImagePath;
             const items = showoff.items || showoff.Items || [];
 
             const itemCount = items.length;
@@ -334,27 +414,27 @@
 
             const body = document.getElementById('viewShowoffBody');
             body.innerHTML = `
-                <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
-                     style="background-color:${bgColor}; min-height:60vh;">
-                    <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
-                        ${items.map(item => {
-                            const imgPath = item.imagePath || item.ImagePath;
-                            const itemName = item.itemName || item.ItemName;
-                            const catName = item.categoryName || item.CategoryName;
-                            return `
-                                <div class="text-center d-flex flex-column align-items-center" style="width:${cellWidth}px;">
-                                    ${imgPath
-                                        ? `<img src="${imgPath}" style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
-                                        : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
-                                    <div class="mt-3 fw-bold fs-5 text-center" style="width:100%;word-wrap:break-word;">${itemName || ''}</div>
-                                    ${catName ? `<div class="text-muted fs-6 text-center" style="width:100%;word-wrap:break-word;">${catName}</div>` : ''}
-                                </div>`;
-                        }).join('')}
-                    </div>
-                    <div class="mt-4 text-center">
-                        <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
-                    </div>
-                </div>`;
+                    <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
+                        style="${bgImagePath ? `background-image:url('${bgImagePath}');background-size:cover;background-position:center;` : `background-color:${bgColor};`} min-height:60vh;">
+                            <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
+                                ${items.map(item => {
+                const imgPath = item.imagePath || item.ImagePath;
+                const itemName = item.itemName || item.ItemName;
+                const catName = item.categoryName || item.CategoryName;
+                return `
+                                        <div class="text-center d-flex flex-column align-items-center" style="width:${cellWidth}px;">
+                                            ${imgPath
+                        ? `<img src="${imgPath}" style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
+                        : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
+                                            <div class="mt-3 fw-bold fs-5 text-center" style="width:100%;word-wrap:break-word;">${itemName || ''}</div>
+                                            ${catName ? `<div class="text-muted fs-6 text-center" style="width:100%;word-wrap:break-word;">${catName}</div>` : ''}
+                                        </div>`;
+            }).join('')}
+                            </div>
+                            <div class="mt-4 text-center">
+                                <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
+                            </div>
+                        </div>`;
 
             new bootstrap.Modal(document.getElementById('viewShowoffModal')).show();
         }
@@ -403,7 +483,59 @@
             }
         }
 
+        // Resolve/Reopen toggle
+        function openResolveToggle(showoffId, isResolved, showoffName) {
+            pendingResolveShowoffId = showoffId;
+            pendingResolveIsResolved = isResolved;
+            pendingResolveName = showoffName;
+
+            const title = document.getElementById('resolveModalTitle');
+            const text = document.getElementById('resolveModalText');
+            const btn = document.getElementById('resolveConfirmBtn');
+
+            if (isResolved) {
+                title.textContent = 'Reopen Reports';
+                text.innerHTML = `Are you sure you want to reopen the reports for <strong>${showoffName}</strong>?`;
+                btn.textContent = 'Reopen';
+                btn.className = 'btn btn-primary';
+            } else {
+                title.textContent = 'Resolve Reports';
+                text.innerHTML = `Mark all reports for <strong>${showoffName}</strong> as resolved?`;
+                btn.textContent = 'Resolve';
+                btn.className = 'btn btn-success';
+            }
+
+            new bootstrap.Modal(document.getElementById('resolveConfirmModal')).show();
+        }
+
+        async function confirmResolveToggle() {
+            const action = pendingResolveIsResolved ? 'unresolve' : 'resolve';
+            const res = await fetch(`${apiBase}/ShowoffReport/${pendingResolveShowoffId}/${action}`, { method: 'PATCH' });
+
+            bootstrap.Modal.getInstance(document.getElementById('resolveConfirmModal'))?.hide();
+
+            if (res.ok) {
+                const newIsResolved = !pendingResolveIsResolved;
+
+                // Update local data so the table reflects the change without a full reload
+                allReports.forEach(r => {
+                    if (r.ShowoffId === pendingResolveShowoffId) r.IsResolved = newIsResolved;
+                });
+
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = newIsResolved
+                    ? `"${pendingResolveName}" reports marked as resolved.`
+                    : `"${pendingResolveName}" reports reopened.`;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+
+                applyFilters();
+            } else {
+                alert('Action failed. Please try again.');
+            }
+        }
+
         // Initial render
-        renderReportTable(groupByShowoff(filteredReports));
+        applyFilters();
     </script>
 }

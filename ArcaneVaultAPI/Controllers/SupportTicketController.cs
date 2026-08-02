@@ -1,0 +1,193 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
+using ArcaneVaultAPI.Data;
+using ArcaneVaultAPI.DataTransferObject;
+using ArcaneVaultAPI.Services;
+
+[Route("api/[controller]")]
+[ApiController]
+public class SupportTicketController : ControllerBase
+{
+    private readonly string _connectionString = "Data Source=ArcaneVault.db";
+    private readonly IEmailService _emailService;
+
+    public SupportTicketController(IEmailService emailService)
+    {
+        _emailService = emailService;
+    }
+
+    // GET: api/SupportTicket — ALL tickets, unfiltered by staff assignment/active status
+    [HttpGet]
+    public ActionResult<IEnumerable<SupportTicketDTO>> GetTickets()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT TicketId, TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt
+              FROM SupportTickets
+              ORDER BY CreatedAt DESC",
+            connection);
+
+        return Ok(ReadTicketDTOs(command));
+    }
+
+    // GET: api/SupportTicket/{id} — for the Review modal
+    [HttpGet("{id}")]
+    public ActionResult<SupportTicketDTO> GetTicket(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT TicketId, TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt
+              FROM SupportTickets WHERE TicketId = @TicketId",
+            connection);
+        command.Parameters.AddWithValue("@TicketId", id);
+
+        var ticket = ReadTicketDTOs(command).FirstOrDefault();
+        if (ticket == null) return NotFound();
+        return Ok(ticket);
+    }
+
+    // POST: api/SupportTicket — user submits a ticket
+    [HttpPost]
+    public async Task<ActionResult<SupportTicketDTO>> PostTicket(CreateSupportTicketDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Round-robin assign among active, non-deleted staff (RoleId = 1)
+        string? assignedStaff = GetNextStaffAssignee(connection);
+
+        var insertCommand = new SqliteCommand(
+            @"INSERT INTO SupportTickets (TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt)
+              VALUES ('', @Name, @Email, @Subject, @Issue, 0, @AssignedStaff, @CreatedAt);
+              SELECT last_insert_rowid();",
+            connection);
+        insertCommand.Parameters.AddWithValue("@Name", dto.Name);
+        insertCommand.Parameters.AddWithValue("@Email", dto.Email);
+        insertCommand.Parameters.AddWithValue("@Subject", dto.Subject);
+        insertCommand.Parameters.AddWithValue("@Issue", dto.Issue);
+        insertCommand.Parameters.AddWithValue("@AssignedStaff", (object?)assignedStaff ?? DBNull.Value);
+        insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+
+        var newId = Convert.ToInt32(insertCommand.ExecuteScalar());
+        var ticketUid = $"CS-{newId:D6}";
+
+        var updateUidCommand = new SqliteCommand(
+            "UPDATE SupportTickets SET TicketUid = @Uid WHERE TicketId = @TicketId",
+            connection);
+        updateUidCommand.Parameters.AddWithValue("@Uid", ticketUid);
+        updateUidCommand.Parameters.AddWithValue("@TicketId", newId);
+        updateUidCommand.ExecuteNonQuery();
+
+        // Send confirmation email — failure here shouldn't block ticket creation
+        try
+        {
+            var body = $@"Hi {dto.Name},
+
+Thanks for reaching out to Arcane Vault Support. We've received your ticket and a member of our team will get back to you soon.
+
+Your ticket reference number is: {ticketUid}
+
+Subject: {dto.Subject}
+
+We appreciate your patience.
+
+— Arcane Vault Support Team";
+
+            await _emailService.SendAsync(dto.Email, $"We've received your ticket ({ticketUid})", body);
+        }
+        catch
+        {
+            // Log this in a real system — email failure shouldn't fail the whole request
+        }
+
+        return Ok(new { TicketId = newId, TicketUid = ticketUid });
+    }
+
+    // PATCH: api/SupportTicket/{id}/resolve
+    [HttpPatch("{id}/resolve")]
+    public IActionResult ResolveTicket(int id)
+    {
+        return SetResolved(id, true);
+    }
+
+    // PATCH: api/SupportTicket/{id}/unresolve
+    [HttpPatch("{id}/unresolve")]
+    public IActionResult UnresolveTicket(int id)
+    {
+        return SetResolved(id, false);
+    }
+
+    private IActionResult SetResolved(int id, bool resolved)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "UPDATE SupportTickets SET IsResolved = @IsResolved WHERE TicketId = @TicketId",
+            connection);
+        command.Parameters.AddWithValue("@IsResolved", resolved);
+        command.Parameters.AddWithValue("@TicketId", id);
+        var rows = command.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound();
+        return NoContent();
+    }
+
+    // Round-robin assignment among active staff — mirrors the Reports assignment pattern
+    private string? GetNextStaffAssignee(SqliteConnection connection)
+    {
+        var staffCommand = new SqliteCommand(
+            @"SELECT UserName FROM ArcaneVaultUsers
+              WHERE RoleId = 1 AND IsDeleted = 0 AND IsActive = 1
+              ORDER BY UserName",
+            connection);
+
+        var staffList = new List<string>();
+        using (var reader = staffCommand.ExecuteReader())
+        {
+            while (reader.Read())
+                staffList.Add(reader["UserName"].ToString());
+        }
+
+        if (staffList.Count == 0) return null; // no active staff — leave unassigned
+
+        var counterCommand = new SqliteCommand(
+            "SELECT Counter FROM TicketAssignmentCounters WHERE Id = 1", connection);
+        var counter = Convert.ToInt32(counterCommand.ExecuteScalar() ?? 0);
+
+        var assignee = staffList[counter % staffList.Count];
+
+        var updateCounterCommand = new SqliteCommand(
+            "UPDATE TicketAssignmentCounters SET Counter = @Counter WHERE Id = 1", connection);
+        updateCounterCommand.Parameters.AddWithValue("@Counter", counter + 1);
+        updateCounterCommand.ExecuteNonQuery();
+
+        return assignee;
+    }
+
+    private List<SupportTicketDTO> ReadTicketDTOs(SqliteCommand command)
+    {
+        var tickets = new List<SupportTicketDTO>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            tickets.Add(new SupportTicketDTO
+            {
+                TicketId = Convert.ToInt32(reader["TicketId"]),
+                TicketUid = reader["TicketUid"].ToString(),
+                Name = reader["Name"].ToString(),
+                Email = reader["Email"].ToString(),
+                Subject = reader["Subject"].ToString(),
+                Issue = reader["Issue"].ToString(),
+                IsResolved = Convert.ToBoolean(reader["IsResolved"]),
+                AssignedStaffUserName = reader["AssignedStaffUserName"] == DBNull.Value ? null : reader["AssignedStaffUserName"].ToString(),
+                CreatedAt = Convert.ToDateTime(reader["CreatedAt"])
+            });
+        }
+        return tickets;
+    }
+}

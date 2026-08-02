@@ -63,7 +63,6 @@ public class ShowoffReportController : ControllerBase
 
         if (counterResult == null)
         {
-            // Create the counter row
             var createCounter = new SqliteCommand(
                 "INSERT INTO ReportAssignmentCounters (Id, Counter) VALUES (1, 0)",
                 connection);
@@ -87,8 +86,8 @@ public class ShowoffReportController : ControllerBase
 
         // 5. Insert the report
         var insertCommand = new SqliteCommand(
-            @"INSERT INTO ShowoffReports (ShowoffId, ReporterUserName, AssignedStaffUserName, Category, Reason, CreatedAt)
-              VALUES (@ShowoffId, @ReporterUserName, @AssignedStaffUserName, @Category, @Reason, @CreatedAt)",
+            @"INSERT INTO ShowoffReports (ShowoffId, ReporterUserName, AssignedStaffUserName, Category, Reason, CreatedAt, IsResolved)
+              VALUES (@ShowoffId, @ReporterUserName, @AssignedStaffUserName, @Category, @Reason, @CreatedAt, 0)",
             connection);
         insertCommand.Parameters.AddWithValue("@ShowoffId", dto.ShowoffId);
         insertCommand.Parameters.AddWithValue("@ReporterUserName", dto.ReporterUserName);
@@ -101,11 +100,43 @@ public class ShowoffReportController : ControllerBase
         return Ok(new { AssignedStaff = assignedStaff });
     }
 
+    // PATCH: api/ShowoffReport/{showoffId}/resolve — marks ALL reports for this showoff as resolved
+    [HttpPatch("{showoffId}/resolve")]
+    public IActionResult ResolveReports(int showoffId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "UPDATE ShowoffReports SET IsResolved = 1 WHERE ShowoffId = @ShowoffId",
+            connection);
+        command.Parameters.AddWithValue("@ShowoffId", showoffId);
+        command.ExecuteNonQuery();
+
+        return Ok();
+    }
+
+    // PATCH: api/ShowoffReport/{showoffId}/unresolve — reopens ALL reports for this showoff
+    [HttpPatch("{showoffId}/unresolve")]
+    public IActionResult UnresolveReports(int showoffId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "UPDATE ShowoffReports SET IsResolved = 0 WHERE ShowoffId = @ShowoffId",
+            connection);
+        command.Parameters.AddWithValue("@ShowoffId", showoffId);
+        command.ExecuteNonQuery();
+
+        return Ok();
+    }
+
     // Helper — read reports, optionally filtered by assigned staff
     private List<ShowoffReportDTO> ReadReports(SqliteConnection connection, string? staffUsername)
     {
         var sql = @"SELECT sr.ReportId, sr.ShowoffId, sr.ReporterUserName, sr.AssignedStaffUserName,
-                           sr.Category, sr.Reason, sr.CreatedAt,
+                           sr.Category, sr.Reason, sr.CreatedAt, sr.IsResolved,
                            s.ShowoffName, s.UserName as OwnerUserName, s.IsDisabled,
                            (SELECT COUNT(*) FROM ShowoffLikes sl WHERE sl.ShowoffId = s.ShowoffId) as LikeCount,
                            (SELECT COUNT(*) FROM ShowoffViews sv WHERE sv.ShowoffId = s.ShowoffId) as ViewCount
@@ -138,6 +169,7 @@ public class ShowoffReportController : ControllerBase
                 Reason = reader["Reason"] == DBNull.Value ? null : reader["Reason"].ToString(),
                 CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
                 IsDisabled = Convert.ToBoolean(reader["IsDisabled"]),
+                IsResolved = Convert.ToBoolean(reader["IsResolved"]),
                 LikeCount = Convert.ToInt32(reader["LikeCount"]),
                 ViewCount = Convert.ToInt32(reader["ViewCount"])
             });

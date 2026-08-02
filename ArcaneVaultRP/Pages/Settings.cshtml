@@ -113,6 +113,24 @@
             <i class="bi bi-arrow-clockwise"></i> Reset Password
         </button>
 
+        @if (HttpContext.Session.GetString(SessionKeys.UserRole) == "1")
+        {
+            <hr style="border-color: var(--border-color); margin: 0 0 20px;" />
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.08em; color: var(--color-periwinkle); margin:0 0 16px; text-transform:uppercase;">
+                Staff Availability
+            </p>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div>
+                    <p class="fw-600 mb-0" style="font-size:15px; color: var(--text-primary);">Receiving assignments</p>
+                    <p class="text-muted small mb-0">When inactive, you won't be assigned new reports or support tickets.</p>
+                </div>
+                @* <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="staffActiveToggle"
+                    @(user.IsActive ? "checked" : "") onchange="toggleStaffActive(this.checked)" style="width:42px;height:22px;cursor:pointer;" />
+                </div> *@
+            </div>
+        }
+
         <hr style="border-color: var(--border-color); margin:20px 0;" />
 
         <!-- ── DANGER ZONE ── -->
@@ -913,6 +931,20 @@
 
         bootstrap.Modal.getInstance(document.getElementById('passwordModal'))?.hide();
         showToast('Password updated.');
+    }
+
+    async function toggleStaffActive(isActive) {
+        const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/active-status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ IsActive: isActive })
+        });
+        if (!res.ok) {
+            alert('Failed to update availability.');
+            document.getElementById('staffActiveToggle').checked = !isActive;
+            return;
+        }
+        showToast(isActive ? 'You are now receiving assignments.' : 'You will no longer receive new assignments.');
     }
 
     // ── Disable modal ──

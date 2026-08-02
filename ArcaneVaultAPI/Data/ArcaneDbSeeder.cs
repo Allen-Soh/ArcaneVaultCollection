@@ -31,12 +31,22 @@ namespace ArcaneVaultAPI.Data
                 context.ArcaneVaultUsers.AddRange(
                     new ArcaneVaultUser
                     {
-                        UserName = "admin_user",
+                        UserName = "Admin1",
                         Email = "admin@arcanevault.com",
                         IsDeleted = false,
                         RoleId = 1,
                         Password = "Admin123",
-                        Country = "Singapore"
+                        Country = "Singapore",
+                        AvatarUrl = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785661451/arcanevault/showoffs/yhvlnmpzeoy4n773kxwu.jpg"
+                    },
+                    new ArcaneVaultUser
+                    {
+                        UserName = "Admin2",
+                        Email = "admin@example.com",
+                        IsDeleted = false,
+                        RoleId = 1,
+                        Password = "Admin123",
+                        Country = "Singapore",
                     },
                     new ArcaneVaultUser
                     {
@@ -45,7 +55,8 @@ namespace ArcaneVaultAPI.Data
                         IsDeleted = false,
                         RoleId = 2,
                         Password = "Password123",
-                        Country = "Malaysia"
+                        Country = "Malaysia",
+                        AvatarUrl = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785665644/arcanevault/showoffs/jtu5vm8ognpxjp05zc8k.jpg"
                     },
                     new ArcaneVaultUser
                     {
@@ -241,6 +252,13 @@ namespace ArcaneVaultAPI.Data
                 context.ReportAssignmentCounters.Add(new ReportAssignmentCounter { Id = 1, Counter = 0 });
                 context.SaveChanges();
             }
+
+            //// Seed Ticket Assignment Counter
+            //if (!context.TicketAssignmentCounters.Any())
+            //{
+            //    context.TicketAssignmentCounters.Add(new TicketAssignmentCounter { Id = 1, Counter = 0 });
+            //    context.SaveChanges();
+            //}
         }
 
         private static void RunMigrations(ArcaneDbContext context)
@@ -277,6 +295,33 @@ namespace ArcaneVaultAPI.Data
                 cmd.ExecuteNonQuery();
             }
 
+            // Add BackgroundImagePath column to Showoffs (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='BackgroundImagePath'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN BackgroundImagePath TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add BackgroundImagePublicId column to Showoffs (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='BackgroundImagePublicId'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN BackgroundImagePublicId TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add IsActive column to ArcaneVaultUsers (staff availability toggle)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('ArcaneVaultUsers') WHERE name='IsActive'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE ArcaneVaultUsers ADD COLUMN IsActive INTEGER DEFAULT 1";
+                cmd.ExecuteNonQuery();
+            }
+
             // Create ShowoffComments table
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS ShowoffComments (
@@ -308,6 +353,29 @@ namespace ArcaneVaultAPI.Data
             // Create ReportAssignmentCounters table
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS ReportAssignmentCounters (
+                    Id INTEGER PRIMARY KEY,
+                    Counter INTEGER NOT NULL DEFAULT 0
+                )";
+            cmd.ExecuteNonQuery();
+
+            // Create SupportTickets table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS SupportTickets (
+                    TicketId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TicketUid TEXT NOT NULL,
+                    Name TEXT NOT NULL,
+                    Email TEXT NOT NULL,
+                    Subject TEXT NOT NULL,
+                    Issue TEXT NOT NULL,
+                    IsResolved INTEGER NOT NULL DEFAULT 0,
+                    AssignedStaffUserName TEXT,
+                    CreatedAt TEXT NOT NULL
+                )";
+            cmd.ExecuteNonQuery();
+
+            // Create TicketAssignmentCounters table (round-robin, mirrors ReportAssignmentCounters)
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS TicketAssignmentCounters (
                     Id INTEGER PRIMARY KEY,
                     Counter INTEGER NOT NULL DEFAULT 0
                 )";

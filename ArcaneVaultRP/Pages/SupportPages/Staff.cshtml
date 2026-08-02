@@ -1,0 +1,200 @@
+﻿@page
+@model ArcaneVaultRP.Pages.SupportPages.StaffModel
+@{
+    ViewData["Title"] = "Customer Support";
+}
+
+<div class="container mt-4">
+    <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1">Customer Support Tickets</h4>
+            <p class="text-muted small mb-0" id="ticketCountText"></p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="text" id="uidSearchInput" class="form-control form-control-sm"
+                   placeholder="Search ticket UID..." style="width:200px;" oninput="applyFilters()" />
+            <label class="text-muted small" style="white-space:nowrap;">Status:</label>
+            <select id="filterStatus" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+                <option value="All">All</option>
+                <option value="Active">Active</option>
+                <option value="Resolved">Resolved</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
+
+    <div class="border rounded overflow-hidden">
+        <div id="ticketTableWrapper" style="overflow-y:auto;">
+            <table class="table mb-0" style="width:100%;">
+                <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                    <tr>
+                        <th style="padding:12px;">Ticket</th>
+                        <th style="padding:12px; width:180px; text-align:right;">Status / Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketTableBody"></tbody>
+            </table>
+        </div>
+        <div id="tableEmpty" style="display:none;" class="text-center text-muted py-5">
+            <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
+            <span id="emptyText">No support tickets — all clear!</span>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="viewTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="viewTicketUid"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1"><strong>Name:</strong> <span id="viewTicketName"></span></p>
+                <p class="mb-1"><strong>Email:</strong> <span id="viewTicketEmail"></span></p>
+                <p class="mb-1"><strong>Subject:</strong> <span id="viewTicketSubject"></span></p>
+                <hr />
+                <p class="mb-0" style="white-space:pre-wrap;" id="viewTicketIssue"></p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        let allTickets = [];
+        let currentReviewTicket = null;
+
+        async function loadTickets() {
+            const res = await fetch(`${apiBase}/SupportTicket`);
+            allTickets = res.ok ? await res.json() : [];
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const status = document.getElementById('filterStatus').value;
+            const query = document.getElementById('uidSearchInput').value.trim().toLowerCase();
+
+            let filtered = [...allTickets];
+
+            if (query) {
+                filtered = filtered.filter(t => (t.ticketUid || t.TicketUid).toLowerCase().includes(query));
+            }
+
+            if (status !== 'All') {
+                filtered = filtered.filter(t => {
+                    const resolved = t.isResolved ?? t.IsResolved;
+                    return status === 'Resolved' ? resolved : !resolved;
+                });
+            }
+
+            filtered.sort((a, b) => {
+                const ar = a.isResolved ?? a.IsResolved;
+                const br = b.isResolved ?? b.IsResolved;
+                return ar === br ? 0 : (ar ? 1 : -1);
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(tickets) {
+            const empty = document.getElementById('tableEmpty');
+            const body = document.getElementById('ticketTableBody');
+            const wrapper = document.getElementById('ticketTableWrapper');
+
+            const pendingCount = allTickets.filter(t => !(t.isResolved ?? t.IsResolved)).length;
+            document.getElementById('ticketCountText').textContent = `${pendingCount} pending ticket${pendingCount !== 1 ? 's' : ''}`;
+
+            if (tickets.length === 0) {
+                empty.style.display = 'block';
+                wrapper.style.display = 'none';
+                return;
+            }
+            empty.style.display = 'none';
+            wrapper.style.display = 'block';
+
+            body.innerHTML = tickets.map(t => {
+                const uid = t.ticketUid || t.TicketUid;
+                const name = t.name || t.Name;
+                const email = t.email || t.Email;
+                const subject = t.subject || t.Subject;
+                const assignedStaff = t.assignedStaffUserName || t.AssignedStaffUserName || 'Unassigned';
+                const resolved = t.isResolved ?? t.IsResolved;
+                const dateStr = new Date(t.createdAt || t.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                const statusBadge = resolved
+                    ? `<span class="badge" style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);font-size:10px;">RESOLVED</span>`
+                    : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
+
+                return `
+                            <tr style="${resolved ? 'opacity:0.6;' : ''}">
+                                <td style="padding:16px;vertical-align:top;">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="fw-bold" style="font-size:15px;">${uid}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <div style="font-size:13px;color:var(--text-secondary);">${name} · ${email}</div>
+                                    <div style="font-size:13px;color:var(--text-muted);">${subject}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                                        Assigned to <strong>${assignedStaff}</strong> · ${dateStr}
+                                    </div>
+                                </td>
+                                <td style="padding:16px;vertical-align:top;text-align:right;">
+                                    <div class="d-flex flex-column gap-1 align-items-end">
+                                        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick='reviewTicket(${JSON.stringify(t)})'>Review</button>
+                                        <button class="btn ${resolved ? 'btn-outline-secondary' : 'btn-success'} btn-sm" style="font-size:11px;padding:4px 12px;" onclick="resolveTicket(${t.ticketId ?? t.TicketId}, ${resolved}, '${email}', '${(subject || '').replace(/'/g, "\\'")}')">
+                                            ${resolved ? 'Reopen' : 'Resolve'}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>`;
+            }).join('');
+        }
+
+        function reviewTicket(ticket) {
+            document.getElementById('viewTicketUid').textContent = ticket.ticketUid || ticket.TicketUid;
+            document.getElementById('viewTicketName').textContent = ticket.name || ticket.Name;
+            document.getElementById('viewTicketEmail').textContent = ticket.email || ticket.Email;
+            document.getElementById('viewTicketSubject').textContent = ticket.subject || ticket.Subject;
+            document.getElementById('viewTicketIssue').textContent = ticket.issue || ticket.Issue;
+            new bootstrap.Modal(document.getElementById('viewTicketModal')).show();
+        }
+
+        // Resolve — opens the staff's default email client with recipient + Re: subject prefilled,
+        // then marks the ticket resolved in the background
+        async function resolveTicket(ticketId, currentlyResolved, email, subject) {
+            if (!currentlyResolved) {
+                const mailSubject = encodeURIComponent(`Re: ${subject}`);
+                const mailBody = encodeURIComponent(
+                    `Hi,
+
+        Thank you for reaching out to Arcane Vault Support. Regarding your inquiry:
+
+        [Your response here]
+
+        Best regards,
+        Arcane Vault Support Team`);
+                window.location.href = `mailto:${email}?subject=${mailSubject}&body=${mailBody}`;
+            }
+
+            const action = currentlyResolved ? 'unresolve' : 'resolve';
+            const res = await fetch(`${apiBase}/SupportTicket/${ticketId}/${action}`, { method: 'PATCH' });
+
+            if (res.ok) {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = currentlyResolved ? 'Ticket reopened.' : 'Ticket marked as resolved.';
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                loadTickets();
+            }
+        }
+
+        loadTickets();
+    </script>
+}

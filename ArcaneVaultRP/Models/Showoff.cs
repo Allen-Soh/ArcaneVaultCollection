@@ -5,6 +5,8 @@ namespace ArcaneVaultRP.Models
         public int ShowoffId { get; set; }
         public string ShowoffName { get; set; }
         public string BackgroundColor { get; set; }
+        public string? BackgroundImagePath { get; set; }
+        public string? BackgroundImagePublicId { get; set; }
         public bool IsPrivate { get; set; }
         public bool IsDeleted { get; set; }
         public string UserName { get; set; }

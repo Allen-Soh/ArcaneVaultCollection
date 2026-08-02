@@ -1,619 +1,740 @@
-@page
-@model ArcaneVaultRP.Pages.ShowoffPages.EditModel
-@{
-    ViewData["Title"] = "Edit Showoff";
-    var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
-    var loggedInUser = userJson != null ? System.Text.Json.JsonSerializer.Deserialize<Models.ArcaneVaultUser>(userJson) : null;
-}
+    @page
+    @model ArcaneVaultRP.Pages.ShowoffPages.EditModel
+    @{
+        ViewData["Title"] = "Edit Showoff";
+        var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+        var loggedInUser = userJson != null ? System.Text.Json.JsonSerializer.Deserialize<Models.ArcaneVaultUser>(userJson) : null;
+    }
 
-<div class="container mt-4 mb-5">
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <a asp-page="./Index" asp-route-tab="profile" class="btn btn-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Back
-        </a>
-        <h4 class="fw-bold mb-0">Edit Showoff</h4>
-    </div>
-
-    <div class="row g-4">
-        <!-- Left Column: Form -->
-        <div class="col-md-5">
-            <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important; overflow: visible !important;">
-                <!-- Showoff Name -->
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Showoff Name</label>
-                    <input type="text" id="showoffName" class="form-control"
-                           maxlength="40" placeholder="Enter showoff name"
-                           oninput="updatePreview()" />
-                    <div class="d-flex justify-content-end">
-                        <small class="text-muted"><span id="nameCharCount">0</span>/40</small>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Description</label>
-                    <textarea id="showoffDescription" class="form-control" rows="3"
-                              maxlength="500" placeholder="Describe your showoff..."
-                              oninput="updatePreview()"></textarea>
-                    <div class="d-flex justify-content-end">
-                        <small class="text-muted"><span id="descCharCount">0</span>/500</small>
-                    </div>
-                </div>
-
-                <!-- Background Color -->
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Background Color</label>
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="color" id="bgColor" class="form-control form-control-color"
-                               value="#1c2128" oninput="updatePreview()" />
-                        <span id="bgColorHex" class="text-muted small">#1c2128</span>
-                    </div>
-                </div>
-
-                <!-- Visibility -->
-                <div class="mb-3">
-                    <label class="form-label fw-semibold d-block">Visibility</label>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio"
-                               name="visibility" id="visPublic" value="false"
-                               checked onchange="updatePreview()" />
-                        <label class="form-check-label" for="visPublic" style="color: var(--color-light);">Public</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio"
-                               name="visibility" id="visPrivate" value="true"
-                               onchange="updatePreview()" />
-                        <label class="form-check-label" for="visPrivate" style="color: var(--color-light);">Private</label>
-                    </div>
-                </div>
-
-                <!-- Category Tag Selector -->
-                <div class="mb-4">
-                    <label class="form-label fw-semibold">Categories</label>
-                    <div id="selectedCategoriesChips" class="d-flex flex-wrap gap-2 mb-2"></div>
-                    <div class="position-relative">
-                        <input type="text" id="categoryTagInput" class="form-control"
-                               placeholder="Search categories..." autocomplete="off"
-                               onfocus="showCategorySuggestions()" oninput="filterCategorySuggestions(event)" />
-                        <div id="categoryTagSuggestions" class="list-group position-absolute z-3 w-100 shadow"
-                             style="display:none; max-height:160px; overflow-y:auto; top:100%; left:0;"></div>
-                    </div>
-                </div>
-
-                <!-- Items Section -->
-                <div class="mb-3 border-top pt-3" style="border-color: var(--border-color) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <label class="form-label fw-semibold mb-0">Items (max 3)</label>
-                        <button type="button" id="addItemBtn" class="btn btn-sm btn-outline-primary" onclick="addItemSlot()">
-                            + Add Item
-                        </button>
-                    </div>
-                    <div id="selectedItemsList" class="d-flex flex-column gap-2">
-                        <!-- Rendered dynamically -->
-                    </div>
-                </div>
-            </div>
+    <div class="container mt-4 mb-5">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <a asp-page="./Index" asp-route-tab="profile" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <h4 class="fw-bold mb-0">Edit Showoff</h4>
         </div>
 
-        <!-- Right Column: Sticky Canvas Preview -->
-        <div class="col-md-7">
-            <div class="position-sticky" style="top: 100px;">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <label class="form-label fw-semibold mb-0">Preview</label>
-                    <div class="d-flex gap-2">
-                        <!-- Orientation Toggle -->
-                        <button type="button" class="btn btn-sm btn-secondary d-flex align-items-center gap-1" onclick="toggleOrientation()">
-                            <i class="bi bi-phone-landscape" id="orientationIcon"></i>
-                            <span id="orientationLabel">Landscape</span>
-                        </button>
-                        <!-- Fullscreen Toggle -->
-                        <button type="button" class="btn btn-sm btn-secondary d-flex align-items-center justify-content-center" onclick="toggleFullscreen(true)" title="Fullscreen preview">
-                            <i class="bi bi-fullscreen"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Showoff Preview Canvas Wrapper -->
-                <div class="d-flex justify-content-center align-items-center p-3 rounded shadow-sm" style="background: rgba(166, 177, 225, 0.01); border: 1px solid var(--border-color);">
-                    <div id="showoffPreview" class="canvas-box landscape-mode shadow-lg" style="background-color:#1c2128; display:flex; align-items:stretch; border-radius:10px; overflow:hidden; transition: all 0.2s;">
-                        <!-- Rendered dynamically -->
-                    </div>
-                </div>
-
-                <!-- Preview Info Footer -->
-                <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background: rgba(166,177,225,0.02); border: 1px solid var(--border-color);">
-                    <span id="previewName" class="fw-semibold text-truncate" style="max-width:300px; color: var(--text-primary);">Showoff Name</span>
-                    <span id="previewBadge" class="badge bg-success">Public</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Actions Row -->
-    <div class="row mt-4">
-        <div class="col-12 pt-3 border-top d-flex gap-2 justify-content-end" style="border-color: var(--border-color) !important;">
-            <a asp-page="./Index" asp-route-tab="profile" class="btn btn-secondary px-4">Cancel</a>
-            <button type="button" class="btn btn-primary px-4" onclick="saveShowoff()">Save Changes</button>
-        </div>
-    </div>
-</div>
-
-<!-- Fullscreen Canvas Overlay -->
-<div id="fullscreenCanvasOverlay" class="position-fixed inset-0 z-3" style="display:none; background: rgba(9, 10, 17, 0.96); flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; top: 0; left: 0; right: 0; bottom: 0;">
-    <div class="d-flex align-items-center justify-content-between w-100" style="max-width: 900px;">
-        <h5 class="fw-bold mb-0 text-white" id="fullscreenTitle">Fullscreen Preview</h5>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleFullscreen(false)">Done</button>
-    </div>
-    <div id="fullscreenCanvas" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; display: flex; align-items: stretch; transition: all 0.2s; box-shadow: 0 16px 48px rgba(0,0,0,0.8);">
-        <!-- Rendered dynamically same as showoffPreview but larger -->
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        const currentUser = '@loggedInUser?.UserName';
-        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
-        const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
-        const categoriesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories.Select(c => c.CategoryName)));
-        const showoffId = @(Model.ShowoffData?.ShowoffId ?? 0);
-        const existingShowoff = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ShowoffData));
-
-        let selectedItems = []; // Array of slot objects: { itemId, itemName, imagePath, imagePublicId }
-        let selectedCategories = []; // List of tags selected
-        let isLandscape = true;
-        let isFullscreen = false;
-
-        // Pre-populate from existing data
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('showoffName').value = existingShowoff.ShowoffName || '';
-            document.getElementById('showoffDescription').value = existingShowoff.Description || '';
-            document.getElementById('bgColor').value = existingShowoff.BackgroundColor || '#1c2128';
-            document.getElementById(existingShowoff.IsPrivate ? 'visPrivate' : 'visPublic').checked = true;
-
-            existingShowoff.Items.forEach(item => {
-                selectedItems.push({
-                    itemId: item.ItemId,
-                    itemName: item.ItemName,
-                    imagePath: item.ImagePath,
-                    imagePublicId: item.ImagePublicId
-                });
-                if (item.CategoryName && !selectedCategories.includes(item.CategoryName)) {
-                    selectedCategories.push(item.CategoryName);
-                }
-            });
-
-            // If empty, initialize at least 1 slot
-            if (selectedItems.length === 0) {
-                addItemSlot();
-            } else {
-                renderItemSlots();
-                renderCategoryChips();
-                updatePreview();
-            }
-        });
-
-        // ── Category Tag Selector ──
-        function showCategorySuggestions() {
-            const input = document.getElementById('categoryTagInput');
-            renderCategorySuggestions(categoriesList);
-            document.getElementById('categoryTagSuggestions').style.display = 'block';
-        }
-
-        function filterCategorySuggestions(e) {
-            const query = e.target.value.trim().toLowerCase();
-            const filtered = categoriesList.filter(cat => 
-                cat.toLowerCase().includes(query) && !selectedCategories.includes(cat)
-            );
-            renderCategorySuggestions(filtered);
-        }
-
-        function renderCategorySuggestions(list) {
-            const container = document.getElementById('categoryTagSuggestions');
-            container.innerHTML = '';
-            const unselected = list.filter(cat => !selectedCategories.includes(cat));
-
-            if (unselected.length === 0) {
-                container.innerHTML = '<div class="list-group-item text-muted small">No other categories found</div>';
-                return;
-            }
-
-            unselected.forEach(cat => {
-                const el = document.createElement('a');
-                el.href = '#';
-                el.className = 'list-group-item list-group-item-action text-start py-2';
-                el.textContent = cat;
-                el.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    addCategoryTag(cat);
-                });
-                container.appendChild(el);
-            });
-        }
-
-        function addCategoryTag(catName) {
-            if (!selectedCategories.includes(catName)) {
-                selectedCategories.push(catName);
-                renderCategoryChips();
-                const input = document.getElementById('categoryTagInput');
-                input.value = '';
-                document.getElementById('categoryTagSuggestions').style.display = 'none';
-                
-                selectedItems.forEach((item, idx) => {
-                    document.getElementById(`rowSuggestions_${idx}`).style.display = 'none';
-                });
-            }
-        }
-
-        function removeCategoryTag(catName) {
-            selectedCategories = selectedCategories.filter(c => c !== catName);
-            renderCategoryChips();
-        }
-
-        function renderCategoryChips() {
-            const container = document.getElementById('selectedCategoriesChips');
-            container.innerHTML = selectedCategories.map(cat => `
-                <span class="badge bg-primary text-white d-flex align-items-center gap-1 rounded-pill px-3 py-2" style="font-size:12px;">
-                    ${cat}
-                    <button type="button" class="btn-close btn-close-white p-0" style="font-size:8px; line-height:1;" onclick="removeCategoryTag('${cat.replace(/'/g, "\\'")}')"></button>
-                </span>
-            `).join('');
-        }
-
-        // Hide suggestions on click outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#categoryTagInput') && !e.target.closest('#categoryTagSuggestions')) {
-                const sugg = document.getElementById('categoryTagSuggestions');
-                if (sugg) sugg.style.display = 'none';
-            }
-            selectedItems.forEach((_, idx) => {
-                const input = document.querySelector(`.item-name-input[data-index="${idx}"]`);
-                const suggestions = document.getElementById(`rowSuggestions_${idx}`);
-                if (suggestions && !e.target.closest(`.item-slot-row[data-index="${idx}"]`)) {
-                    suggestions.style.display = 'none';
-                }
-            });
-        });
-
-
-        // ── Item Slot Operations ──
-        function addItemSlot() {
-            if (selectedItems.length >= 3) {
-                alert('Maximum of 3 items allowed in a showoff.');
-                return;
-            }
-            selectedItems.push({
-                itemId: null,
-                itemName: '',
-                imagePath: null,
-                imagePublicId: null
-            });
-            renderItemSlots();
-            updatePreview();
-        }
-
-        function removeItemSlot(idx) {
-            const item = selectedItems[idx];
-            if (item && item.imagePublicId) {
-                window.pendingImageDeletes = window.pendingImageDeletes || [];
-                window.pendingImageDeletes.push(item.imagePublicId);
-            }
-            selectedItems.splice(idx, 1);
-            renderItemSlots();
-            updatePreview();
-        }
-
-        function renderItemSlots() {
-            const list = document.getElementById('selectedItemsList');
-            list.innerHTML = '';
-
-            selectedItems.forEach((item, idx) => {
-                const div = document.createElement('div');
-                div.className = 'card p-3 mb-2 item-slot-row';
-                div.setAttribute('data-index', idx);
-                div.style.background = 'rgba(166, 177, 225, 0.02)';
-                div.style.border = '1px solid var(--border-color)';
-                div.style.overflow = 'visible';
-                
-                div.innerHTML = `
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Thumbnail box -->
-                        <div class="item-thumb-box position-relative" 
-                             style="width:54px; height:54px; border:2px dashed var(--border-color); border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; overflow:hidden;"
-                             onclick="triggerRowFileUpload(${idx})" title="Click to upload custom image">
-                            ${item.imagePath 
-                                ? `<img src="${item.imagePath}" style="width:100%; height:100%; object-fit:cover;" />`
-                                : `<i class="bi bi-image text-muted fs-4"></i>`}
-                            <input type="file" id="rowFileInput_${idx}" accept=".jpg,.jpeg,.png" style="display:none;" onchange="handleRowImageUpload(event, ${idx})" />
+        <div class="row g-4">
+            <!-- Left Column: Form -->
+            <div class="col-md-5">
+                <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important; overflow: visible !important;">
+                    <!-- Showoff Name -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Showoff Name</label>
+                        <input type="text" id="showoffName" class="form-control"
+                               maxlength="40" placeholder="Enter showoff name"
+                               oninput="updatePreview()" />
+                        <div class="d-flex justify-content-end">
+                            <small class="text-muted"><span id="nameCharCount">0</span>/40</small>
                         </div>
-                        
-                        <!-- Search & autocomplete input -->
-                        <div class="flex-grow-1 position-relative">
-                            <input type="text" class="form-control form-control-sm item-name-input" 
-                                   data-index="${idx}" placeholder="Search collection items..." 
-                                   value="${item.itemName}" onfocus="showRowSuggestions(${idx})" 
-                                   oninput="filterRowSuggestions(event, ${idx})" autocomplete="off" />
-                            <div id="rowSuggestions_${idx}" class="list-group position-absolute z-3 w-100 shadow" 
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea id="showoffDescription" class="form-control" rows="3"
+                                  maxlength="500" placeholder="Describe your showoff..."
+                                  oninput="updatePreview()"></textarea>
+                        <div class="d-flex justify-content-end">
+                            <small class="text-muted"><span id="descCharCount">0</span>/500</small>
+                        </div>
+                    </div>
+
+                    <!-- Background -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Background</label>
+                        <div class="btn-group btn-group-sm mb-2" role="group">
+                            <input type="radio" class="btn-check" name="bgMode" id="bgModeColor" checked onchange="setBgMode('color')" />
+                            <label class="btn btn-outline-secondary" for="bgModeColor">Color</label>
+                            <input type="radio" class="btn-check" name="bgMode" id="bgModeImage" onchange="setBgMode('image')" />
+                            <label class="btn btn-outline-secondary" for="bgModeImage">Image</label>
+                        </div>
+
+                        <div id="bgColorSection" class="d-flex align-items-center gap-2">
+                            <input type="color" id="bgColor" class="form-control form-control-color"
+                                   value="#1c2128" oninput="updatePreview()" />
+                            <span id="bgColorHex" class="text-muted small">#1c2128</span>
+                        </div>
+
+                        <div id="bgImageSection" style="display:none;">
+                            <div id="bgImageDropZone"
+                                 class="d-flex align-items-center justify-content-center position-relative"
+                                 style="height:80px; border:2px dashed var(--border-color); border-radius:8px; cursor:pointer; overflow:hidden;"
+                                 onclick="triggerBgFileUpload()">
+                                <img id="bgImagePreviewThumb" src="" style="display:none; width:100%; height:100%; object-fit:cover;" />
+                                <span id="bgImagePlaceholder" class="text-muted small"><i class="bi bi-image"></i> Click to upload background image</span>
+                                <input type="file" id="bgImageFileInput" accept=".jpg,.jpeg,.png" style="display:none;" onchange="handleBgImageUpload(event)" />
+                            </div>
+                            <div class="d-flex justify-content-end mt-1">
+                                <button type="button" id="bgImageRemoveBtn" class="btn btn-sm btn-outline-danger"
+                                        style="display:none; font-size:11px; padding:2px 8px;" onclick="removeBgImage()">
+                                    Remove image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visibility -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Visibility</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio"
+                                   name="visibility" id="visPublic" value="false"
+                                   checked onchange="updatePreview()" />
+                            <label class="form-check-label" for="visPublic" style="color: var(--color-light);">Public</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio"
+                                   name="visibility" id="visPrivate" value="true"
+                                   onchange="updatePreview()" />
+                            <label class="form-check-label" for="visPrivate" style="color: var(--color-light);">Private</label>
+                        </div>
+                    </div>
+
+                    <!-- Category Tag Selector -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Categories</label>
+                        <div id="selectedCategoriesChips" class="d-flex flex-wrap gap-2 mb-2"></div>
+                        <div class="position-relative">
+                            <input type="text" id="categoryTagInput" class="form-control"
+                                   placeholder="Search categories..." autocomplete="off"
+                                   onfocus="showCategorySuggestions()" oninput="filterCategorySuggestions(event)" />
+                            <div id="categoryTagSuggestions" class="list-group position-absolute z-3 w-100 shadow"
                                  style="display:none; max-height:160px; overflow-y:auto; top:100%; left:0;"></div>
                         </div>
-                        
-                        <!-- Remove button -->
-                        <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="removeItemSlot(${idx})">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
                     </div>
-                `;
-                list.appendChild(div);
-            });
 
-            document.getElementById('addItemBtn').style.display = selectedItems.length >= 3 ? 'none' : 'block';
-        }
-
-        function triggerRowFileUpload(idx) {
-            document.getElementById(`rowFileInput_${idx}`).click();
-        }
-
-        async function handleRowImageUpload(event, idx) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!['image/jpeg', 'image/png'].includes(file.type)) {
-                alert('Only JPG and PNG allowed.');
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Max 5MB file size.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!uploadRes.ok) {
-                alert('Image upload failed.');
-                return;
-            }
-
-            const data = await uploadRes.json();
-            
-            const oldPublicId = selectedItems[idx].imagePublicId;
-            if (oldPublicId) {
-                window.pendingImageDeletes = window.pendingImageDeletes || [];
-                window.pendingImageDeletes.push(oldPublicId);
-            }
-
-            selectedItems[idx].imagePath = data.imagePath;
-            selectedItems[idx].imagePublicId = data.imagePublicId;
-
-            renderItemSlots();
-            updatePreview();
-        }
-
-        // ── Autocomplete suggestions ──
-        function getFilteredCollectionItems() {
-            if (selectedCategories.length === 0) {
-                return userCollectionItems;
-            }
-            return userCollectionItems.filter(item => 
-                item.CategoryName && selectedCategories.includes(item.CategoryName)
-            );
-        }
-
-        function showRowSuggestions(idx) {
-            const list = getFilteredCollectionItems();
-            renderRowSuggestions(list, idx);
-            document.getElementById(`rowSuggestions_${idx}`).style.display = 'block';
-        }
-
-        function filterRowSuggestions(event, idx) {
-            const query = event.target.value.trim().toLowerCase();
-            const list = getFilteredCollectionItems();
-            const filtered = list.filter(item => 
-                item.ItemName && item.ItemName.toLowerCase().includes(query)
-            );
-            renderRowSuggestions(filtered, idx);
-        }
-
-        function renderRowSuggestions(items, idx) {
-            const container = document.getElementById(`rowSuggestions_${idx}`);
-            container.innerHTML = '';
-
-            if (items.length === 0) {
-                container.innerHTML = '<div class="list-group-item text-muted small py-2">No collection items found</div>';
-                return;
-            }
-
-            items.forEach(item => {
-                const el = document.createElement('a');
-                el.href = '#';
-                el.className = 'list-group-item list-group-item-action text-start py-2';
-                el.innerHTML = `<strong>${item.ItemName}</strong> <span class="text-muted float-end small">${item.CategoryName || ''}</span>`;
-                el.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    
-                    selectedItems[idx].itemId = item.ItemId;
-                    selectedItems[idx].itemName = item.ItemName;
-                    if (!selectedItems[idx].imagePath && item.ImageUrl) {
-                        selectedItems[idx].imagePath = item.ImageUrl;
-                        selectedItems[idx].imagePublicId = item.ImagePublicId;
-                    }
-
-                    renderItemSlots();
-                    updatePreview();
-                });
-                container.appendChild(el);
-            });
-        }
-
-
-        // ── Orientation and Layout ──
-        function toggleOrientation() {
-            isLandscape = !isLandscape;
-            const icon = document.getElementById('orientationIcon');
-            const label = document.getElementById('orientationLabel');
-            
-            if (isLandscape) {
-                icon.className = 'bi bi-phone-landscape';
-                label.textContent = 'Landscape';
-            } else {
-                icon.className = 'bi bi-phone';
-                label.textContent = 'Portrait';
-            }
-
-            updatePreview();
-        }
-
-        function toggleFullscreen(show) {
-            isFullscreen = show;
-            const overlay = document.getElementById('fullscreenCanvasOverlay');
-            
-            if (show) {
-                document.getElementById('fullscreenTitle').textContent = document.getElementById('showoffName').value.trim() || 'Fullscreen Preview';
-                overlay.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            } else {
-                overlay.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-
-            updatePreview();
-        }
-
-
-        // ── Render Preview Canvas ──
-        function updatePreview() {
-            const name = document.getElementById('showoffName').value.trim();
-            const color = document.getElementById('bgColor').value;
-            const isPrivate = document.getElementById('visPrivate').checked;
-
-            document.getElementById('bgColorHex').textContent = color;
-            document.getElementById('previewName').textContent = name || 'Showoff Name';
-            document.getElementById('nameCharCount').textContent = name.length;
-            document.getElementById('descCharCount').textContent = document.getElementById('showoffDescription').value.length;
-
-            const badge = document.getElementById('previewBadge');
-            badge.textContent = isPrivate ? 'Private' : 'Public';
-            badge.className = `badge ${isPrivate ? 'bg-secondary' : 'bg-success'}`;
-
-            const mainCanvas = document.getElementById('showoffPreview');
-            const fullCanvas = document.getElementById('fullscreenCanvas');
-
-            const classToAdd = isLandscape ? 'preview-canvas-landscape' : 'preview-canvas-portrait';
-            const classToRemove = isLandscape ? 'preview-canvas-portrait' : 'preview-canvas-landscape';
-            
-            mainCanvas.classList.remove(classToRemove);
-            mainCanvas.classList.add(classToAdd);
-
-            if (isLandscape) {
-                mainCanvas.style.width = '480px';
-                mainCanvas.style.height = '270px';
-                mainCanvas.style.flexDirection = 'row';
-                
-                fullCanvas.style.width = 'min(860px, 90vw)';
-                fullCanvas.style.height = 'min(480px, 50.625vw)';
-                fullCanvas.style.flexDirection = 'row';
-            } else {
-                mainCanvas.style.width = '270px';
-                mainCanvas.style.height = '480px';
-                mainCanvas.style.flexDirection = 'column';
-
-                fullCanvas.style.width = 'min(360px, 56.25vh)';
-                fullCanvas.style.height = 'min(640px, 100vh - 200px)';
-                fullCanvas.style.flexDirection = 'column';
-            }
-
-            mainCanvas.style.backgroundColor = color;
-            fullCanvas.style.backgroundColor = color;
-
-            let html = '';
-            for (let i = 0; i < 3; i++) {
-                const item = selectedItems[i];
-                const borderStyle = isLandscape 
-                    ? 'border-right: 1px dashed rgba(166,177,225,0.15);' 
-                    : 'border-bottom: 1px dashed rgba(166,177,225,0.15);';
-                const finalBorder = (i === 2) ? '' : borderStyle;
-
-                if (item) {
-                    html += `
-                        <div class="d-flex align-items-center justify-content-center p-2" style="flex:1; overflow:hidden; ${finalBorder}">
-                            ${item.imagePath 
-                                ? `<img src="${item.imagePath}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />`
-                                : `<span class="small text-muted text-center px-1" style="font-size:11px; word-break:break-all;">${item.itemName}</span>`}
+                    <!-- Items Section -->
+                    <div class="mb-3 border-top pt-3" style="border-color: var(--border-color) !important;">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <label class="form-label fw-semibold mb-0">Items (max 3)</label>
+                            <button type="button" id="addItemBtn" class="btn btn-sm btn-outline-primary" onclick="addItemSlot()">
+                                + Add Item
+                            </button>
                         </div>
-                    `;
+                        <div id="selectedItemsList" class="d-flex flex-column gap-2">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Sticky Canvas Preview -->
+            <div class="col-md-7">
+                <div class="position-sticky" style="top: 100px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <label class="form-label fw-semibold mb-0">Preview</label>
+                        <div class="d-flex gap-2">
+                            <!-- Orientation Toggle -->
+                            <button type="button" class="btn btn-sm btn-secondary d-flex align-items-center gap-1" onclick="toggleOrientation()">
+                                <i class="bi bi-phone-landscape" id="orientationIcon"></i>
+                                <span id="orientationLabel">Landscape</span>
+                            </button>
+                            <!-- Fullscreen Toggle -->
+                            <button type="button" class="btn btn-sm btn-secondary d-flex align-items-center justify-content-center" onclick="toggleFullscreen(true)" title="Fullscreen preview">
+                                <i class="bi bi-fullscreen"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Showoff Preview Canvas Wrapper -->
+                    <div class="d-flex justify-content-center align-items-center p-3 rounded shadow-sm" style="background: rgba(166, 177, 225, 0.01); border: 1px solid var(--border-color);">
+                        <div id="showoffPreview" class="canvas-box landscape-mode shadow-lg" style="background-color:#1c2128; display:flex; align-items:stretch; border-radius:10px; overflow:hidden; transition: all 0.2s;">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Preview Info Footer -->
+                    <div class="mt-3 p-3 rounded d-flex justify-content-between align-items-center" style="background: rgba(166,177,225,0.02); border: 1px solid var(--border-color);">
+                        <span id="previewName" class="fw-semibold text-truncate" style="max-width:300px; color: var(--text-primary);">Showoff Name</span>
+                        <span id="previewBadge" class="badge bg-success">Public</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Actions Row -->
+        <div class="row mt-4">
+            <div class="col-12 pt-3 border-top d-flex gap-2 justify-content-end" style="border-color: var(--border-color) !important;">
+                <a asp-page="./Index" asp-route-tab="profile" class="btn btn-secondary px-4">Cancel</a>
+                <button type="button" class="btn btn-primary px-4" onclick="saveShowoff()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Canvas Overlay -->
+    <div id="fullscreenCanvasOverlay" class="position-fixed inset-0 z-3" style="display:none; background: rgba(9, 10, 17, 0.96); flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; top: 0; left: 0; right: 0; bottom: 0;">
+        <div class="d-flex align-items-center justify-content-between w-100" style="max-width: 900px;">
+            <h5 class="fw-bold mb-0 text-white" id="fullscreenTitle">Fullscreen Preview</h5>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleFullscreen(false)">Done</button>
+        </div>
+        <div id="fullscreenCanvas" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; display: flex; align-items: stretch; transition: all 0.2s; box-shadow: 0 16px 48px rgba(0,0,0,0.8);">
+            <!-- Rendered dynamically same as showoffPreview but larger -->
+        </div>
+    </div>
+
+    @section Scripts {
+        <script>
+            const currentUser = '@loggedInUser?.UserName';
+            const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+            const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
+            const categoriesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories.Select(c => c.CategoryName)));
+            const showoffId = @(Model.ShowoffData?.ShowoffId ?? 0);
+            const existingShowoff = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ShowoffData));
+
+            let selectedItems = []; // Array of slot objects: { itemId, itemName, imagePath, imagePublicId }
+            let selectedCategories = []; // List of tags selected
+            let isLandscape = true;
+            let isFullscreen = false;
+            let bgMode = 'color'; // 'color' | 'image'
+            let bgImagePath = null;
+            let bgImagePublicId = null;
+
+            function setBgMode(mode) {
+                bgMode = mode;
+                document.getElementById('bgColorSection').style.display = mode === 'color' ? 'flex' : 'none';
+                document.getElementById('bgImageSection').style.display = mode === 'image' ? 'block' : 'none';
+                updatePreview();
+            }
+
+            function triggerBgFileUpload() {
+                document.getElementById('bgImageFileInput').click();
+            }
+
+            async function handleBgImageUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    alert('Only JPG and PNG allowed.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Max 5MB file size.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadRes = await fetch(`${apiBase}/ImageUpload`, { method: 'POST', body: formData });
+                if (!uploadRes.ok) { alert('Image upload failed.'); return; }
+                const data = await uploadRes.json();
+
+                if (bgImagePublicId) {
+                    window.pendingImageDeletes = window.pendingImageDeletes || [];
+                    window.pendingImageDeletes.push(bgImagePublicId);
+                }
+
+                bgImagePath = data.imagePath;
+                bgImagePublicId = data.imagePublicId;
+
+                renderBgImagePreview();
+                updatePreview();
+            }
+
+            function removeBgImage() {
+                if (bgImagePublicId) {
+                    window.pendingImageDeletes = window.pendingImageDeletes || [];
+                    window.pendingImageDeletes.push(bgImagePublicId);
+                }
+                bgImagePath = null;
+                bgImagePublicId = null;
+                renderBgImagePreview();
+                updatePreview();
+            }
+
+            function renderBgImagePreview() {
+                const thumb = document.getElementById('bgImagePreviewThumb');
+                const placeholder = document.getElementById('bgImagePlaceholder');
+                const removeBtn = document.getElementById('bgImageRemoveBtn');
+
+                if (bgImagePath) {
+                    thumb.src = bgImagePath;
+                    thumb.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    removeBtn.style.display = 'inline-block';
                 } else {
-                    html += `
-                        <div class="d-flex align-items-center justify-content-center" style="flex:1; ${finalBorder}">
-                            <i class="bi bi-plus-circle text-muted fs-5 opacity-50"></i>
-                        </div>
-                    `;
+                    thumb.style.display = 'none';
+                    placeholder.style.display = 'block';
+                    removeBtn.style.display = 'none';
                 }
             }
 
-            mainCanvas.innerHTML = html;
-            fullCanvas.innerHTML = html;
-        }
+            window.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('showoffName').value = existingShowoff.ShowoffName || '';
+                document.getElementById('showoffDescription').value = existingShowoff.Description || '';
+                document.getElementById('bgColor').value = existingShowoff.BackgroundColor || '#1c2128';
+                document.getElementById(existingShowoff.IsPrivate ? 'visPrivate' : 'visPublic').checked = true;
 
-        // ── Save Showoff payload submission ──
-        async function saveShowoff() {
-            const name = document.getElementById('showoffName').value.trim();
-            if (!name) {
-                alert('Please enter a showoff name.');
-                return;
+                if (existingShowoff.BackgroundImagePath) {
+                    bgMode = 'image';
+                    bgImagePath = existingShowoff.BackgroundImagePath;
+                    bgImagePublicId = existingShowoff.BackgroundImagePublicId;
+                    document.getElementById('bgModeImage').checked = true;
+                    document.getElementById('bgColorSection').style.display = 'none';
+                    document.getElementById('bgImageSection').style.display = 'block';
+                    renderBgImagePreview();
+                }
+
+                existingShowoff.Items.forEach(item => {
+                    selectedItems.push({
+                        itemId: item.ItemId,
+                        itemName: item.ItemName,
+                        imagePath: item.ImagePath,
+                        imagePublicId: item.ImagePublicId
+                    });
+                    if (item.CategoryName && !selectedCategories.includes(item.CategoryName)) {
+                        selectedCategories.push(item.CategoryName);
+                    }
+                });
+
+                if (selectedItems.length === 0) {
+                    addItemSlot();
+                } else {
+                    renderItemSlots();
+                    renderCategoryChips();
+                    updatePreview();
+                }
+            });
+
+            // ── Category Tag Selector ──
+            function showCategorySuggestions() {
+                const input = document.getElementById('categoryTagInput');
+                renderCategorySuggestions(categoriesList);
+                document.getElementById('categoryTagSuggestions').style.display = 'block';
             }
-            const activeItems = selectedItems.filter(i => i.itemId !== null);
-            if (activeItems.length === 0) {
-                alert('Please select at least 1 collection item.');
-                return;
+
+            function filterCategorySuggestions(e) {
+                const query = e.target.value.trim().toLowerCase();
+                const filtered = categoriesList.filter(cat => 
+                    cat.toLowerCase().includes(query) && !selectedCategories.includes(cat)
+                );
+                renderCategorySuggestions(filtered);
             }
 
-            const payload = {
-                showoffName: name,
-                backgroundColor: document.getElementById('bgColor').value,
-                isPrivate: document.getElementById('visPrivate').checked,
-                description: document.getElementById('showoffDescription').value.trim() || null,
-                items: activeItems.map((i, idx) => ({
-                    itemId: i.itemId,
-                    imagePath: i.imagePath,
-                    imagePublicId: i.imagePublicId,
-                    displayOrder: idx
-                })),
-                imagePublicIdsToDelete: window.pendingImageDeletes || []
-            };
+            function renderCategorySuggestions(list) {
+                const container = document.getElementById('categoryTagSuggestions');
+                container.innerHTML = '';
+                const unselected = list.filter(cat => !selectedCategories.includes(cat));
 
-            if (window.pendingImageDeletes && window.pendingImageDeletes.length) {
-                for (const publicId of window.pendingImageDeletes) {
-                    await fetch(`${apiBase}/ImageUpload`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(publicId)
+                if (unselected.length === 0) {
+                    container.innerHTML = '<div class="list-group-item text-muted small">No other categories found</div>';
+                    return;
+                }
+
+                unselected.forEach(cat => {
+                    const el = document.createElement('a');
+                    el.href = '#';
+                    el.className = 'list-group-item list-group-item-action text-start py-2';
+                    el.textContent = cat;
+                    el.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        addCategoryTag(cat);
+                    });
+                    container.appendChild(el);
+                });
+            }
+
+            function addCategoryTag(catName) {
+                if (!selectedCategories.includes(catName)) {
+                    selectedCategories.push(catName);
+                    renderCategoryChips();
+                    const input = document.getElementById('categoryTagInput');
+                    input.value = '';
+                    document.getElementById('categoryTagSuggestions').style.display = 'none';
+                
+                    selectedItems.forEach((item, idx) => {
+                        document.getElementById(`rowSuggestions_${idx}`).style.display = 'none';
                     });
                 }
-                window.pendingImageDeletes = [];
             }
 
-            const res = await fetch(`${apiBase}/Showoff/${showoffId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            function removeCategoryTag(catName) {
+                selectedCategories = selectedCategories.filter(c => c !== catName);
+                renderCategoryChips();
+            }
+
+            function renderCategoryChips() {
+                const container = document.getElementById('selectedCategoriesChips');
+                container.innerHTML = selectedCategories.map(cat => `
+                    <span class="badge bg-primary text-white d-flex align-items-center gap-1 rounded-pill px-3 py-2" style="font-size:12px;">
+                        ${cat}
+                        <button type="button" class="btn-close btn-close-white p-0" style="font-size:8px; line-height:1;" onclick="removeCategoryTag('${cat.replace(/'/g, "\\'")}')"></button>
+                    </span>
+                `).join('');
+            }
+
+            // Hide suggestions on click outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#categoryTagInput') && !e.target.closest('#categoryTagSuggestions')) {
+                    const sugg = document.getElementById('categoryTagSuggestions');
+                    if (sugg) sugg.style.display = 'none';
+                }
+                selectedItems.forEach((_, idx) => {
+                    const input = document.querySelector(`.item-name-input[data-index="${idx}"]`);
+                    const suggestions = document.getElementById(`rowSuggestions_${idx}`);
+                    if (suggestions && !e.target.closest(`.item-slot-row[data-index="${idx}"]`)) {
+                        suggestions.style.display = 'none';
+                    }
+                });
             });
 
-            if (res.ok) {
-                window.location.href = '/ShowoffPages/Index?tab=profile';
-            } else {
-                const text = await res.text();
-                alert(`Failed to save showoff: ${text}`);
-            }
-        }
-    </script>
-}
 
-<style>
-    .canvas-box {
-        transition: all 0.2s ease-in-out;
+            // ── Item Slot Operations ──
+            function addItemSlot() {
+                if (selectedItems.length >= 3) {
+                    alert('Maximum of 3 items allowed in a showoff.');
+                    return;
+                }
+                selectedItems.push({
+                    itemId: null,
+                    itemName: '',
+                    imagePath: null,
+                    imagePublicId: null
+                });
+                renderItemSlots();
+                updatePreview();
+            }
+
+            function removeItemSlot(idx) {
+                const item = selectedItems[idx];
+                if (item && item.imagePublicId) {
+                    window.pendingImageDeletes = window.pendingImageDeletes || [];
+                    window.pendingImageDeletes.push(item.imagePublicId);
+                }
+                selectedItems.splice(idx, 1);
+                renderItemSlots();
+                updatePreview();
+            }
+
+            function renderItemSlots() {
+                const list = document.getElementById('selectedItemsList');
+                list.innerHTML = '';
+
+                selectedItems.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'card p-3 mb-2 item-slot-row';
+                    div.setAttribute('data-index', idx);
+                    div.style.background = 'rgba(166, 177, 225, 0.02)';
+                    div.style.border = '1px solid var(--border-color)';
+                    div.style.overflow = 'visible';
+                
+                    div.innerHTML = `
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Thumbnail box -->
+                            <div class="item-thumb-box position-relative" 
+                                 style="width:54px; height:54px; border:2px dashed var(--border-color); border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; overflow:hidden;"
+                                 onclick="triggerRowFileUpload(${idx})" title="Click to upload custom image">
+                                ${item.imagePath 
+                                    ? `<img src="${item.imagePath}" style="width:100%; height:100%; object-fit:cover;" />`
+                                    : `<i class="bi bi-image text-muted fs-4"></i>`}
+                                <input type="file" id="rowFileInput_${idx}" accept=".jpg,.jpeg,.png" style="display:none;" onchange="handleRowImageUpload(event, ${idx})" />
+                            </div>
+                        
+                            <!-- Search & autocomplete input -->
+                            <div class="flex-grow-1 position-relative">
+                                <input type="text" class="form-control form-control-sm item-name-input" 
+                                       data-index="${idx}" placeholder="Search collection items..." 
+                                       value="${item.itemName}" onfocus="showRowSuggestions(${idx})" 
+                                       oninput="filterRowSuggestions(event, ${idx})" autocomplete="off" />
+                                <div id="rowSuggestions_${idx}" class="list-group position-absolute z-3 w-100 shadow" 
+                                     style="display:none; max-height:160px; overflow-y:auto; top:100%; left:0;"></div>
+                            </div>
+                        
+                            <!-- Remove button -->
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="removeItemSlot(${idx})">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+
+                document.getElementById('addItemBtn').style.display = selectedItems.length >= 3 ? 'none' : 'block';
+            }
+
+            function triggerRowFileUpload(idx) {
+                document.getElementById(`rowFileInput_${idx}`).click();
+            }
+
+            async function handleRowImageUpload(event, idx) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    alert('Only JPG and PNG allowed.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Max 5MB file size.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadRes.ok) {
+                    alert('Image upload failed.');
+                    return;
+                }
+
+                const data = await uploadRes.json();
+            
+                const oldPublicId = selectedItems[idx].imagePublicId;
+                if (oldPublicId) {
+                    window.pendingImageDeletes = window.pendingImageDeletes || [];
+                    window.pendingImageDeletes.push(oldPublicId);
+                }
+
+                selectedItems[idx].imagePath = data.imagePath;
+                selectedItems[idx].imagePublicId = data.imagePublicId;
+
+                renderItemSlots();
+                updatePreview();
+            }
+
+            // ── Autocomplete suggestions ──
+            function getFilteredCollectionItems() {
+                if (selectedCategories.length === 0) {
+                    return userCollectionItems;
+                }
+                return userCollectionItems.filter(item => 
+                    item.CategoryName && selectedCategories.includes(item.CategoryName)
+                );
+            }
+
+            function showRowSuggestions(idx) {
+                const list = getFilteredCollectionItems();
+                renderRowSuggestions(list, idx);
+                document.getElementById(`rowSuggestions_${idx}`).style.display = 'block';
+            }
+
+            function filterRowSuggestions(event, idx) {
+                const query = event.target.value.trim().toLowerCase();
+                const list = getFilteredCollectionItems();
+                const filtered = list.filter(item => 
+                    item.ItemName && item.ItemName.toLowerCase().includes(query)
+                );
+                renderRowSuggestions(filtered, idx);
+            }
+
+            function renderRowSuggestions(items, idx) {
+                const container = document.getElementById(`rowSuggestions_${idx}`);
+                container.innerHTML = '';
+
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="list-group-item text-muted small py-2">No collection items found</div>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    const el = document.createElement('a');
+                    el.href = '#';
+                    el.className = 'list-group-item list-group-item-action text-start py-2';
+                    el.innerHTML = `<strong>${item.ItemName}</strong> <span class="text-muted float-end small">${item.CategoryName || ''}</span>`;
+                    el.addEventListener('click', (e) => {
+                        e.preventDefault();
+                    
+                        selectedItems[idx].itemId = item.ItemId;
+                        selectedItems[idx].itemName = item.ItemName;
+                        if (!selectedItems[idx].imagePath && item.ImageUrl) {
+                            selectedItems[idx].imagePath = item.ImageUrl;
+                            selectedItems[idx].imagePublicId = item.ImagePublicId;
+                        }
+
+                        renderItemSlots();
+                        updatePreview();
+                    });
+                    container.appendChild(el);
+                });
+            }
+
+
+            // ── Orientation and Layout ──
+            function toggleOrientation() {
+                isLandscape = !isLandscape;
+                const icon = document.getElementById('orientationIcon');
+                const label = document.getElementById('orientationLabel');
+            
+                if (isLandscape) {
+                    icon.className = 'bi bi-phone-landscape';
+                    label.textContent = 'Landscape';
+                } else {
+                    icon.className = 'bi bi-phone';
+                    label.textContent = 'Portrait';
+                }
+
+                updatePreview();
+            }
+
+            function toggleFullscreen(show) {
+                isFullscreen = show;
+                const overlay = document.getElementById('fullscreenCanvasOverlay');
+            
+                if (show) {
+                    document.getElementById('fullscreenTitle').textContent = document.getElementById('showoffName').value.trim() || 'Fullscreen Preview';
+                    overlay.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    overlay.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+
+                updatePreview();
+            }
+
+
+            // ── Render Preview Canvas ──
+            function updatePreview() {
+                const name = document.getElementById('showoffName').value.trim();
+                const color = document.getElementById('bgColor').value;
+                const isPrivate = document.getElementById('visPrivate').checked;
+
+                document.getElementById('bgColorHex').textContent = color;
+                document.getElementById('previewName').textContent = name || 'Showoff Name';
+                document.getElementById('nameCharCount').textContent = name.length;
+                document.getElementById('descCharCount').textContent = document.getElementById('showoffDescription').value.length;
+
+                const badge = document.getElementById('previewBadge');
+                badge.textContent = isPrivate ? 'Private' : 'Public';
+                badge.className = `badge ${isPrivate ? 'bg-secondary' : 'bg-success'}`;
+
+                const mainCanvas = document.getElementById('showoffPreview');
+                const fullCanvas = document.getElementById('fullscreenCanvas');
+
+                const classToAdd = isLandscape ? 'preview-canvas-landscape' : 'preview-canvas-portrait';
+                const classToRemove = isLandscape ? 'preview-canvas-portrait' : 'preview-canvas-landscape';
+            
+                mainCanvas.classList.remove(classToRemove);
+                mainCanvas.classList.add(classToAdd);
+
+                if (isLandscape) {
+                    mainCanvas.style.width = '480px';
+                    mainCanvas.style.height = '270px';
+                    mainCanvas.style.flexDirection = 'row';
+                
+                    fullCanvas.style.width = 'min(860px, 90vw)';
+                    fullCanvas.style.height = 'min(480px, 50.625vw)';
+                    fullCanvas.style.flexDirection = 'row';
+                } else {
+                    mainCanvas.style.width = '270px';
+                    mainCanvas.style.height = '480px';
+                    mainCanvas.style.flexDirection = 'column';
+
+                    fullCanvas.style.width = 'min(360px, 56.25vh)';
+                    fullCanvas.style.height = 'min(640px, 100vh - 200px)';
+                    fullCanvas.style.flexDirection = 'column';
+                }
+
+                if (bgMode === 'image' && bgImagePath) {
+                    mainCanvas.style.backgroundImage = `url('${bgImagePath}')`;
+                    mainCanvas.style.backgroundSize = 'cover';
+                    mainCanvas.style.backgroundPosition = 'center';
+                    mainCanvas.style.backgroundColor = '';
+                    fullCanvas.style.backgroundImage = `url('${bgImagePath}')`;
+                    fullCanvas.style.backgroundSize = 'cover';
+                    fullCanvas.style.backgroundPosition = 'center';
+                    fullCanvas.style.backgroundColor = '';
+                } else {
+                    mainCanvas.style.backgroundImage = '';
+                    fullCanvas.style.backgroundImage = '';
+                    mainCanvas.style.backgroundColor = color;
+                    fullCanvas.style.backgroundColor = color;
+                }
+
+                let html = '';
+                for (let i = 0; i < 3; i++) {
+                    const item = selectedItems[i];
+                    const borderStyle = isLandscape 
+                        ? 'border-right: 1px dashed rgba(166,177,225,0.15);' 
+                        : 'border-bottom: 1px dashed rgba(166,177,225,0.15);';
+                    const finalBorder = (i === 2) ? '' : borderStyle;
+
+                    if (item) {
+                        html += `
+                            <div class="d-flex align-items-center justify-content-center p-2" style="flex:1; overflow:hidden; ${finalBorder}">
+                                ${item.imagePath 
+                                    ? `<img src="${item.imagePath}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />`
+                                    : `<span class="small text-muted text-center px-1" style="font-size:11px; word-break:break-all;">${item.itemName}</span>`}
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="d-flex align-items-center justify-content-center" style="flex:1; ${finalBorder}">
+                                <i class="bi bi-plus-circle text-muted fs-5 opacity-50"></i>
+                            </div>
+                        `;
+                    }
+                }
+
+                mainCanvas.innerHTML = html;
+                fullCanvas.innerHTML = html;
+            }
+
+            // ── Save Showoff payload submission ──
+            async function saveShowoff() {
+                const name = document.getElementById('showoffName').value.trim();
+                if (!name) {
+                    alert('Please enter a showoff name.');
+                    return;
+                }
+                const activeItems = selectedItems.filter(i => i.itemId !== null);
+                if (activeItems.length === 0) {
+                    alert('Please select at least 1 collection item.');
+                    return;
+                }
+
+                const payload = {
+                    showoffName: name,
+                    backgroundColor: document.getElementById('bgColor').value,
+                    backgroundImagePath: bgMode === 'image' ? bgImagePath : null,
+                    backgroundImagePublicId: bgMode === 'image' ? bgImagePublicId : null,
+                    isPrivate: document.getElementById('visPrivate').checked,
+                    userName: currentUser,
+                    description: document.getElementById('showoffDescription').value.trim() || null,
+                    items: activeItems.map((i, idx) => ({
+                        itemId: i.itemId,
+                        imagePath: i.imagePath,
+                        imagePublicId: i.imagePublicId,
+                        displayOrder: idx
+                    }))
+                };
+
+                if (window.pendingImageDeletes && window.pendingImageDeletes.length) {
+                    for (const publicId of window.pendingImageDeletes) {
+                        await fetch(`${apiBase}/ImageUpload`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(publicId)
+                        });
+                    }
+                    window.pendingImageDeletes = [];
+                }
+
+                const res = await fetch(`${apiBase}/Showoff/${showoffId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    window.location.href = '/ShowoffPages/Index?tab=profile';
+                } else {
+                    const text = await res.text();
+                    alert(`Failed to save showoff: ${text}`);
+                }
+            }
+        </script>
     }
-</style>
+
+    <style>
+        .canvas-box {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>

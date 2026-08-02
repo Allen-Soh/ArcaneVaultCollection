@@ -330,3 +330,15 @@
 - Make profile photo show up in viewShowoff and My Profile page
 - Fix share issue where it does not the copied link will not show the specific showoff because the showoff is a modal, not a page, so it will not be able to show the specific showoff when the link is shared
 - In Reports, add a "Resolve" button which will still store the report in the database, but will be sent to the bottom of the table. Add filter for Ongoing report cases.
+
+===== DEV LOG (2/8/2026) - Part 2=====
+[Done]
+- Make profile photo show up in viewShowoff and My Profile page
+- Added Resolve button in reports which will still store the report in the database, but will be sent to the bottom of the table. Added filter for Ongoing report cases.
+- Added customer support
+
+[To Do]
+- Fix share issue where it does not the copied link will not show the specific showoff because
+- Fix issue where sending one ticket will actually send multiple tickets to staff
+- Fix issue where in Report, under All Reports mini tab, it does not show all of the reports that also include those that arent given to that staff
+- Fix issue where in Settings cshtml line 129

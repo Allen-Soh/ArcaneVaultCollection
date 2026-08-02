@@ -47,6 +47,15 @@
                                 <li class="nav-item">
                                     <a class="nav-link" asp-page="/ShowoffPages/Reports">Reports</a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-page="/SupportPages/Staff">Customer Support</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-page="/SupportPages/Index">Customer Support</a>
+                                </li>
                             }
                             <li class="nav-item">
                                     <a class="nav-link" asp-page="/ShowoffPages/Index">Showoffs</a>
@@ -55,7 +64,7 @@
                                 <a class="nav-link" asp-page="/CollectionItemPages/Index">Collection Items</a>
                             </li>
                         }
-                        </ul> 
+                    </ul> 
                      <!-- Right-side login/logout link changes based on session state. --> 
                      <ul class="navbar-nav ms-auto align-items-center">
                         @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)

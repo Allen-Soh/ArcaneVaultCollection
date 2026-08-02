@@ -5,7 +5,7 @@
     {
         <div class="col">
             <div class="showoff-card card border-0 shadow-sm h-100 position-relative"
-                 style="background-color: @showoff.BackgroundColor; cursor:pointer;"
+                 style="@(string.IsNullOrEmpty(showoff.BackgroundImagePath) ? $"background-color: {showoff.BackgroundColor};" : $"background-image: url('{showoff.BackgroundImagePath}'); background-size: cover; background-position: center;") cursor:pointer;"
                  onclick="viewShowoff(@showoff.ShowoffId, '@showoff.UserName')">
 
                 <div class="owner-overlay position-absolute top-0 start-0 p-2"

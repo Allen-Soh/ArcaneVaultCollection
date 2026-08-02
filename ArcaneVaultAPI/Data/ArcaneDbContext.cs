@@ -11,7 +11,7 @@ namespace ArcaneVaultAPI.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<CollectionItem> CollectionItems { get; set; }
         public DbSet<CollectionItemCategory> CollectionItemCategories { get; set; }
-        public DbSet<Showoff> Showoffs { get; set;  }
+        public DbSet<Showoff> Showoffs { get; set; }
         public DbSet<ShowoffItem> ShowoffItems { get; set; }
         public DbSet<ShowoffLike> ShowoffLikes { get; set; }
         public DbSet<ShowoffView> ShowoffViews { get; set; }

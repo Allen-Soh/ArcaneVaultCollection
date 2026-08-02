@@ -1,4 +1,5 @@
 using ArcaneVaultAPI.Data;
+using ArcaneVaultAPI.Services;
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,8 @@ namespace ArcaneVaultAPI
                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
                 };
             });
+
+            builder.Services.AddScoped<IEmailService, EmailService>();
 
             var app = builder.Build();
 
