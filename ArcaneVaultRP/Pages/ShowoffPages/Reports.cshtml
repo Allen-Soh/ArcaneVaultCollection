@@ -56,7 +56,7 @@
                 <thead class="table-light" style="position:sticky; top:0; z-index:2;">
                     <tr>
                         <th style="padding:12px;">Report Details</th>
-                        <th style="padding:12px; width:160px; text-align:right;">Status / Actions</th>
+                        <th style="padding:12px; width:160px; text-align:right;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="reportTableBody"></tbody>
@@ -99,11 +99,35 @@
             </div>
             <div class="modal-body">
                 <p id="disableModalText"></p>
-                <p class="text-danger small">This will hide the showoff from the public feed and other users.</p>
+                <p class="text-danger small" id="disableModalWarning">This will hide the showoff from the public feed and other users.</p>
+                <label class="form-label small text-muted" id="disableModalNoteLabel" style="display:none;">Note to owner (optional)</label>
+                <textarea id="disableModalNoteInput" class="form-control" rows="3" maxlength="1000" style="display:none;" placeholder="e.g. Reviewed and no violation found."></textarea>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="disableConfirmBtn" onclick="confirmDisableToggle()">Disable</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deny Appeal Confirmation Modal -->
+<div class="modal fade" id="denyAppealModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Deny Appeal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="denyAppealText"></p>
+                <p class="text-muted small">The showoff stays disabled. The owner is notified by email.</p>
+                <label class="form-label small text-muted">Note to owner (optional)</label>
+                <textarea id="denyAppealNoteInput" class="form-control" rows="3" maxlength="1000" placeholder="e.g. Content still violates guideline X."></textarea>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="denyAppealConfirmBtn" onclick="confirmDenyAppeal()">Deny Appeal</button>
             </div>
         </div>
     </div>
@@ -329,13 +353,8 @@
                 // Determine if current staff is assigned (use first report's assignment for the showoff)
                 const isAssigned = group.reports.some(r => r.AssignedStaffUserName === currentStaff);
                 const assignedStaff = group.AssignedStaffUserName || group.reports[0]?.AssignedStaffUserName || 'Unknown';
-
-                const statusBadge = group.IsDisabled
-                    ? `<span class="badge" style="background:rgba(220,53,69,0.15);color:#ff8591;border:1px solid rgba(220,53,69,0.3);font-size:10px;">DISABLED</span>`
-                    : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
-
-                const resolvedBadge = group.IsResolved
-                    ? `<span class="badge" style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);font-size:10px;">RESOLVED</span>`
+                const latestDateStr = group.reports[0]?.CreatedAt
+                    ? new Date(group.reports[0].CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                     : '';
 
                 const disableBtn = (isAssigned || activeTab === 'my')
@@ -349,6 +368,14 @@
                     ? `<button class="btn btn-sm ${group.IsResolved ? 'btn-outline-secondary' : 'btn-primary'}" style="font-size:11px;padding:4px 12px;"
                                        onclick="openResolveToggle(${group.ShowoffId}, ${group.IsResolved}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
                                    ${group.IsResolved ? 'Reopen' : 'Resolve'}
+                               </button>`
+                    : '';
+
+                // Deny Appeal — only relevant while the showoff is disabled; keeps it disabled but emails the owner a decision
+                const denyAppealBtn = (group.IsDisabled && (isAssigned || activeTab === 'my'))
+                    ? `<button class="btn btn-sm btn-outline-danger" style="font-size:11px;padding:4px 12px;"
+                                       onclick="openDenyAppeal(${group.ShowoffId}, '${group.ShowoffName.replace(/'/g, "\\'")}')">
+                                   Deny Appeal
                                </button>`
                     : '';
 
@@ -375,19 +402,16 @@
                                     <div style="max-height:90px;overflow-y:auto;">
                                         ${reportsHtml}
                                     </div>
+                                    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
+                                        Assigned to <strong>${assignedStaff}</strong>${latestDateStr ? ` · ${latestDateStr}` : ''}
+                                    </div>
                                 </td>
                                 <td style="padding:16px;vertical-align:top;text-align:right;">
                                     <div class="d-flex flex-column align-items-end justify-content-between h-100" style="min-height:${ROW_HEIGHT - 32}px;">
-                                        <div class="d-flex flex-column align-items-end gap-1">
-                                            <span class="badge" style="background:var(--color-indigo-dark);color:var(--color-light);font-size:10px;padding:3px 8px;">
-                                                <i class="bi bi-person-fill"></i> ${assignedStaff}
-                                            </span>
-                                            ${statusBadge}
-                                            ${resolvedBadge}
-                                        </div>
-                                        <div class="d-flex flex-column gap-1 mt-auto">
+                                        <div class="d-flex flex-column gap-1 align-items-end">
                                             <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="viewShowoff(${group.ShowoffId})">View</button>
                                             ${disableBtn}
+                                            ${denyAppealBtn}
                                             ${resolveBtn}
                                         </div>
                                     </div>
@@ -405,7 +429,6 @@
 
             document.getElementById('viewShowoffName').textContent = showoff.showoffName || showoff.ShowoffName;
             const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
-            const bgImagePath = showoff.backgroundImagePath || showoff.BackgroundImagePath;
             const items = showoff.items || showoff.Items || [];
 
             const itemCount = items.length;
@@ -414,8 +437,8 @@
 
             const body = document.getElementById('viewShowoffBody');
             body.innerHTML = `
-                    <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
-                        style="${bgImagePath ? `background-image:url('${bgImagePath}');background-size:cover;background-position:center;` : `background-color:${bgColor};`} min-height:60vh;">
+                        <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
+                             style="background-color:${bgColor}; min-height:60vh;">
                             <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
                                 ${items.map(item => {
                 const imgPath = item.imagePath || item.ImagePath;
@@ -448,17 +471,27 @@
             const title = document.getElementById('disableModalTitle');
             const text = document.getElementById('disableModalText');
             const btn = document.getElementById('disableConfirmBtn');
+            const warning = document.getElementById('disableModalWarning');
+            const noteLabel = document.getElementById('disableModalNoteLabel');
+            const noteInput = document.getElementById('disableModalNoteInput');
+            noteInput.value = '';
 
             if (isDisabled) {
                 title.textContent = 'Re-enable Showoff';
-                text.innerHTML = `Are you sure you want to re-enable <strong>${showoffName}</strong>?`;
+                text.innerHTML = `Are you sure you want to re-enable <strong>${showoffName}</strong>? The owner will be emailed that their appeal was approved.`;
                 btn.textContent = 'Re-enable';
                 btn.className = 'btn btn-success';
+                warning.style.display = 'none';
+                noteLabel.style.display = 'block';
+                noteInput.style.display = 'block';
             } else {
                 title.textContent = 'Disable Showoff';
                 text.innerHTML = `Are you sure you want to disable <strong>${showoffName}</strong>?`;
                 btn.textContent = 'Disable';
                 btn.className = 'btn btn-danger';
+                warning.style.display = 'block';
+                noteLabel.style.display = 'none';
+                noteInput.style.display = 'none';
             }
 
             new bootstrap.Modal(document.getElementById('disableConfirmModal')).show();
@@ -466,18 +499,72 @@
 
         async function confirmDisableToggle() {
             const action = pendingToggleIsDisabled ? 'enable' : 'disable';
-            const res = await fetch(`${apiBase}/Showoff/${pendingToggleShowoffId}/${action}`, { method: 'PUT' });
+            const btn = document.getElementById('disableConfirmBtn');
+            const noteInput = document.getElementById('disableModalNoteInput');
+            const originalLabel = btn.textContent;
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Processing...`;
+
+            const res = await fetch(`${apiBase}/Showoff/${pendingToggleShowoffId}/${action}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ staffNote: noteInput.value.trim() || null })
+            });
+
+            btn.disabled = false;
+            btn.textContent = originalLabel;
 
             bootstrap.Modal.getInstance(document.getElementById('disableConfirmModal'))?.hide();
 
             if (res.ok) {
                 const msg = document.getElementById('actionMessage');
                 msg.textContent = pendingToggleIsDisabled
-                    ? `"${pendingToggleName}" has been re-enabled.`
+                    ? `"${pendingToggleName}" has been re-enabled. The owner has been notified by email.`
                     : `"${pendingToggleName}" has been disabled.`;
                 msg.style.display = 'block';
                 setTimeout(() => msg.style.display = 'none', 4000);
                 window.location.reload();
+            } else {
+                alert('Action failed. Please try again.');
+            }
+        }
+
+        // Deny Appeal — keeps the showoff disabled, notifies the owner by email
+        let pendingDenyShowoffId = null;
+        let pendingDenyName = '';
+
+        function openDenyAppeal(showoffId, showoffName) {
+            pendingDenyShowoffId = showoffId;
+            pendingDenyName = showoffName;
+            document.getElementById('denyAppealText').innerHTML = `Deny the appeal for <strong>${showoffName}</strong>?`;
+            document.getElementById('denyAppealNoteInput').value = '';
+            new bootstrap.Modal(document.getElementById('denyAppealModal')).show();
+        }
+
+        async function confirmDenyAppeal() {
+            const btn = document.getElementById('denyAppealConfirmBtn');
+            const noteInput = document.getElementById('denyAppealNoteInput');
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Sending...`;
+
+            const res = await fetch(`${apiBase}/Showoff/${pendingDenyShowoffId}/deny-appeal`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ staffNote: noteInput.value.trim() || null })
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = 'Deny Appeal';
+
+            bootstrap.Modal.getInstance(document.getElementById('denyAppealModal'))?.hide();
+
+            if (res.ok) {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = `Appeal for "${pendingDenyName}" denied. The owner has been notified by email.`;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
             } else {
                 alert('Action failed. Please try again.');
             }

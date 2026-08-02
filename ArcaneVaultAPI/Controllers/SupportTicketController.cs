@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
-using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
 using ArcaneVaultAPI.Services;
 
@@ -85,19 +84,7 @@ public class SupportTicketController : ControllerBase
         // Send confirmation email — failure here shouldn't block ticket creation
         try
         {
-            var body = $@"Hi {dto.Name},
-
-Thanks for reaching out to Arcane Vault Support. We've received your ticket and a member of our team will get back to you soon.
-
-Your ticket reference number is: {ticketUid}
-
-Subject: {dto.Subject}
-
-We appreciate your patience.
-
-— Arcane Vault Support Team";
-
-            await _emailService.SendAsync(dto.Email, $"We've received your ticket ({ticketUid})", body);
+            await _emailService.SendTicketConfirmationAsync(dto.Email, dto.Name, ticketUid, dto.Subject);
         }
         catch
         {
@@ -190,4 +177,67 @@ We appreciate your patience.
         }
         return tickets;
     }
+
+    // GET: api/SupportTicket/staff/{username} — tickets assigned to a specific staff member
+    [HttpGet("staff/{username}")]
+    public ActionResult<IEnumerable<SupportTicketDTO>> GetStaffTickets(string username)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT TicketId, TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt
+          FROM SupportTickets
+          WHERE AssignedStaffUserName = @StaffUserName
+          ORDER BY CreatedAt DESC",
+            connection);
+        command.Parameters.AddWithValue("@StaffUserName", username);
+
+        return Ok(ReadTicketDTOs(command));
+    }
+
+    // POST: api/SupportTicket/{id}/reply — staff replies via centralized email, marks resolved
+    [HttpPost("{id}/reply")]
+    public async Task<IActionResult> ReplyToTicket(int id, [FromBody] ReplyToTicketDTO dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            return BadRequest("Reply message is required.");
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            "SELECT TicketUid, Name, Email, Subject FROM SupportTickets WHERE TicketId = @TicketId",
+            connection);
+        command.Parameters.AddWithValue("@TicketId", id);
+
+        string? ticketUid = null, name = null, email = null, subject = null;
+        using (var reader = command.ExecuteReader())
+        {
+            if (!reader.Read()) return NotFound();
+            ticketUid = reader["TicketUid"].ToString();
+            name = reader["Name"].ToString();
+            email = reader["Email"].ToString();
+            subject = reader["Subject"].ToString();
+        }
+
+        try
+        {
+            await _emailService.SendTicketReplyAsync(email, name, ticketUid, subject, dto.Message);
+        }
+        catch
+        {
+            return StatusCode(500, "Failed to send reply email.");
+        }
+
+        var resolveCommand = new SqliteCommand(
+            "UPDATE SupportTickets SET IsResolved = 1 WHERE TicketId = @TicketId",
+            connection);
+        resolveCommand.Parameters.AddWithValue("@TicketId", id);
+        resolveCommand.ExecuteNonQuery();
+
+        return Ok();
+    }
+
+    public class ReplyToTicketDTO { public string Message { get; set; } }
 }

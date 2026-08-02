@@ -105,4 +105,9 @@ namespace ArcaneVaultAPI.DataTransferObject
         public string Category { get; set; }
         public string? Reason { get; set; }
     }
+
+    public class SubmitAppealDTO
+    {
+        public string AppealMessage { get; set; }
+    }
 }

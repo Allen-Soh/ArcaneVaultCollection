@@ -42,7 +42,7 @@ public class ShowoffReportController : ControllerBase
 
         // 1. Get all staff users (RoleId = 1) ordered by UserName
         var staffCommand = new SqliteCommand(
-            "SELECT UserName FROM ArcaneVaultUsers WHERE RoleId = 1 AND IsDeleted = 0 ORDER BY UserName",
+            "SELECT UserName FROM ArcaneVaultUsers WHERE RoleId = 1 AND IsDeleted = 0 AND IsActive = 1 ORDER BY UserName",
             connection);
         var staffList = new List<string>();
         using (var reader = staffCommand.ExecuteReader())

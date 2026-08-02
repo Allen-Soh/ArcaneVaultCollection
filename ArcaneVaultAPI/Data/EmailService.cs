@@ -3,11 +3,6 @@ using System.Net.Mail;
 
 namespace ArcaneVaultAPI.Services
 {
-    public interface IEmailService
-    {
-        Task SendAsync(string toEmail, string subject, string body);
-    }
-
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _config;
@@ -17,7 +12,44 @@ namespace ArcaneVaultAPI.Services
             _config = config;
         }
 
-        public async Task SendAsync(string toEmail, string subject, string body)
+        public Task SendTicketConfirmationAsync(string toEmail, string name, string ticketUid, string subject)
+        {
+            var (emailSubject, body) = EmailTemplates.TicketConfirmation(name, ticketUid, subject);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        public Task SendTicketReplyAsync(string toEmail, string name, string ticketUid, string subject, string replyMessage)
+        {
+            var (emailSubject, body) = EmailTemplates.TicketReply(name, ticketUid, subject, replyMessage);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        public Task SendPasswordResetCodeAsync(string toEmail, string userName, string code)
+        {
+            var (emailSubject, body) = EmailTemplates.PasswordResetCode(userName, code);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        public Task SendShowoffAppealSubmittedAsync(string toEmail, string ownerUserName, string showoffName, string appealMessage, int showoffId)
+        {
+            var (emailSubject, body) = EmailTemplates.ShowoffAppealSubmitted(ownerUserName, showoffName, appealMessage, showoffId);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        public Task SendShowoffAppealResponseAsync(string toEmail, string userName, string showoffName, bool approved, string? staffNote)
+        {
+            var (emailSubject, body) = EmailTemplates.ShowoffAppealResponse(userName, showoffName, approved, staffNote);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        public Task SendShowoffAppealConfirmationAsync(string toEmail, string userName, string showoffName)
+        {
+            var (emailSubject, body) = EmailTemplates.ShowoffAppealConfirmation(userName, showoffName);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
+        // Single low-level sender — every email type funnels through here
+        private async Task SendAsync(string toEmail, string subject, string htmlBody)
         {
             var host = _config["Smtp:Host"];
             var port = int.Parse(_config["Smtp:Port"] ?? "587");
@@ -31,9 +63,9 @@ namespace ArcaneVaultAPI.Services
                 EnableSsl = true
             };
 
-            var message = new MailMessage(fromEmail, toEmail, subject, body)
+            var message = new MailMessage(fromEmail, toEmail, subject, htmlBody)
             {
-                IsBodyHtml = false
+                IsBodyHtml = true
             };
 
             await client.SendMailAsync(message);

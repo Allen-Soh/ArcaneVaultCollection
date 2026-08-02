@@ -22,6 +22,17 @@
         </div>
     </div>
 
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "all" ? "active" : "")"
+               asp-page="./Staff" asp-route-tab="all">All Tickets</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "my" ? "active" : "")"
+               asp-page="./Staff" asp-route-tab="my">My Tickets</a>
+        </li>
+    </ul>
+
     <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
     <div class="border rounded overflow-hidden">
@@ -30,7 +41,7 @@
                 <thead class="table-light" style="position:sticky; top:0; z-index:2;">
                     <tr>
                         <th style="padding:12px;">Ticket</th>
-                        <th style="padding:12px; width:180px; text-align:right;">Status / Actions</th>
+                        <th style="padding:12px; width:180px; text-align:right;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ticketTableBody"></tbody>
@@ -65,17 +76,34 @@
     </div>
 </div>
 
+<!-- Reply Modal -->
+<div class="modal fade" id="replyTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Reply to Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">This will be emailed to the customer and mark the ticket as resolved.</p>
+                <textarea id="replyMessageInput" class="form-control" rows="5" maxlength="2000" placeholder="Type your response..."></textarea>
+                <div id="replyError" class="text-danger small mt-1" style="display:none;">Please enter a message.</div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="replySubmitBtn" onclick="submitReply()">Send Reply & Resolve</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
-        let allTickets = [];
+        const currentStaff = '@Model.CurrentStaffUserName';
+        const activeTab = '@Model.ActiveTab';
+        let allTickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveTab == "my" ? Model.MyTickets : Model.AllTickets));
         let currentReviewTicket = null;
-
-        async function loadTickets() {
-            const res = await fetch(`${apiBase}/SupportTicket`);
-            allTickets = res.ok ? await res.json() : [];
-            applyFilters();
-        }
 
         function applyFilters() {
             const status = document.getElementById('filterStatus').value;
@@ -147,10 +175,11 @@
                                 </td>
                                 <td style="padding:16px;vertical-align:top;text-align:right;">
                                     <div class="d-flex flex-column gap-1 align-items-end">
-                                        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick='reviewTicket(${JSON.stringify(t)})'>Review</button>
-                                        <button class="btn ${resolved ? 'btn-outline-secondary' : 'btn-success'} btn-sm" style="font-size:11px;padding:4px 12px;" onclick="resolveTicket(${t.ticketId ?? t.TicketId}, ${resolved}, '${email}', '${(subject || '').replace(/'/g, "\\'")}')">
-                                            ${resolved ? 'Reopen' : 'Resolve'}
-                                        </button>
+                                    <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick='reviewTicket(${JSON.stringify(t)})'>Review</button>
+                                    ${(assignedStaff === currentStaff || activeTab === 'my') ? (resolved
+                                        ? `<button class="btn btn-outline-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="reopenTicket(${t.ticketId ?? t.TicketId})">Reopen</button>`
+                                        : `<button class="btn btn-success btn-sm" style="font-size:11px;padding:4px 12px;" onclick="openReplyModal(${t.ticketId ?? t.TicketId})">Reply &amp; Resolve</button>`
+                                    ) : ''}
                                     </div>
                                 </td>
                             </tr>`;
@@ -168,33 +197,75 @@
 
         // Resolve — opens the staff's default email client with recipient + Re: subject prefilled,
         // then marks the ticket resolved in the background
-        async function resolveTicket(ticketId, currentlyResolved, email, subject) {
-            if (!currentlyResolved) {
-                const mailSubject = encodeURIComponent(`Re: ${subject}`);
-                const mailBody = encodeURIComponent(
-                    `Hi,
+        let pendingReplyTicketId = null;
 
-        Thank you for reaching out to Arcane Vault Support. Regarding your inquiry:
+        function openReplyModal(ticketId) {
+            pendingReplyTicketId = ticketId;
+            document.getElementById('replyMessageInput').value = '';
+            document.getElementById('replyError').style.display = 'none';
+            new bootstrap.Modal(document.getElementById('replyTicketModal')).show();
+        }
 
-        [Your response here]
+        async function submitReply() {
+            const message = document.getElementById('replyMessageInput').value.trim();
+            const errEl = document.getElementById('replyError');
 
-        Best regards,
-        Arcane Vault Support Team`);
-                window.location.href = `mailto:${email}?subject=${mailSubject}&body=${mailBody}`;
+            if (!message) {
+                errEl.style.display = 'block';
+                return;
             }
+            errEl.style.display = 'none';
 
-            const action = currentlyResolved ? 'unresolve' : 'resolve';
-            const res = await fetch(`${apiBase}/SupportTicket/${ticketId}/${action}`, { method: 'PATCH' });
+            const btn = document.getElementById('replySubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Sending...`;
+
+            const res = await fetch(`${apiBase}/SupportTicket/${pendingReplyTicketId}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = 'Send Reply & Resolve';
+
+            bootstrap.Modal.getInstance(document.getElementById('replyTicketModal'))?.hide();
 
             if (res.ok) {
+                allTickets.forEach(t => {
+                    if ((t.ticketId ?? t.TicketId) === pendingReplyTicketId) {
+                        t.isResolved = true;
+                        t.IsResolved = true;
+                    }
+                });
                 const msg = document.getElementById('actionMessage');
-                msg.textContent = currentlyResolved ? 'Ticket reopened.' : 'Ticket marked as resolved.';
+                msg.textContent = 'Reply sent and ticket marked as resolved.';
                 msg.style.display = 'block';
                 setTimeout(() => msg.style.display = 'none', 4000);
-                loadTickets();
+                applyFilters();
+            } else {
+                alert('Failed to send reply. Please try again.');
             }
         }
 
-        loadTickets();
+        async function reopenTicket(ticketId) {
+            const res = await fetch(`${apiBase}/SupportTicket/${ticketId}/unresolve`, { method: 'PATCH' });
+
+            if (res.ok) {
+                allTickets.forEach(t => {
+                    if ((t.ticketId ?? t.TicketId) === ticketId) {
+                        t.isResolved = false;
+                        t.IsResolved = false;
+                    }
+                });
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = 'Ticket reopened.';
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                applyFilters();
+            }
+        }
+
+        applyFilters();
     </script>
 }

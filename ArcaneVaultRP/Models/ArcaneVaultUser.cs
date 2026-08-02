@@ -9,6 +9,7 @@
         public string Password { get; set; }
         public string Country { get; set; }
         public string? AvatarUrl { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 
     public class ArcaneVaultUserDTO
@@ -20,5 +21,6 @@
         public string Password { get; set; }
         public string Country { get; set; }
         public string? AvatarUrl { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

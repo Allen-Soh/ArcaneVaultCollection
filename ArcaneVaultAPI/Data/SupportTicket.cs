@@ -1,7 +1,10 @@
-﻿namespace ArcaneVaultAPI.Data
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ArcaneVaultAPI.Data
 {
     public class SupportTicket
     {
+        [Key]
         public int TicketId { get; set; }
         public string TicketUid { get; set; }
         public string Name { get; set; }

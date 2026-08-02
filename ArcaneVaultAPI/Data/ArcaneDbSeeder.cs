@@ -32,7 +32,7 @@ namespace ArcaneVaultAPI.Data
                     new ArcaneVaultUser
                     {
                         UserName = "Admin1",
-                        Email = "admin@arcanevault.com",
+                        Email = "admin1@example.com",
                         IsDeleted = false,
                         RoleId = 1,
                         Password = "Admin123",
@@ -42,7 +42,7 @@ namespace ArcaneVaultAPI.Data
                     new ArcaneVaultUser
                     {
                         UserName = "Admin2",
-                        Email = "admin@example.com",
+                        Email = "apocoloto@gmail.com",
                         IsDeleted = false,
                         RoleId = 1,
                         Password = "Admin123",
@@ -253,12 +253,12 @@ namespace ArcaneVaultAPI.Data
                 context.SaveChanges();
             }
 
-            //// Seed Ticket Assignment Counter
-            //if (!context.TicketAssignmentCounters.Any())
-            //{
-            //    context.TicketAssignmentCounters.Add(new TicketAssignmentCounter { Id = 1, Counter = 0 });
-            //    context.SaveChanges();
-            //}
+            // Seed Ticket Assignment Counter
+            if (!context.TicketAssignmentCounters.Any())
+            {
+                context.TicketAssignmentCounters.Add(new TicketAssignmentCounter { Id = 1, Counter = 0 });
+                context.SaveChanges();
+            }
         }
 
         private static void RunMigrations(ArcaneDbContext context)

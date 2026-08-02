@@ -115,8 +115,6 @@ namespace ArcaneVaultRP.Pages
 
             return RedirectToPage("/Index");
         }
-
-        // Add this class at the bottom of Login.cshtml.cs
         public class JwtTokenResponse
         {
             public string Token { get; set; }

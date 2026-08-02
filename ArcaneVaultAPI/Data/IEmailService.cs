@@ -1,0 +1,12 @@
+﻿namespace ArcaneVaultAPI.Services
+{
+    public interface IEmailService
+    {
+        Task SendTicketConfirmationAsync(string toEmail, string name, string ticketUid, string subject);
+        Task SendPasswordResetCodeAsync(string toEmail, string userName, string code);
+        Task SendShowoffAppealResponseAsync(string toEmail, string userName, string showoffName, bool approved, string? staffNote);
+        Task SendShowoffAppealSubmittedAsync(string toEmail, string ownerUserName, string showoffName, string appealMessage, int showoffId);
+        Task SendShowoffAppealConfirmationAsync(string toEmail, string userName, string showoffName);
+        Task SendTicketReplyAsync(string toEmail, string name, string ticketUid, string subject, string replyMessage);
+    }
+}

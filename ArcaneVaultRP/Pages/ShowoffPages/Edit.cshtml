@@ -45,15 +45,17 @@
                         <label class="form-label fw-semibold d-block">Background</label>
                         <div class="btn-group btn-group-sm mb-2" role="group">
                             <input type="radio" class="btn-check" name="bgMode" id="bgModeColor" checked onchange="setBgMode('color')" />
-                            <label class="btn btn-outline-secondary" for="bgModeColor">Color</label>
+                            <label class="btn bg-mode-btn" for="bgModeColor">Color</label>
                             <input type="radio" class="btn-check" name="bgMode" id="bgModeImage" onchange="setBgMode('image')" />
-                            <label class="btn btn-outline-secondary" for="bgModeImage">Image</label>
+                            <label class="btn bg-mode-btn" for="bgModeImage">Image</label>
                         </div>
 
-                        <div id="bgColorSection" class="d-flex align-items-center gap-2">
-                            <input type="color" id="bgColor" class="form-control form-control-color"
-                                   value="#1c2128" oninput="updatePreview()" />
-                            <span id="bgColorHex" class="text-muted small">#1c2128</span>
+                        <div id="bgColorSection">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="color" id="bgColor" class="form-control form-control-color"
+                                       value="#1c2128" oninput="updatePreview()" />
+                                <span id="bgColorHex" class="text-muted small">#1c2128</span>
+                            </div>
                         </div>
 
                         <div id="bgImageSection" style="display:none;">
@@ -736,5 +738,23 @@
     <style>
         .canvas-box {
             transition: all 0.2s ease-in-out;
+        }
+
+        .bg-mode-btn {
+            border: 1px solid var(--border-color, #30363d);
+            color: var(--text-muted, #7d8590);
+            background: transparent;
+            transition: all 0.15s;
+        }
+
+            .bg-mode-btn:hover {
+                border-color: var(--color-teal, #2dd4bf);
+                color: var(--color-teal, #2dd4bf);
+            }
+
+        .btn-check:checked + .bg-mode-btn {
+            background: var(--color-teal, #2dd4bf);
+            border-color: var(--color-teal, #2dd4bf);
+            color: var(--bg-darkest, #0d1117);
         }
     </style>

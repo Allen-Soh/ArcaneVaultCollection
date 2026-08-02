@@ -48,4 +48,27 @@
         public string? AssignedStaffUserName { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    public class AppealDecisionDTO
+    {
+        public string? StaffNote { get; set; }
+    }
+
+    public class RequestResetCodeDTO
+    {
+        public string UserName { get; set; }
+    }
+
+    public class VerifyResetCodeDTO
+    {
+        public string UserName { get; set; }
+        public string Code { get; set; }
+    }
+
+    public class ResetPasswordWithCodeDTO
+    {
+        public string UserName { get; set; }
+        public string Code { get; set; }
+        public string NewPassword { get; set; }
+    }
 }

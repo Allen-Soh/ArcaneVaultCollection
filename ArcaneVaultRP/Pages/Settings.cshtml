@@ -109,7 +109,7 @@
             <i class="bi bi-lock-fill"></i> Change Password
         </button>
         <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2"
-                style="height:48px; opacity: 0.5;" disabled>
+                style="height:48px;" onclick="openResetPasswordModal()">
             <i class="bi bi-arrow-clockwise"></i> Reset Password
         </button>
 
@@ -124,10 +124,10 @@
                     <p class="fw-600 mb-0" style="font-size:15px; color: var(--text-primary);">Receiving assignments</p>
                     <p class="text-muted small mb-0">When inactive, you won't be assigned new reports or support tickets.</p>
                 </div>
-                @* <div class="form-check form-switch">
+                <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="staffActiveToggle"
                     @(user.IsActive ? "checked" : "") onchange="toggleStaffActive(this.checked)" style="width:42px;height:22px;cursor:pointer;" />
-                </div> *@
+                </div>
             </div>
         }
 
@@ -179,6 +179,80 @@
     </div>
 </div>
 
+<!-- ── Reset Password: Step 1 (Verify Code) ── -->
+<div class="modal fade" id="resetStep1Modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold mb-0">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <p class="text-muted small mb-3">
+                    We'll send a 6-digit verification code to <strong id="resetEmailDisplay"></strong>.
+                </p>
+                <button class="btn btn-primary w-100 mb-3" id="sendCodeBtn" onclick="sendResetCode()">
+                    Send verification code
+                </button>
+                <div id="codeInputSection" style="display:none;">
+                    <label class="form-label" style="font-size:13px;">Enter the 6-digit code</label>
+                    <div class="d-flex gap-2 justify-content-center mb-2" id="codeCellsContainer">
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                    </div>
+                    <p class="text-muted small text-center mb-0" id="resendText" style="display:none;">
+                        Didn't get it? <a href="#" onclick="sendResetCode(); return false;">Resend code</a>
+                    </p>
+                </div>
+                <div id="resetStep1Error" class="text-danger small mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="verifyCodeBtn" style="display:none;" onclick="verifyResetCode()">Verify</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Reset Password: Step 2 (New Password) ── -->
+<div class="modal fade" id="resetStep2Modal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold mb-0">Set New Password</h5>
+            </div>
+            <div class="modal-body px-4">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;">New password</label>
+                    <div class="input-group">
+                        <input type="password" id="resetNewPwdInput" class="form-control settingsPassword" placeholder="New password (min 6 characters)" />
+                        <button class="btn btn-outline-primary" type="button" id="resetNewTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="resetNewEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;">Confirm new password</label>
+                    <div class="input-group">
+                        <input type="password" id="resetConfirmPwdInput" class="form-control settingsPassword" placeholder="Confirm new password" />
+                        <button class="btn btn-outline-primary" type="button" id="resetConfirmTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="resetConfirmEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="resetStep2Error" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary w-100" onclick="submitNewPassword()">Save new password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── Password Modal ── -->
 <div class="modal fade" id="passwordModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -193,9 +267,8 @@
                     <div class="input-group">
                         <input type="password" id="currentPwdInput" class="form-control"
                                placeholder="Current password" />
-                        <button class="btn btn-outline-secondary" type="button"
-                                onclick="togglePwd('currentPwdInput', 'eyeCurrent')">
-                            <i class="bi bi-eye" id="eyeCurrent"></i>
+                        <button class="btn btn-outline-primary" type="button" id="currentTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="currentEyeIcon"></i>
                         </button>
                     </div>
                 </div>
@@ -204,9 +277,8 @@
                     <div class="input-group">
                         <input type="password" id="newPwdInput" class="form-control"
                                placeholder="New password (min 6 characters)" />
-                        <button class="btn btn-outline-secondary" type="button"
-                                onclick="togglePwd('newPwdInput', 'eyeNew')">
-                            <i class="bi bi-eye" id="eyeNew"></i>
+                        <button class="btn btn-outline-primary" type="button" id="newTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="newEyeIcon"></i>
                         </button>
                     </div>
                 </div>
@@ -215,9 +287,8 @@
                     <div class="input-group">
                         <input type="password" id="confirmPwdInput" class="form-control"
                                placeholder="Confirm new password" />
-                        <button class="btn btn-outline-secondary" type="button"
-                                onclick="togglePwd('confirmPwdInput', 'eyeConfirm')">
-                            <i class="bi bi-eye" id="eyeConfirm"></i>
+                        <button class="btn btn-outline-primary" type="button" id="confirmTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="confirmEyeIcon"></i>
                         </button>
                     </div>
                 </div>
@@ -882,17 +953,70 @@
         new bootstrap.Modal(document.getElementById('passwordModal')).show();
     }
 
-    function togglePwd(inputId, iconId) {
-        const input = document.getElementById(inputId);
-        const icon  = document.getElementById(iconId);
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.className = 'bi bi-eye-slash';
+    // Reset New Password toggle
+    document.getElementById("resetNewTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("resetNewPwdInput");
+        const icon = document.getElementById("resetNewEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
         } else {
-            input.type = 'password';
-            icon.className = 'bi bi-eye';
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
         }
-    }
+    });
+
+    // Reset Confirm Password toggle
+    document.getElementById("resetConfirmTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("resetConfirmPwdInput");
+        const icon = document.getElementById("resetConfirmEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        }
+    });
+
+    // Current Password toggle
+    document.getElementById("currentTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("currentPwdInput");
+        const icon = document.getElementById("currentEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        }
+    });
+
+    // New Password toggle
+    document.getElementById("newTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("newPwdInput");
+        const icon = document.getElementById("newEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        }
+    });
+
+    // Confirm New Password toggle
+    document.getElementById("confirmTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("confirmPwdInput");
+        const icon = document.getElementById("confirmEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        }
+    });
 
     async function savePassword() {
         const current  = document.getElementById('currentPwdInput').value;
@@ -945,6 +1069,162 @@
             return;
         }
         showToast(isActive ? 'You are now receiving assignments.' : 'You will no longer receive new assignments.');
+    }
+
+    // ── Reset Password (forgot-password style, from within Settings) ──
+    let resetCodeSent = false;
+    let resetTimerInterval = null;
+    let resetCooldownUntil = 0;
+
+    function openResetPasswordModal() {
+        resetCodeSent = false;
+        document.getElementById('resetEmailDisplay').textContent = document.getElementById('emailDisplay').value;
+        document.getElementById('codeInputSection').style.display = 'none';
+        document.getElementById('sendCodeBtn').style.display = 'block';
+        document.getElementById('verifyCodeBtn').style.display = 'none';
+        document.getElementById('resendText').style.display = 'none';
+        document.getElementById('resetStep1Error').style.display = 'none';
+        document.querySelectorAll('.code-cell').forEach(c => c.value = '');
+        new bootstrap.Modal(document.getElementById('resetStep1Modal')).show();
+    }
+
+    async function sendResetCode() {
+        const errEl = document.getElementById('resetStep1Error');
+        errEl.style.display = 'none';
+
+        const sendBtn = document.getElementById('sendCodeBtn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
+
+        const res = await fetch(`${apiBase}/ArcaneVaultUser/request-reset-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ UserName: userName })
+        });
+
+        if (res.status === 429) {
+            const text = await res.text();
+            errEl.textContent = text;
+            errEl.style.display = 'block';
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send verification code';
+            return;
+        }
+
+        if (!res.ok) {
+            errEl.textContent = 'Failed to send code. Please try again.';
+            errEl.style.display = 'block';
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send verification code';
+            return;
+        }
+
+        resetCodeSent = true;
+        resetCooldownUntil = Date.now() + 120000;
+        sendBtn.style.display = 'none';
+        document.getElementById('codeInputSection').style.display = 'block';
+        document.getElementById('verifyCodeBtn').style.display = 'inline-block';
+        document.getElementById('resendText').style.display = 'block';
+        startResendCooldownDisplay();
+
+        document.querySelectorAll('.code-cell').forEach(c => c.value = '');
+        document.querySelector('.code-cell').focus();
+    }
+
+    function startResendCooldownDisplay() {
+        const resendEl = document.getElementById('resendText');
+        if (resetTimerInterval) clearInterval(resetTimerInterval);
+
+        resetTimerInterval = setInterval(() => {
+            const secondsLeft = Math.ceil((resetCooldownUntil - Date.now()) / 1000);
+            if (secondsLeft <= 0) {
+                resendEl.innerHTML = `Didn't get it? <a href="#" onclick="sendResetCode(); return false;">Resend code</a>`;
+                clearInterval(resetTimerInterval);
+            } else {
+                resendEl.innerHTML = `Didn't get it? Resend available in ${secondsLeft}s`;
+            }
+        }, 1000);
+    }
+
+    // Wire up the 6 code cells: auto-advance, backspace navigation, digit-only
+    document.querySelectorAll('.code-cell').forEach((cell, idx, cells) => {
+        cell.addEventListener('input', () => {
+            cell.value = cell.value.replace(/[^0-9]/g, '');
+            if (cell.value && idx < cells.length - 1) cells[idx + 1].focus();
+        });
+        cell.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !cell.value && idx > 0) cells[idx - 1].focus();
+        });
+    });
+
+    async function verifyResetCode() {
+        const errEl = document.getElementById('resetStep1Error');
+        errEl.style.display = 'none';
+
+        const code = Array.from(document.querySelectorAll('.code-cell')).map(c => c.value).join('');
+        if (code.length !== 6) {
+            errEl.textContent = 'Please enter all 6 digits.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        const res = await fetch(`${apiBase}/ArcaneVaultUser/verify-reset-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ UserName: userName, Code: code })
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            errEl.textContent = text || 'Invalid or expired code.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        // Store verified code for the final reset call
+        window._verifiedResetCode = code;
+
+        bootstrap.Modal.getInstance(document.getElementById('resetStep1Modal'))?.hide();
+        document.getElementById('resetNewPwdInput').value = '';
+        document.getElementById('resetConfirmPwdInput').value = '';
+        document.getElementById('resetStep2Error').style.display = 'none';
+        setTimeout(() => new bootstrap.Modal(document.getElementById('resetStep2Modal')).show(), 300);
+    }
+
+    async function submitNewPassword() {
+        const newPwd = document.getElementById('resetNewPwdInput').value;
+        const confirmPwd = document.getElementById('resetConfirmPwdInput').value;
+        const errEl = document.getElementById('resetStep2Error');
+        errEl.style.display = 'none';
+
+        if (!newPwd || !confirmPwd) {
+            errEl.textContent = 'Please fill in both fields.';
+            errEl.style.display = 'block'; return;
+        }
+        if (newPwd.length < 6) {
+            errEl.textContent = 'Password must be at least 6 characters.';
+            errEl.style.display = 'block'; return;
+        }
+        if (newPwd !== confirmPwd) {
+            errEl.textContent = 'Passwords do not match.';
+            errEl.style.display = 'block'; return;
+        }
+
+        const res = await fetch(`${apiBase}/ArcaneVaultUser/reset-password`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ UserName: userName, Code: window._verifiedResetCode, NewPassword: newPwd })
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            errEl.textContent = text || 'Failed to reset password.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('resetStep2Modal'))?.hide();
+        showToast('Password successfully changed.');
     }
 
     // ── Disable modal ──

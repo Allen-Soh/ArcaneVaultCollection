@@ -36,7 +36,7 @@
         <i class="bi bi-check-circle-fill text-success fs-1 mb-3 d-block"></i>
         <h5 class="fw-bold mb-2">Ticket submitted</h5>
         <p class="text-muted mb-1">Your reference number is:</p>
-        <p class="fw-bold fs-4 mb-3" id="ticketUidDisplay"></p>
+        <p class="fw-bold fs-4 mb-3" style="color: var(--text-primary, #e6edf3);" id="ticketUidDisplay"></p>
         <p class="text-muted small">A confirmation email has been sent to your inbox. Our team will get back to you soon.</p>
         <button class="btn btn-outline-primary mt-2" onclick="resetForm()">Submit another ticket</button>
     </div>
@@ -60,7 +60,11 @@
             document.getElementById('ticketSuccessCard').style.display = 'none';
         }
 
+        let ticketSubmitInFlight = false;
+
         async function submitTicket() {
+            if (ticketSubmitInFlight) return; // ignore extra clicks while a request is already in progress
+
             const name = document.getElementById('ticketName').value.trim();
             const email = document.getElementById('ticketEmail').value.trim();
             const subject = document.getElementById('ticketSubject').value.trim();
@@ -79,22 +83,33 @@
                 return;
             }
 
-            const res = await fetch(`${apiBase}/SupportTicket`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Name: name, Email: email, Subject: subject, Issue: issue })
-            });
+            const submitBtn = document.querySelector('#ticketFormCard button.btn-primary');
+            ticketSubmitInFlight = true;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Submitting...`;
 
-            if (!res.ok) {
-                errEl.textContent = 'Failed to submit ticket. Please try again.';
-                errEl.style.display = 'block';
-                return;
+            try {
+                const res = await fetch(`${apiBase}/SupportTicket`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Name: name, Email: email, Subject: subject, Issue: issue })
+                });
+
+                if (!res.ok) {
+                    errEl.textContent = 'Failed to submit ticket. Please try again.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                const data = await res.json();
+                document.getElementById('ticketUidDisplay').textContent = data.ticketUid || data.TicketUid;
+                document.getElementById('ticketFormCard').style.display = 'none';
+                document.getElementById('ticketSuccessCard').style.display = 'block';
+            } finally {
+                ticketSubmitInFlight = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit';
             }
-
-            const data = await res.json();
-            document.getElementById('ticketUidDisplay').textContent = data.ticketUid || data.TicketUid;
-            document.getElementById('ticketFormCard').style.display = 'none';
-            document.getElementById('ticketSuccessCard').style.display = 'block';
         }
     </script>
 }

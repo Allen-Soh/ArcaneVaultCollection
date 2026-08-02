@@ -2,21 +2,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
+using ArcaneVaultAPI.Services;
 
 [Route("api/[controller]")]
 [ApiController]
 public class ShowoffController : ControllerBase
 {
     private readonly ArcaneDbContext _context;
+    private readonly IEmailService _emailService;
     private readonly string _connectionString = "Data Source=ArcaneVault.db";
 
-    public ShowoffController(ArcaneDbContext context)
+    public ShowoffController(ArcaneDbContext context, IEmailService emailService)
     {
         _context = context;
+        _emailService = emailService;
     }
 
-// GET: api/Showoff — all public non-deleted non-disabled showoffs with items and like count
-[HttpGet]
+    // GET: api/Showoff — all public non-deleted non-disabled showoffs with items and like count
+    [HttpGet]
     public ActionResult<IEnumerable<ShowoffDTO>> GetShowoffs()
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -122,8 +125,8 @@ public class ShowoffController : ControllerBase
         return Ok(showoff);
     }
 
-// POST: api/Showoff
-[HttpPost]
+    // POST: api/Showoff
+    [HttpPost]
     public async Task<ActionResult<ShowoffDTO>> PostShowoff(CreateShowoffDTO dto)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -354,5 +357,172 @@ public class ShowoffController : ControllerBase
         }
 
         return items;
+    }
+
+    // POST: api/Showoff/{id}/appeal — owner appeals a disabled showoff
+    [HttpPost("{id}/appeal")]
+    public async Task<IActionResult> SubmitAppeal(int id, [FromBody] SubmitAppealDTO dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.AppealMessage))
+            return BadRequest("Appeal message is required.");
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var showoffCommand = new SqliteCommand(
+            "SELECT ShowoffName, UserName, IsDisabled FROM Showoffs WHERE ShowoffId = @ShowoffId AND IsDeleted = 0",
+            connection);
+        showoffCommand.Parameters.AddWithValue("@ShowoffId", id);
+
+        string? showoffName = null;
+        string? ownerUserName = null;
+        bool isDisabled = false;
+        using (var reader = showoffCommand.ExecuteReader())
+        {
+            if (!reader.Read()) return NotFound();
+            showoffName = reader["ShowoffName"].ToString();
+            ownerUserName = reader["UserName"].ToString();
+            isDisabled = Convert.ToBoolean(reader["IsDisabled"]);
+        }
+
+        if (!isDisabled)
+            return BadRequest("This showoff is not currently disabled.");
+
+        // Look up the owner's email — needed for the confirmation email
+        var ownerEmailCommand = new SqliteCommand(
+            "SELECT Email FROM ArcaneVaultUsers WHERE UserName = @UserName", connection);
+        ownerEmailCommand.Parameters.AddWithValue("@UserName", ownerUserName);
+        var ownerEmail = ownerEmailCommand.ExecuteScalar() as string;
+
+        // Prefer the staff member already assigned to this showoff's reports
+        var staffCommand = new SqliteCommand(
+            @"SELECT AssignedStaffUserName FROM ShowoffReports
+          WHERE ShowoffId = @ShowoffId
+          ORDER BY CreatedAt DESC LIMIT 1",
+            connection);
+        staffCommand.Parameters.AddWithValue("@ShowoffId", id);
+        var assignedStaff = staffCommand.ExecuteScalar() as string;
+
+        string? staffEmail = null;
+        if (!string.IsNullOrEmpty(assignedStaff))
+        {
+            var emailCommand = new SqliteCommand(
+                "SELECT Email FROM ArcaneVaultUsers WHERE UserName = @UserName", connection);
+            emailCommand.Parameters.AddWithValue("@UserName", assignedStaff);
+            staffEmail = emailCommand.ExecuteScalar() as string;
+        }
+
+        // Fallback — any active staff member, if no assignment found
+        if (string.IsNullOrEmpty(staffEmail))
+        {
+            var fallbackCommand = new SqliteCommand(
+                "SELECT Email FROM ArcaneVaultUsers WHERE RoleId = 1 AND IsDeleted = 0 AND IsActive = 1 ORDER BY UserName LIMIT 1",
+                connection);
+            staffEmail = fallbackCommand.ExecuteScalar() as string;
+        }
+
+        if (string.IsNullOrEmpty(staffEmail))
+            return StatusCode(500, "No staff available to receive this appeal.");
+
+        try
+        {
+            await _emailService.SendShowoffAppealSubmittedAsync(staffEmail, ownerUserName, showoffName, dto.AppealMessage, id);
+        }
+        catch
+        {
+            return StatusCode(500, "Failed to send appeal email.");
+        }
+
+        // Confirmation to the appealing user — best-effort, doesn't fail the request if it errors,
+        // since the staff notification (the critical part) already succeeded above
+        if (!string.IsNullOrEmpty(ownerEmail))
+        {
+            try
+            {
+                await _emailService.SendShowoffAppealConfirmationAsync(ownerEmail, ownerUserName, showoffName);
+            }
+            catch
+            {
+                // Log this in a real system — confirmation failure shouldn't fail the whole request
+            }
+        }
+
+        return Ok();
+    }
+
+    // PUT: api/Showoff/{id}/enable — staff re-enables a showoff (also serves as "approve appeal")
+    [HttpPut("{id}/enable")]
+    public async Task<IActionResult> EnableShowoff(int id, [FromBody] AppealDecisionDTO? dto = null)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"UPDATE Showoffs SET IsDisabled = 0, DisabledAt = NULL
+          WHERE ShowoffId = @ShowoffId AND IsDeleted = 0",
+            connection);
+        command.Parameters.AddWithValue("@ShowoffId", id);
+        var rows = command.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound();
+
+        // Best-effort notification — re-enabling always counts as an "approved" outcome for the owner
+        await NotifyAppealDecision(connection, id, approved: true, dto?.StaffNote);
+
+        return NoContent();
+    }
+
+    // PUT: api/Showoff/{id}/deny-appeal — staff keeps a showoff disabled, but formally responds to the appeal
+    [HttpPut("{id}/deny-appeal")]
+    public async Task<IActionResult> DenyAppeal(int id, [FromBody] AppealDecisionDTO? dto = null)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var checkCommand = new SqliteCommand(
+            "SELECT COUNT(*) FROM Showoffs WHERE ShowoffId = @ShowoffId AND IsDeleted = 0 AND IsDisabled = 1",
+            connection);
+        checkCommand.Parameters.AddWithValue("@ShowoffId", id);
+        if (Convert.ToInt32(checkCommand.ExecuteScalar()) == 0)
+            return NotFound();
+
+        await NotifyAppealDecision(connection, id, approved: false, dto?.StaffNote);
+
+        return NoContent();
+    }
+
+    // Helper — looks up the owner's email/name/showoff name and sends the appeal decision email.
+    // Failure here never fails the request — the state change (or lack thereof) already succeeded.
+    private async Task NotifyAppealDecision(SqliteConnection connection, int showoffId, bool approved, string? staffNote)
+    {
+        var lookupCommand = new SqliteCommand(
+            @"SELECT s.ShowoffName, s.UserName, u.Email
+          FROM Showoffs s
+          JOIN ArcaneVaultUsers u ON s.UserName = u.UserName
+          WHERE s.ShowoffId = @ShowoffId",
+            connection);
+        lookupCommand.Parameters.AddWithValue("@ShowoffId", showoffId);
+
+        string? showoffName = null, ownerUserName = null, ownerEmail = null;
+        using (var reader = lookupCommand.ExecuteReader())
+        {
+            if (reader.Read())
+            {
+                showoffName = reader["ShowoffName"].ToString();
+                ownerUserName = reader["UserName"].ToString();
+                ownerEmail = reader["Email"].ToString();
+            }
+        }
+
+        if (string.IsNullOrEmpty(ownerEmail)) return;
+
+        try
+        {
+            await _emailService.SendShowoffAppealResponseAsync(ownerEmail, ownerUserName, showoffName, approved, staffNote);
+        }
+        catch
+        {
+            // Log this in a real system — notification failure shouldn't fail the whole request
+        }
     }
 }

@@ -1,13 +1,20 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
+using ArcaneVaultAPI.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 
 [Route("api/[controller]")]
 [ApiController]
 public class ArcaneVaultUserController : ControllerBase
 {
     private readonly string _connectionString = "Data Source=ArcaneVault.db";
+    private readonly IEmailService _emailService;
+
+    public ArcaneVaultUserController(IEmailService emailService)
+    {
+        _emailService = emailService;
+    }
 
     // GET: api/ArcaneVaultUser
     [HttpGet]
@@ -19,7 +26,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl FROM ArcaneVaultUsers",
+            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers",
             connection);
 
         using var reader = command.ExecuteReader();
@@ -33,7 +40,8 @@ public class ArcaneVaultUserController : ControllerBase
                 RoleId = Convert.ToInt32(reader["RoleId"]),
                 Password = reader["Password"].ToString(),
                 Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
-                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString()
+                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString(),
+                IsActive = Convert.ToBoolean(reader["IsActive"])
             });
         }
 
@@ -51,7 +59,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers WHERE UserName = @UserName",
             connection);
         command.Parameters.AddWithValue("@UserName", username);
 
@@ -163,6 +171,150 @@ public class ArcaneVaultUserController : ControllerBase
         return CreatedAtAction("GetArcaneVaultUser",
             new { username = newUser.UserName },
             newUser);
+    }
+
+    // POST: api/ArcaneVaultUser/request-reset-code
+    [HttpPost("request-reset-code")]
+    public async Task<IActionResult> RequestResetCode(RequestResetCodeDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var userCommand = new SqliteCommand(
+            "SELECT Email FROM ArcaneVaultUsers WHERE UserName = @UserName AND IsDeleted = 0",
+            connection);
+        userCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        var email = userCommand.ExecuteScalar() as string;
+
+        if (email == null) return NotFound("User not found.");
+
+        // Rate limit: reject if the most recent code for this user was requested < 120s ago
+        var lastRequestCommand = new SqliteCommand(
+            @"SELECT CreatedAt FROM PasswordResetCodes
+          WHERE UserName = @UserName
+          ORDER BY CreatedAt DESC LIMIT 1",
+            connection);
+        lastRequestCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        var lastRequestResult = lastRequestCommand.ExecuteScalar();
+
+        if (lastRequestResult != null)
+        {
+            var lastRequestedAt = Convert.ToDateTime(lastRequestResult);
+            var secondsSinceLastRequest = (DateTime.UtcNow - lastRequestedAt).TotalSeconds;
+
+            if (secondsSinceLastRequest < 120)
+            {
+                var secondsRemaining = (int)Math.Ceiling(120 - secondsSinceLastRequest);
+                return StatusCode(429, $"Please wait {secondsRemaining} seconds before requesting another code.");
+            }
+        }
+
+        // Generate 6-digit code
+        var code = Random.Shared.Next(100000, 999999).ToString();
+        var expiresAt = DateTime.UtcNow.AddMinutes(5);
+
+        // Invalidate any previous unused codes for this user
+        var invalidateCommand = new SqliteCommand(
+            "UPDATE PasswordResetCodes SET IsUsed = 1 WHERE UserName = @UserName AND IsUsed = 0",
+            connection);
+        invalidateCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        invalidateCommand.ExecuteNonQuery();
+
+        var insertCommand = new SqliteCommand(
+            @"INSERT INTO PasswordResetCodes (UserName, Code, ExpiresAt, IsUsed, CreatedAt)
+          VALUES (@UserName, @Code, @ExpiresAt, 0, @CreatedAt)",
+            connection);
+        insertCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        insertCommand.Parameters.AddWithValue("@Code", code);
+        insertCommand.Parameters.AddWithValue("@ExpiresAt", expiresAt);
+        insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+        insertCommand.ExecuteNonQuery();
+
+        try
+        {
+            await _emailService.SendPasswordResetCodeAsync(email, dto.UserName, code);
+        }
+        catch
+        {
+            return StatusCode(500, "Failed to send email.");
+        }
+
+        return Ok();
+    }
+
+    // POST: api/ArcaneVaultUser/verify-reset-code
+    [HttpPost("verify-reset-code")]
+    public IActionResult VerifyResetCode(VerifyResetCodeDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(
+            @"SELECT ExpiresAt, IsUsed FROM PasswordResetCodes
+          WHERE UserName = @UserName AND Code = @Code
+          ORDER BY CreatedAt DESC LIMIT 1",
+            connection);
+        command.Parameters.AddWithValue("@UserName", dto.UserName);
+        command.Parameters.AddWithValue("@Code", dto.Code);
+
+        using var reader = command.ExecuteReader();
+        if (!reader.Read()) return BadRequest("Invalid code.");
+
+        var expiresAt = Convert.ToDateTime(reader["ExpiresAt"]);
+        var isUsed = Convert.ToBoolean(reader["IsUsed"]);
+
+        if (isUsed) return BadRequest("This code has already been used.");
+        if (DateTime.UtcNow > expiresAt) return BadRequest("This code has expired.");
+
+        return Ok();
+    }
+
+    // PATCH: api/ArcaneVaultUser/reset-password
+    [HttpPatch("reset-password")]
+    public IActionResult ResetPasswordWithCode(ResetPasswordWithCodeDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var codeCommand = new SqliteCommand(
+            @"SELECT ResetId, ExpiresAt, IsUsed FROM PasswordResetCodes
+          WHERE UserName = @UserName AND Code = @Code
+          ORDER BY CreatedAt DESC LIMIT 1",
+            connection);
+        codeCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        codeCommand.Parameters.AddWithValue("@Code", dto.Code);
+
+        int resetId;
+        using (var reader = codeCommand.ExecuteReader())
+        {
+            if (!reader.Read()) return BadRequest("Invalid code.");
+
+            var isUsed = Convert.ToBoolean(reader["IsUsed"]);
+            var expiresAt = Convert.ToDateTime(reader["ExpiresAt"]);
+
+            if (isUsed) return BadRequest("This code has already been used.");
+            if (DateTime.UtcNow > expiresAt) return BadRequest("This code has expired.");
+
+            resetId = Convert.ToInt32(reader["ResetId"]);
+        }
+
+        // Mark code as used
+        var markUsedCommand = new SqliteCommand(
+            "UPDATE PasswordResetCodes SET IsUsed = 1 WHERE ResetId = @ResetId",
+            connection);
+        markUsedCommand.Parameters.AddWithValue("@ResetId", resetId);
+        markUsedCommand.ExecuteNonQuery();
+
+        // Update password
+        var updatePwdCommand = new SqliteCommand(
+            "UPDATE ArcaneVaultUsers SET Password = @Password WHERE UserName = @UserName",
+            connection);
+        updatePwdCommand.Parameters.AddWithValue("@Password", dto.NewPassword);
+        updatePwdCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        var rows = updatePwdCommand.ExecuteNonQuery();
+
+        if (rows == 0) return NotFound("User not found.");
+        return NoContent();
     }
 
     // PATCH: api/ArcaneVaultUser/{username}/username — change username
