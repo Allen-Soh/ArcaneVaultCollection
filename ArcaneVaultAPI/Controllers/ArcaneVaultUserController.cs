@@ -189,13 +189,21 @@ public class ArcaneVaultUserController : ControllerBase
 
         if (email == null) return NotFound("User not found.");
 
-        // Rate limit: reject if the most recent code for this user was requested < 120s ago
+        return await GenerateAndSendResetCodeAsync(connection, dto.UserName, email);
+    }
+
+    // Shared logic: rate-limit check, code generation, storage, email send.
+    // Returns { userName } so email-initiated callers (Login page) can carry
+    // the resolved username forward into verify-reset-code / reset-password,
+    // which remain keyed by UserName exactly as before.
+    private async Task<IActionResult> GenerateAndSendResetCodeAsync(SqliteConnection connection, string userName, string email)
+    {
         var lastRequestCommand = new SqliteCommand(
             @"SELECT CreatedAt FROM PasswordResetCodes
           WHERE UserName = @UserName
           ORDER BY CreatedAt DESC LIMIT 1",
             connection);
-        lastRequestCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        lastRequestCommand.Parameters.AddWithValue("@UserName", userName);
         var lastRequestResult = lastRequestCommand.ExecuteScalar();
 
         if (lastRequestResult != null)
@@ -206,26 +214,25 @@ public class ArcaneVaultUserController : ControllerBase
             if (secondsSinceLastRequest < 120)
             {
                 var secondsRemaining = (int)Math.Ceiling(120 - secondsSinceLastRequest);
-                return StatusCode(429, $"Please wait {secondsRemaining} seconds before requesting another code.");
+                return new ObjectResult($"Please wait {secondsRemaining} seconds before requesting another code.")
+                { StatusCode = 429 };
             }
         }
 
-        // Generate 6-digit code
         var code = Random.Shared.Next(100000, 999999).ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(5);
 
-        // Invalidate any previous unused codes for this user
         var invalidateCommand = new SqliteCommand(
             "UPDATE PasswordResetCodes SET IsUsed = 1 WHERE UserName = @UserName AND IsUsed = 0",
             connection);
-        invalidateCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        invalidateCommand.Parameters.AddWithValue("@UserName", userName);
         invalidateCommand.ExecuteNonQuery();
 
         var insertCommand = new SqliteCommand(
             @"INSERT INTO PasswordResetCodes (UserName, Code, ExpiresAt, IsUsed, CreatedAt)
           VALUES (@UserName, @Code, @ExpiresAt, 0, @CreatedAt)",
             connection);
-        insertCommand.Parameters.AddWithValue("@UserName", dto.UserName);
+        insertCommand.Parameters.AddWithValue("@UserName", userName);
         insertCommand.Parameters.AddWithValue("@Code", code);
         insertCommand.Parameters.AddWithValue("@ExpiresAt", expiresAt);
         insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
@@ -233,14 +240,14 @@ public class ArcaneVaultUserController : ControllerBase
 
         try
         {
-            await _emailService.SendPasswordResetCodeAsync(email, dto.UserName, code);
+            await _emailService.SendPasswordResetCodeAsync(email, userName, code);
         }
         catch
         {
             return StatusCode(500, "Failed to send email.");
         }
 
-        return Ok();
+        return Ok(new { userName });
     }
 
     // POST: api/ArcaneVaultUser/verify-reset-code
@@ -539,6 +546,24 @@ public class ArcaneVaultUserController : ControllerBase
         return NoContent();
     }
 
+    // POST: api/ArcaneVaultUser/request-reset-code-by-email
+    [HttpPost("request-reset-code-by-email")]
+    public async Task<IActionResult> RequestResetCodeByEmail(RequestResetCodeByEmailDTO dto)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var userCommand = new SqliteCommand(
+            "SELECT UserName FROM ArcaneVaultUsers WHERE Email = @Email AND IsDeleted = 0",
+            connection);
+        userCommand.Parameters.AddWithValue("@Email", dto.Email);
+        var userName = userCommand.ExecuteScalar() as string;
+
+        if (userName == null) return NotFound("No account found with that email address.");
+
+        return await GenerateAndSendResetCodeAsync(connection, userName, dto.Email);
+    }
+
     // DELETE: api/ArcaneVaultUser/{username}/delete — hard delete
     [HttpDelete("{username}/delete")]
     public async Task<IActionResult> DeleteAccountPermanent(string username)
@@ -585,4 +610,5 @@ public class ArcaneVaultUserController : ControllerBase
     public class ChangePasswordRequest { public string CurrentPassword { get; set; } public string NewPassword { get; set; } }
     public class UpdateAvatarRequest { public string AvatarUrl { get; set; } }
     public class UpdateCountryRequest { public string Country { get; set; } }
+    public class RequestResetCodeByEmailDTO { public string Email { get; set; } }
 }

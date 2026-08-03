@@ -35,7 +35,7 @@
 
     <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
-    <div class="border rounded overflow-hidden">
+    <div class="border rounded overflow-hidden" style="position:relative;">
         <div id="ticketTableWrapper" style="overflow-y:auto;">
             <table class="table mb-0" style="width:100%;">
                 <thead class="table-light" style="position:sticky; top:0; z-index:2;">
@@ -51,6 +51,10 @@
             <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
             <span id="emptyText">No support tickets — all clear!</span>
         </div>
+    </div>
+    <div class="d-flex justify-content-between mt-2 mb-4" id="ticketTableIndicatorRow">
+        <p class="text-muted mb-0" id="ticketScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id="ticketScrollMoreText" style="font-size:12px;">Scroll to load more</p>
     </div>
 </div>
 
@@ -131,59 +135,130 @@
             renderTable(filtered);
         }
 
+        // ── Virtual Scroll Implementation (same pattern as Reports/Category/CollectionItems) ──
+        const ROW_HEIGHT = 130;
+        const BUFFER = 3;
+        const THRESHOLD = 5;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            // Fixed height based on THRESHOLD rows only — stays constant regardless of how
+            // many additional rows exist beyond it, so the table never grows/shrinks as data changes.
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(data.length, Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER);
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="2"></td></tr>` : '') +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="2"></td></tr>` : '');
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function renderTicketRow(t, idx) {
+            const uid = t.ticketUid || t.TicketUid;
+            const name = t.name || t.Name;
+            const email = t.email || t.Email;
+            const subject = t.subject || t.Subject;
+            const assignedStaff = t.assignedStaffUserName || t.AssignedStaffUserName || 'Unassigned';
+            const resolved = t.isResolved ?? t.IsResolved;
+            const dateStr = new Date(t.createdAt || t.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            const statusBadge = resolved
+                ? `<span class="badge" style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);font-size:10px;">RESOLVED</span>`
+                : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
+
+            return `
+                                <tr style="height:${ROW_HEIGHT}px;${resolved ? 'opacity:0.6;' : ''}">
+                                    <td style="padding:16px;vertical-align:top;">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="fw-bold" style="font-size:15px;">${uid}</span>
+                                            ${statusBadge}
+                                        </div>
+                                        <div style="font-size:13px;color:var(--text-secondary);">${name} · ${email}</div>
+                                        <div style="font-size:13px;color:var(--text-muted);">${subject}</div>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                                            Assigned to <strong>${assignedStaff}</strong> · ${dateStr}
+                                        </div>
+                                    </td>
+                                    <td style="padding:16px;vertical-align:top;text-align:right;">
+                                        <div class="d-flex flex-column gap-1 align-items-end">
+                                        <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick='reviewTicket(${JSON.stringify(t)})'>Review</button>
+                                        ${(assignedStaff === currentStaff || activeTab === 'my') ? (resolved
+                    ? `<button class="btn btn-outline-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="reopenTicket(${t.ticketId ?? t.TicketId})">Reopen</button>`
+                    : `<button class="btn btn-success btn-sm" style="font-size:11px;padding:4px 12px;" onclick="openReplyModal(${t.ticketId ?? t.TicketId})">Reply &amp; Resolve</button>`
+                ) : ''}
+                                        </div>
+                                    </td>
+                                </tr>`;
+        }
+
         function renderTable(tickets) {
             const empty = document.getElementById('tableEmpty');
-            const body = document.getElementById('ticketTableBody');
             const wrapper = document.getElementById('ticketTableWrapper');
+            const indicatorRow = document.getElementById('ticketTableIndicatorRow');
+            const moreText = document.getElementById('ticketScrollMoreText');
 
             const pendingCount = allTickets.filter(t => !(t.isResolved ?? t.IsResolved)).length;
             document.getElementById('ticketCountText').textContent = `${pendingCount} pending ticket${pendingCount !== 1 ? 's' : ''}`;
 
             if (tickets.length === 0) {
                 empty.style.display = 'block';
-                wrapper.style.display = 'none';
+                document.getElementById('ticketTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
                 return;
             }
+
             empty.style.display = 'none';
-            wrapper.style.display = 'block';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = tickets.length > THRESHOLD ? 'block' : 'none';
 
-            body.innerHTML = tickets.map(t => {
-                const uid = t.ticketUid || t.TicketUid;
-                const name = t.name || t.Name;
-                const email = t.email || t.Email;
-                const subject = t.subject || t.Subject;
-                const assignedStaff = t.assignedStaffUserName || t.AssignedStaffUserName || 'Unassigned';
-                const resolved = t.isResolved ?? t.IsResolved;
-                const dateStr = new Date(t.createdAt || t.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(tickets.length, visStart + THRESHOLD - 1);
+                document.getElementById('ticketScrollIndicator').textContent =
+                    tickets.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${tickets.length}`
+                        : `${tickets.length} ticket${tickets.length === 1 ? '' : 's'}`;
+            }
 
-                const statusBadge = resolved
-                    ? `<span class="badge" style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3);font-size:10px;">RESOLVED</span>`
-                    : `<span class="badge" style="background:rgba(25,135,84,0.15);color:#7ef5a6;border:1px solid rgba(25,135,84,0.3);font-size:10px;">● Active</span>`;
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
 
-                return `
-                            <tr style="${resolved ? 'opacity:0.6;' : ''}">
-                                <td style="padding:16px;vertical-align:top;">
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <span class="fw-bold" style="font-size:15px;">${uid}</span>
-                                        ${statusBadge}
-                                    </div>
-                                    <div style="font-size:13px;color:var(--text-secondary);">${name} · ${email}</div>
-                                    <div style="font-size:13px;color:var(--text-muted);">${subject}</div>
-                                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-                                        Assigned to <strong>${assignedStaff}</strong> · ${dateStr}
-                                    </div>
-                                </td>
-                                <td style="padding:16px;vertical-align:top;text-align:right;">
-                                    <div class="d-flex flex-column gap-1 align-items-end">
-                                    <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick='reviewTicket(${JSON.stringify(t)})'>Review</button>
-                                    ${(assignedStaff === currentStaff || activeTab === 'my') ? (resolved
-                                        ? `<button class="btn btn-outline-secondary btn-sm" style="font-size:11px;padding:4px 12px;" onclick="reopenTicket(${t.ticketId ?? t.TicketId})">Reopen</button>`
-                                        : `<button class="btn btn-success btn-sm" style="font-size:11px;padding:4px 12px;" onclick="openReplyModal(${t.ticketId ?? t.TicketId})">Reply &amp; Resolve</button>`
-                                    ) : ''}
-                                    </div>
-                                </td>
-                            </tr>`;
-            }).join('');
+            createVirtualTable('ticketTableWrapper', 'ticketTableBody', tickets, renderTicketRow);
+            updateIndicator();
         }
 
         function reviewTicket(ticket) {

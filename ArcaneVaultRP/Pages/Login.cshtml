@@ -9,7 +9,7 @@
         <div class="col-lg-5 col-md-7 col-sm-10">
             <!-- Branding above the Login Card -->
             <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-content-center bg-dark rounded-circle mb-3" 
+                <div class="d-inline-flex align-items-center justify-content-center bg-dark rounded-circle mb-3"
                      style="width: 64px; height: 64px; background: linear-gradient(135deg, rgba(66, 72, 116, 0.4) 0%, rgba(27, 29, 46, 0.8) 100%) !important; border: 1px solid var(--border-color);">
                     <i class="bi bi-magic text-light fs-3"></i>
                 </div>
@@ -34,7 +34,7 @@
                             <span asp-validation-for="Input.Username" class="text-danger small"></span>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-2">
                             <label asp-for="Input.Password" class="form-label fw-semibold">Password</label>
                             <div class="input-group">
                                 <input asp-for="Input.Password" class="form-control" placeholder="Enter your password" id="Input_Password" />
@@ -45,10 +45,15 @@
                             <span asp-validation-for="Input.Password" class="text-danger small"></span>
                         </div>
 
+                        <div class="text-end mb-4">
+                            <a href="#" class="small text-muted text-decoration-none"
+                               onclick="openForgotPasswordModal(); return false;">Forgot password?</a>
+                        </div>
+
                         <div class="d-grid mb-3">
                             <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
                         </div>
-                        
+
                         <!-- Disabled account modal -->
                         @if (TempData["DisabledUser"] != null)
                         {
@@ -105,11 +110,89 @@
     </div>
 </div>
 
+<!-- ── Forgot Password: Step 1 (Email + Verify Code) ── -->
+<div class="modal fade" id="forgotStep1Modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="background-color: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color) !important;">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold mb-0">Forgot Password</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <div id="forgotEmailSection">
+                    <label class="form-label" style="font-size:13px;">Email address</label>
+                    <input type="email" id="forgotEmailInput" class="form-control" placeholder="Enter your account email" />
+                    <button class="btn btn-primary w-100 mt-3" id="forgotSendCodeBtn" onclick="sendForgotResetCode()">
+                        Send verification code
+                    </button>
+                </div>
+                <div id="forgotCodeInputSection" style="display:none;">
+                    <p class="text-muted small mb-3">
+                        We'll send a 6-digit verification code to <strong id="forgotEmailDisplay"></strong>.
+                    </p>
+                    <label class="form-label" style="font-size:13px;">Enter the 6-digit code</label>
+                    <div class="d-flex gap-2 justify-content-center mb-2" id="forgotCodeCellsContainer">
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                        <input type="text" maxlength="1" class="form-control text-center forgot-code-cell" style="width:44px;height:52px;font-size:20px;" inputmode="numeric" />
+                    </div>
+                    <p class="text-muted small text-center mb-0" id="forgotResendText" style="display:none;">
+                        Didn't get it? <a href="#" onclick="sendForgotResetCode(); return false;">Resend code</a>
+                    </p>
+                </div>
+                <div id="forgotStep1Error" class="text-danger small mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="forgotVerifyCodeBtn" style="display:none;" onclick="verifyForgotResetCode()">Verify</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Forgot Password: Step 2 (New Password) ── -->
+<div class="modal fade" id="forgotStep2Modal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="background-color: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color) !important;">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold mb-0">Set New Password</h5>
+            </div>
+            <div class="modal-body px-4">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;">New password</label>
+                    <div class="input-group">
+                        <input type="password" id="forgotNewPwdInput" class="form-control" placeholder="New password (min 6 characters)" />
+                        <button class="btn btn-outline-primary" type="button" id="forgotNewTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="forgotNewEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;">Confirm new password</label>
+                    <div class="input-group">
+                        <input type="password" id="forgotConfirmPwdInput" class="form-control" placeholder="Confirm new password" />
+                        <button class="btn btn-outline-primary" type="button" id="forgotConfirmTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="forgotConfirmEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="forgotStep2Error" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary w-100" onclick="submitForgotNewPassword()">Save new password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── Success Toast ── -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
     <div id="successToast" class="toast align-items-center text-bg-success border-0"
          role="alert" aria-live="assertive">
-         <div class="d-flex" style="background-color: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div class="d-flex" style="background-color: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px;">
             <div class="toast-body d-flex align-items-center gap-2" id="toastMsg">
                 <i class="bi bi-check-circle-fill text-success"></i>
                 <span>Saved successfully.</span>
@@ -126,6 +209,8 @@
     }
 
     <script>
+        const apiBase = 'https://localhost:7040/api';
+
         const togglePassword = document.getElementById("togglePassword");
         const passwordInput = document.getElementById("Input_Password");
         const eyeIcon = document.getElementById("eyeIcon");
@@ -153,19 +238,222 @@
         }
 
         @if (Model.Registered)
-        {
-            <text>showToast('Account created successfully. Please log in.'); </text>
+            {
+                <text>showToast('Account created successfully. Please log in.'); </text>
         }
 
-        async function enableAccount(userName) {
-            const apiBase = 'https://localhost:7040/api';
-            const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/enable`, {
-                method: 'PATCH'
-            });
-            if (res.ok) {
-                // Submit login form again
-                document.querySelector('form').submit();
+            async function enableAccount(userName) {
+                const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/enable`, {
+                    method: 'PATCH'
+                });
+                if (res.ok) {
+                    // Submit login form again
+                    document.querySelector('form').submit();
+                }
             }
+
+        // ══════════════════════════════════════════════════════
+        // ── Forgot Password (email → OTP → new password) ──
+        // ══════════════════════════════════════════════════════
+        let forgotUserName = null;
+        let forgotCooldownUntil = 0;
+        let forgotTimerInterval = null;
+
+        function openForgotPasswordModal() {
+            forgotUserName = null;
+            document.getElementById('forgotEmailInput').value = '';
+            document.getElementById('forgotEmailSection').style.display = 'block';
+            document.getElementById('forgotCodeInputSection').style.display = 'none';
+            document.getElementById('forgotResendText').style.display = 'none';
+            document.getElementById('forgotVerifyCodeBtn').style.display = 'none';
+            document.getElementById('forgotStep1Error').style.display = 'none';
+            document.querySelectorAll('.forgot-code-cell').forEach(c => c.value = '');
+            if (forgotTimerInterval) clearInterval(forgotTimerInterval);
+            new bootstrap.Modal(document.getElementById('forgotStep1Modal')).show();
         }
+
+        async function sendForgotResetCode() {
+            const errEl = document.getElementById('forgotStep1Error');
+            errEl.style.display = 'none';
+
+            const email = document.getElementById('forgotEmailInput').value.trim();
+            if (!email || !email.includes('@@')) {
+                errEl.textContent = 'Please enter a valid email address.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            // Only the initial "Send verification code" button shows a loading state —
+            // the resend link (shown once the code section is visible) stays as-is.
+            const sendBtn = document.getElementById('forgotSendCodeBtn');
+            const isInitialSend = document.getElementById('forgotEmailSection').style.display !== 'none';
+            if (isInitialSend) {
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Sending...';
+            }
+
+            const res = await fetch(`${apiBase}/ArcaneVaultUser/request-reset-code-by-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Email: email })
+            });
+
+            if (isInitialSend) {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send verification code';
+            }
+
+            if (res.status === 404) {
+                errEl.textContent = 'No account found with that email address.';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (res.status === 429) {
+                const text = await res.text();
+                errEl.textContent = text;
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!res.ok) {
+                errEl.textContent = 'Failed to send code. Please try again.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            const data = await res.json();
+            forgotUserName = data.userName ?? data.UserName;
+
+            document.getElementById('forgotEmailDisplay').textContent = email;
+            document.getElementById('forgotEmailSection').style.display = 'none';
+            document.getElementById('forgotCodeInputSection').style.display = 'block';
+            document.getElementById('forgotVerifyCodeBtn').style.display = 'inline-block';
+            document.getElementById('forgotResendText').style.display = 'block';
+
+            forgotCooldownUntil = Date.now() + 120000;
+            startForgotResendCooldownDisplay();
+
+            document.querySelectorAll('.forgot-code-cell').forEach(c => c.value = '');
+            document.querySelector('.forgot-code-cell').focus();
+        }
+
+        function startForgotResendCooldownDisplay() {
+            const resendEl = document.getElementById('forgotResendText');
+            if (forgotTimerInterval) clearInterval(forgotTimerInterval);
+
+            forgotTimerInterval = setInterval(() => {
+                const secondsLeft = Math.ceil((forgotCooldownUntil - Date.now()) / 1000);
+                if (secondsLeft <= 0) {
+                    resendEl.innerHTML = `Didn't get it? <a href="#" onclick="sendForgotResetCode(); return false;">Resend code</a>`;
+                    clearInterval(forgotTimerInterval);
+                } else {
+                    resendEl.innerHTML = `Didn't get it? Resend available in ${secondsLeft}s`;
+                }
+            }, 1000);
+        }
+
+        // Wire up the 6 code cells: auto-advance, backspace navigation, digit-only
+        document.querySelectorAll('.forgot-code-cell').forEach((cell, idx, cells) => {
+            cell.addEventListener('input', () => {
+                cell.value = cell.value.replace(/[^0-9]/g, '');
+                if (cell.value && idx < cells.length - 1) cells[idx + 1].focus();
+            });
+            cell.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !cell.value && idx > 0) cells[idx - 1].focus();
+            });
+        });
+
+        async function verifyForgotResetCode() {
+            const errEl = document.getElementById('forgotStep1Error');
+            errEl.style.display = 'none';
+
+            const code = Array.from(document.querySelectorAll('.forgot-code-cell')).map(c => c.value).join('');
+            if (code.length !== 6) {
+                errEl.textContent = 'Please enter all 6 digits.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            const res = await fetch(`${apiBase}/ArcaneVaultUser/verify-reset-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ UserName: forgotUserName, Code: code })
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                errEl.textContent = text || 'Invalid or expired code.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            window._forgotVerifiedCode = code;
+
+            bootstrap.Modal.getInstance(document.getElementById('forgotStep1Modal'))?.hide();
+            document.getElementById('forgotNewPwdInput').value = '';
+            document.getElementById('forgotConfirmPwdInput').value = '';
+            document.getElementById('forgotStep2Error').style.display = 'none';
+            setTimeout(() => new bootstrap.Modal(document.getElementById('forgotStep2Modal')).show(), 300);
+        }
+
+        async function submitForgotNewPassword() {
+            const newPwd = document.getElementById('forgotNewPwdInput').value;
+            const confirmPwd = document.getElementById('forgotConfirmPwdInput').value;
+            const errEl = document.getElementById('forgotStep2Error');
+            errEl.style.display = 'none';
+
+            if (!newPwd || !confirmPwd) {
+                errEl.textContent = 'Please fill in both fields.';
+                errEl.style.display = 'block'; return;
+            }
+            if (newPwd.length < 6) {
+                errEl.textContent = 'Password must be at least 6 characters.';
+                errEl.style.display = 'block'; return;
+            }
+            if (newPwd !== confirmPwd) {
+                errEl.textContent = 'Passwords do not match.';
+                errEl.style.display = 'block'; return;
+            }
+
+            const res = await fetch(`${apiBase}/ArcaneVaultUser/reset-password`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ UserName: forgotUserName, Code: window._forgotVerifiedCode, NewPassword: newPwd })
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                errEl.textContent = text || 'Failed to reset password.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('forgotStep2Modal'))?.hide();
+            showToast('Password successfully changed. You can now log in.');
+        }
+
+        // Password visibility toggles for the "Set New Password" step
+        document.getElementById("forgotNewTogglePassword").addEventListener("click", function () {
+            const input = document.getElementById("forgotNewPwdInput");
+            const icon = document.getElementById("forgotNewEyeIcon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("bi-eye", "bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("bi-eye-slash", "bi-eye");
+            }
+        });
+
+        document.getElementById("forgotConfirmTogglePassword").addEventListener("click", function () {
+            const input = document.getElementById("forgotConfirmPwdInput");
+            const icon = document.getElementById("forgotConfirmEyeIcon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("bi-eye", "bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("bi-eye-slash", "bi-eye");
+            }
+        });
     </script>
 }

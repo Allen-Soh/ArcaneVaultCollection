@@ -527,6 +527,12 @@
         async function viewShowoff(showoffId, ownerName) {
             currentViewShowoffId = showoffId;
 
+            // Reset comment input + list so stale text/content from a previous showoff doesn't carry over
+            document.getElementById('commentInput').value = '';
+            document.getElementById('commentsList').innerHTML = '';
+            commentPage = 1;
+            commentTotalPages = 1;
+
             // Fetch showoff details
             const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
             if (!res.ok) { alert('Could not load showoff.'); return; }
@@ -836,13 +842,15 @@
             const list = document.getElementById('commentsList');
             if (page === 1) list.innerHTML = '';
 
-            comments.forEach(c => {
+            comments.forEach((c, idx) => {
                 const dateStr = new Date(c.createdAt || c.CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 const userName = c.userName || c.UserName;
                 const text = c.text || c.Text;
+                const avatarId = `commentAvatar-${page}-${idx}`;
+
                 list.innerHTML += `
                         <div class="d-flex gap-2 mb-2 p-2 rounded" style="background:rgba(166,177,225,0.02); border:1px solid var(--border-color);">
-                            <div style="width:28px;height:28px;border-radius:50%;background:rgba(166,177,225,0.1);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <div id="${avatarId}" style="width:28px;height:28px;border-radius:50%;background:rgba(166,177,225,0.1);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
                                 <i class="bi bi-person-fill small"></i>
                             </div>
                             <div style="flex:1;min-width:0;">
@@ -853,6 +861,21 @@
                                 <p class="mb-0 small text-white">${text}</p>
                             </div>
                         </div>`;
+
+                // Fetch this commenter's current avatar directly — same live-fetch approach as
+                // the owner avatar in viewShowoff, so it always reflects their latest photo
+                // rather than a stale cached one.
+                fetch(`${apiBase}/ArcaneVaultUser/${userName}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(userData => {
+                        const avatarEl = document.getElementById(avatarId);
+                        if (!avatarEl) return; // comment list may have re-rendered already
+                        const avatarPath = userData?.avatarUrl || userData?.AvatarUrl;
+                        if (avatarPath) {
+                            avatarEl.innerHTML = `<img src="${avatarPath}" style="width:100%;height:100%;object-fit:cover;" alt="${userName}" />`;
+                        }
+                    })
+                    .catch(() => { /* keep default icon on failure */ });
             });
 
             document.getElementById('loadMoreComments').style.display =

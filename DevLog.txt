@@ -372,3 +372,15 @@
 - If deployment is successful, attempt to add google auth, if not delete google auth button
 - Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
 (- Maybe add a notifications system, see how)
+
+===== DEV LOG (4/8/2026) - Part 2 =====
+[Done]
+- Fixed issue where profile does not show in the owner's comments in viewShowoffs and comment input did not reset in a different viewShowoff modal
+- Fixed category and collection item tables heights
+- Added "Forget Password?" link in the login page which will ask for the user's email, then will send a otp to the user's email, which will then ask for the otp and new password which will then change the password to the new password (Same modal as reset password in settings)
+
+[To Do]
+- Try to deploy project
+- If deployment is successful, attempt to add google auth, if not delete google auth button
+- Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
+(- Maybe add a notifications system, see how)

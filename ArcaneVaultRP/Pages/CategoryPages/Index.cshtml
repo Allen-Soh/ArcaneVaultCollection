@@ -103,7 +103,7 @@
         });
 
         // ── Virtual Scroll Table Implementation (Copied from Insights) ──
-        const ROW_HEIGHT = 53;
+        const ROW_HEIGHT = 60;
         const BUFFER = 5;
         const THRESHOLD = 7;
 
@@ -184,7 +184,7 @@
             function updateIndicator() {
                 const scrollTop = wrapper.scrollTop;
                 const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
-                const visEnd = Math.min(data.length, visStart + THRESHOLD - 1);
+                const visEnd = Math.min(data.length, visStart + THRESHOLD - 2);
                 document.getElementById('categoryScrollIndicator').textContent =
                     data.length > THRESHOLD
                         ? `Showing ${visStart}–${visEnd} of ${data.length}`
