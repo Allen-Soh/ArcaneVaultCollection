@@ -76,7 +76,8 @@ public class ArcaneVaultUserController : ControllerBase
                 RoleId = Convert.ToInt32(reader["RoleId"]),
                 Password = reader["Password"].ToString(),
                 Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
-                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString()
+                AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString(),
+                IsActive = Convert.ToBoolean(reader["IsActive"])
             };
         }
 
@@ -400,6 +401,15 @@ public class ArcaneVaultUserController : ControllerBase
         using var connection = new SqliteConnection("Data Source=ArcaneVault.db");
         connection.Open();
 
+        // Verify password first
+        var pwdCheckCmd = new SqliteCommand(
+            "SELECT COUNT(*) FROM ArcaneVaultUsers WHERE UserName = @UserName AND Password = @Password",
+            connection);
+        pwdCheckCmd.Parameters.AddWithValue("@UserName", username);
+        pwdCheckCmd.Parameters.AddWithValue("@Password", req.Password);
+        if (Convert.ToInt32(pwdCheckCmd.ExecuteScalar()) == 0)
+            return BadRequest("Incorrect password.");
+
         // Check duplicate email
         var checkCmd = new SqliteCommand(
             "SELECT COUNT(*) FROM ArcaneVaultUsers WHERE Email = @Email AND UserName != @UserName",
@@ -571,7 +581,7 @@ public class ArcaneVaultUserController : ControllerBase
     }
 
     public class ChangeUsernameRequest { public string NewUserName { get; set; } }
-    public class ChangeEmailRequest { public string NewEmail { get; set; } }
+    public class ChangeEmailRequest { public string NewEmail { get; set; } public string Password { get; set; } }
     public class ChangePasswordRequest { public string CurrentPassword { get; set; } public string NewPassword { get; set; } }
     public class UpdateAvatarRequest { public string AvatarUrl { get; set; } }
     public class UpdateCountryRequest { public string Country { get; set; } }

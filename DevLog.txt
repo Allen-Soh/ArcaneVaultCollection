@@ -355,3 +355,20 @@
 - Add more stuff to Staff homepage, such as a list of all reports that are assigned to them, and a list of all tickets that are assigned to them
 - Fix share issue where it does not the copied link will not show the specific showoff because the showoff is a modal, not a page, so it will not be able to show the specific showoff when the link is shared
 (- Maybe add a notifications system, see how)
+
+===== DEV LOG (4/8/2026) =====
+[Done]
+- Fixed re-enable disabled showoff issue where there is error ss in claude chat
+- Added cloudinary and smtp credentials in appsettings.json and made the file hidden in gitignore
+- Added new cards into the Index pages for staff and users
+- Fixed staff toggleActive
+- Added Password to be required for email change
+
+[To Do]
+- Fix issue where profile does not show in the owner's comments in viewShowoffs
+- Change table to virtual scroll for Report and Ticket pages
+- Add a "Forget Password?" link in the login page which will ask for the user's email, then will send a otp to the user's email, which will then ask for the otp and new password which will then change the password to the new password (Same modal as reset password in settings)
+- Try to deploy project
+- If deployment is successful, attempt to add google auth, if not delete google auth button
+- Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
+(- Maybe add a notifications system, see how)

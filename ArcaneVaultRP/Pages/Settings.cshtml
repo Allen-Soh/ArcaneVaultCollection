@@ -168,7 +168,19 @@
                            placeholder="Enter new email" />
                 </div>
                 <div id="emailError" class="text-danger small" style="display:none;"></div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;">Password</label>
+                    <div class="input-group">
+                        <input type="password" id="emailPwdInput" class="form-control"
+                               placeholder="Password" />
+                        <button class="btn btn-outline-primary" type="button" id="emailTogglePassword" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                            <i class="bi bi-eye" id="emailPwdEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="emailPasswordError" class="text-danger small" style="display:none;"></div>
             </div>
+            <div id="emailChangeError" class="text-danger small" style="display:none;"></div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-outline-secondary"
                         data-bs-dismiss="modal">Cancel</button>
@@ -898,17 +910,30 @@
     // ── Email modal ──
     function openEmailModal() {
         document.getElementById('newEmailInput').value = '';
+        document.getElementById('emailPwdInput').value = '';
         document.getElementById('emailError').style.display = 'none';
+        document.getElementById('emailPasswordError').style.display = 'none';
+        document.getElementById('emailChangeError').style.display = 'none';
         new bootstrap.Modal(document.getElementById('emailModal')).show();
     }
 
     async function saveEmail() {
         const newEmail = document.getElementById('newEmailInput').value.trim();
-        const errEl    = document.getElementById('emailError');
+        const password = document.getElementById('emailPwdInput').value;
+        const errEl = document.getElementById('emailError');
+        const errEP = document.getElementById('emailPasswordError');
+        const errEC = document.getElementById('emailChangeError');
         errEl.style.display = 'none';
+        errEP.style.display = 'none';
+            errEC.style.display = 'none';
 
         if (!newEmail || !newEmail.includes('@@')) {
-            errEl.textContent   = 'Please enter a valid email address.';
+            errEl.textContent = 'Please enter a valid email address.';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (!password) {
+            errEl.textContent = 'Please enter your password.';
             errEl.style.display = 'block';
             return;
         }
@@ -916,17 +941,22 @@
         const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/email`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ NewEmail: newEmail })
+            body: JSON.stringify({ NewEmail: newEmail, Password: password })
         });
 
         if (res.status === 409) {
-            errEl.textContent   = 'This email is already in use.';
+            errEl.textContent = 'This email is already in use.';
             errEl.style.display = 'block';
             return;
         }
+        if (res.status === 400) {
+            errEP.textContent = 'Incorrect password.';
+            errEP.style.display = 'block';
+            return;
+        }
         if (!res.ok) {
-            errEl.textContent   = 'Failed to update email.';
-            errEl.style.display = 'block';
+            errEC.textContent = 'Failed to update email.';
+            errEC.style.display = 'block';
             return;
         }
 
@@ -952,6 +982,19 @@
         document.getElementById('pwdError').style.display = 'none';
         new bootstrap.Modal(document.getElementById('passwordModal')).show();
     }
+
+    // Email Password toggle
+    document.getElementById("emailTogglePassword").addEventListener("click", function () {
+        const input = document.getElementById("emailPwdInput");
+        const icon = document.getElementById("emailPwdEyeIcon");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        }
+    });
 
     // Reset New Password toggle
     document.getElementById("resetNewTogglePassword").addEventListener("click", function () {

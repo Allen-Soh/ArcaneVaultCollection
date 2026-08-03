@@ -20,9 +20,9 @@ namespace ArcaneVaultAPI
 
             // Cloudinary
             builder.Services.AddSingleton(new Cloudinary(new Account(
-                "nyj7a9za",
-                "***REMOVED-CLOUDINARY-APIKEY***",
-                "***REMOVED-CLOUDINARY-APISECRET***"
+                builder.Configuration["Cloudinary:CloudName"],
+                builder.Configuration["Cloudinary:ApiKey"],
+                builder.Configuration["Cloudinary:ApiSecret"]
             )));
 
             // CORS — allow RP to communicate with API
