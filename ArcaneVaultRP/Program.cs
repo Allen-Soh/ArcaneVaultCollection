@@ -15,7 +15,8 @@ namespace ArcaneVaultRP
             builder.Services.AddTransient<JwtAuthHandler>();
 
             builder.Services.AddHttpClient("ArcaneVaultAPI",
-                client => { client.BaseAddress = new Uri("https://localhost:7040/api/"); }).AddHttpMessageHandler<JwtAuthHandler>();
+                client => { client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!); })
+                .AddHttpMessageHandler<JwtAuthHandler>();
 
             builder.Services.AddDistributedMemoryCache();
 

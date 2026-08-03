@@ -384,3 +384,14 @@
 - If deployment is successful, attempt to add google auth, if not delete google auth button
 - Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
 (- Maybe add a notifications system, see how)
+
+===== DEV LOG (4/8/2026) - Part 3 =====
+[Done]
+- Deployed project through IIS which worked but currently shows 404 error which is normal for now
+- Did Practical 15 up until Task 4, check ggd for more details of current status
+
+[To Do]
+- Try to deploy project
+- If deployment is successful, attempt to add google auth, if not delete google auth button
+- Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
+(- Maybe add a notifications system, see how)
