@@ -1,5 +1,6 @@
 using ArcaneVaultRP.Helpers;
 using ArcaneVaultRP.Models;
+using ArcaneVaultRP.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
@@ -9,11 +10,20 @@ namespace ArcaneVaultRP.Pages
     public class RegistrationModel : PageModel
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IRecaptchaService _recaptchaService;
+        private readonly IConfiguration _configuration;
 
-        public RegistrationModel(IHttpClientFactory httpClientFactory)
+        public RegistrationModel(
+            IHttpClientFactory httpClientFactory,
+            IRecaptchaService recaptchaService,
+            IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
+            _recaptchaService = recaptchaService;
+            _configuration = configuration;
         }
+
+        public string ReCaptchaSiteKey => _configuration["ReCaptcha:SiteKey"] ?? "";
 
         [BindProperty]
         public RegisterInputModel Input { get; set; } = new();
@@ -54,6 +64,15 @@ namespace ArcaneVaultRP.Pages
         {
             if (!ModelState.IsValid)
             {
+                return Page();
+            }
+
+            // ── reCAPTCHA verification — must pass before any API call happens ──
+            var captchaToken = Request.Form["g-recaptcha-response"].ToString();
+            var captchaOk = await _recaptchaService.VerifyAsync(captchaToken);
+            if (!captchaOk)
+            {
+                ModelState.AddModelError(string.Empty, "Please complete the reCAPTCHA verification.");
                 return Page();
             }
 

@@ -33,6 +33,9 @@ namespace ArcaneVaultRP
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
 
+            builder.Services.AddHttpClient(); // default client, used by RecaptchaService for Google's endpoint
+            builder.Services.AddScoped<ArcaneVaultRP.Services.IRecaptchaService, ArcaneVaultRP.Services.RecaptchaService>();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

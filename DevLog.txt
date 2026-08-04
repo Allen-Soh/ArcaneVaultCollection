@@ -395,3 +395,14 @@
 - If deployment is successful, attempt to add google auth, if not delete google auth button
 - Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
 (- Maybe add a notifications system, see how)
+
+===== DEV LOG (5/8/2026) =====
+[Done]
+- Could deploy api, but won't show RP, will not attempt at deploying RP at all
+- Removed Google Auth button from login page
+- Added ReCaptcha to registration page, however there is an error, check screenshot to see
+- Do not attempt to deploy project from now on, as it is not working
+
+[To Do]
+- Fix ReCaptcha error in registration page
+- Fix ReCaptcha modal alignment, while removing the cancel and confirm buttons, making it automatically close modal when the captcha is completed successfully, and will show an error message if the captcha is not completed successfully

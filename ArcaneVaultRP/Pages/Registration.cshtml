@@ -84,8 +84,10 @@
                             <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
                         </div>
 
+                        <input type="hidden" id="recaptchaTokenField" name="g-recaptcha-response" />
+
                         <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg w-100">Register</button>
+                            <button type="button" id="registerBtn" class="btn btn-primary btn-lg w-100">Register</button>
                         </div>
 
                     </form>
@@ -102,7 +104,30 @@
     </div>
 </div>
 
+<!-- reCAPTCHA Modal -->
+<div class="modal fade" id="captchaModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold mb-0">Verify You're Human</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 d-flex justify-content-center">
+                <div id="recaptchaContainer"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="captchaContinueBtn" disabled onclick="completeRegistration()">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
@@ -209,5 +234,69 @@
                 icon.classList.replace("bi-eye-slash", "bi-eye");
             }
         });
+
+
+        //Captcha handling
+        let recaptchaWidgetId = null;
+        let recaptchaReady = false;
+
+        function onRecaptchaLoad() {
+        recaptchaReady = true;
+        }
+
+        document.getElementById('registerBtn').addEventListener('click', function () {
+        // Re-run the country check your original submit handler did
+        if (!selectedCountry.value) {
+        document.getElementById('countryError').style.display = 'block';
+        countrySearch.focus();
+        return;
+        }
+
+        // Trigger asp-validation / native HTML5 checks without actually submitting
+        const form = document.querySelector('form');
+        if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+        }
+
+        const modalEl = document.getElementById('captchaModal');
+        const modal = new bootstrap.Modal(modalEl);
+
+        modalEl.addEventListener('shown.bs.modal', function onceShown() {
+        modalEl.removeEventListener('shown.bs.modal', onceShown);
+        if (recaptchaReady) {
+        renderCaptchaWidget();
+        } else {
+        const waitForReady = setInterval(() => {
+        if (recaptchaReady) {
+        clearInterval(waitForReady);
+        renderCaptchaWidget();
+        }
+        }, 100);
+        }
+        }, { once: true });
+
+        modal.show();
+        });
+
+        function renderCaptchaWidget() {
+        if (recaptchaWidgetId !== null) return; // render once only
+
+        recaptchaWidgetId = grecaptcha.render('recaptchaContainer', {
+        sitekey: '@Model.ReCaptchaSiteKey',
+        callback: function (token) {
+        document.getElementById('recaptchaTokenField').value = token;
+        document.getElementById('captchaContinueBtn').disabled = false;
+        },
+        'expired-callback': function () {
+        document.getElementById('recaptchaTokenField').value = '';
+        document.getElementById('captchaContinueBtn').disabled = true;
+        }
+        });
+        }
+
+        function completeRegistration() {
+        document.querySelector('form').submit();
+        }
     </script>
 }
