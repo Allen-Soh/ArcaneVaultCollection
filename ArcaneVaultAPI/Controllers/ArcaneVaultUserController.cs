@@ -146,8 +146,8 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            @"INSERT INTO ArcaneVaultUsers (UserName, Email, IsDeleted, RoleId, Password, Country) 
-          VALUES (@UserName, @Email, @IsDeleted, @RoleId, @Password, @Country)",
+            @"INSERT INTO ArcaneVaultUsers (UserName, Email, IsDeleted, RoleId, Password, Country, IsActive) 
+          VALUES (@UserName, @Email, @IsDeleted, @RoleId, @Password, @Country, @IsActive)",
             connection);
 
         command.Parameters.AddWithValue("@UserName", dto.UserName);
@@ -156,6 +156,7 @@ public class ArcaneVaultUserController : ControllerBase
         command.Parameters.AddWithValue("@RoleId", dto.RoleId);
         command.Parameters.AddWithValue("@Password", dto.Password);
         command.Parameters.AddWithValue("@Country", dto.Country);
+        command.Parameters.AddWithValue("@IsActive", true);
 
         command.ExecuteNonQuery();
 
@@ -347,8 +348,8 @@ public class ArcaneVaultUserController : ControllerBase
             // Copy user with new username
             var copyCmd = new SqliteCommand(
                 @"INSERT INTO ArcaneVaultUsers 
-              (UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl)
-              SELECT @NewUserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl
+              (UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive)
+              SELECT @NewUserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive
               FROM ArcaneVaultUsers WHERE UserName = @OldUserName",
                 connection, tx);
             copyCmd.Parameters.AddWithValue("@NewUserName", req.NewUserName);

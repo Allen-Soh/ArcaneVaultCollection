@@ -11,12 +11,14 @@ namespace ArcaneVaultRP
             // Add services to the container.
             builder.Services.AddRazorPages();
 
+            builder.Services.AddHttpClient(); // default client, used by RecaptchaService for Google's endpoint
+            builder.Services.AddScoped<ArcaneVaultRP.Services.IRecaptchaService, ArcaneVaultRP.Services.RecaptchaService>();
+
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddTransient<JwtAuthHandler>();
 
             builder.Services.AddHttpClient("ArcaneVaultAPI",
-                client => { client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!); })
-                .AddHttpMessageHandler<JwtAuthHandler>();
+                client => { client.BaseAddress = new Uri("https://localhost:7040/api/"); }).AddHttpMessageHandler<JwtAuthHandler>();
 
             builder.Services.AddDistributedMemoryCache();
 
@@ -32,9 +34,6 @@ namespace ArcaneVaultRP
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
-
-            builder.Services.AddHttpClient(); // default client, used by RecaptchaService for Google's endpoint
-            builder.Services.AddScoped<ArcaneVaultRP.Services.IRecaptchaService, ArcaneVaultRP.Services.RecaptchaService>();
 
             var app = builder.Build();
 

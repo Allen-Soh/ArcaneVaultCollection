@@ -385,24 +385,13 @@
 - Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
 (- Maybe add a notifications system, see how)
 
-===== DEV LOG (4/8/2026) - Part 3 =====
-[Done]
-- Deployed project through IIS which worked but currently shows 404 error which is normal for now
-- Did Practical 15 up until Task 4, check ggd for more details of current status
-
-[To Do]
-- Try to deploy project
-- If deployment is successful, attempt to add google auth, if not delete google auth button
-- Try to add captcha to registeration which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
-(- Maybe add a notifications system, see how)
-
 ===== DEV LOG (5/8/2026) =====
 [Done]
-- Could deploy api, but won't show RP, will not attempt at deploying RP at all
+- Added ReCaptcha to registration page, which will appear when the user clicks on the register button, and will only allow the user to register if the captcha is completed successfully. If not, it will show an error message and will not allow the user to register.
 - Removed Google Auth button from login page
-- Added ReCaptcha to registration page, however there is an error, check screenshot to see
-- Do not attempt to deploy project from now on, as it is not working
+- Fixed registration notification success pop up
 
 [To Do]
-- Fix ReCaptcha error in registration page
-- Fix ReCaptcha modal alignment, while removing the cancel and confirm buttons, making it automatically close modal when the captcha is completed successfully, and will show an error message if the captcha is not completed successfully
+- It is probably done...
+- Can add Notifications system
+- Must think about how to add another user to be staff "RoleId = 1"

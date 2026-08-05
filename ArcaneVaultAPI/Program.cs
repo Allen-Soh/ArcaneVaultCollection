@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Scalar.AspNetCore;
 
 namespace ArcaneVaultAPI
 {
@@ -72,14 +71,10 @@ namespace ArcaneVaultAPI
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
-            //if (app.Environment.IsDevelopment())
-            //{
+            if (app.Environment.IsDevelopment())
+            {
                 app.MapOpenApi();
-                app.MapScalarApiReference(options =>
-                {
-                    options.Title = "Arcane Vault API";
-                });
-            //}
+            }
 
             app.UseHttpsRedirection();
 
@@ -93,12 +88,12 @@ namespace ArcaneVaultAPI
             app.MapControllers();
 
             // Ensure DB + run seeder
-            //using (var scope = app.Services.CreateScope())
-            //{
-            //    var context = scope.ServiceProvider.GetRequiredService<ArcaneDbContext>();
-            //    context.Database.EnsureCreated();
-            //}
-            //ArcaneDbSeeder.Seed(app.Services);
+            using (var scope = app.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<ArcaneDbContext>();
+                context.Database.EnsureCreated();
+            }
+            ArcaneDbSeeder.Seed(app.Services);
 
             app.Run();
         }
