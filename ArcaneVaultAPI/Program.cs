@@ -4,6 +4,7 @@ using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Stripe;
 using System.Text;
 
 namespace ArcaneVaultAPI
@@ -19,11 +20,14 @@ namespace ArcaneVaultAPI
             builder.Services.AddOpenApi();
 
             // Cloudinary
-            builder.Services.AddSingleton(new Cloudinary(new Account(
+            builder.Services.AddSingleton(new Cloudinary(new CloudinaryDotNet.Account(
                 builder.Configuration["Cloudinary:CloudName"],
                 builder.Configuration["Cloudinary:ApiKey"],
                 builder.Configuration["Cloudinary:ApiSecret"]
             )));
+
+            //Stripe API
+            StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
             // CORS — allow RP to communicate with API
             builder.Services.AddCors(options =>

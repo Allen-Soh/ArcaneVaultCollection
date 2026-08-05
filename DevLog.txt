@@ -395,3 +395,13 @@
 - It is probably done...
 - Can add Notifications system
 - Must think about how to add another user to be staff "RoleId = 1"
+
+===== DEV LOG (5/8/2026) - Part 2 =====
+[Done]
+- Added Stripe API Keys, need to add webhook secret key to API appsettings.json
+- Added Stripe to API Program.cs
+
+[To Do]
+- Can add Notifications system
+- Must think about how to add another user to be staff "RoleId = 1"
+- Continue working on shop, inventory and trades page in "Proposed Ideas"
