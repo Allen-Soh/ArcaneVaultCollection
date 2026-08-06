@@ -559,6 +559,39 @@
             }).join('');
         }
 
+        // Adds a clear ("×") button to a search input; shows only when it has text.
+        // Dispatches a native 'input' event on clear so existing input listeners re-run automatically.
+        function enableSearchClear(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const wrapper = input.parentElement;
+            wrapper.classList.add('search-clear-wrapper');
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-clear-btn';
+            btn.innerHTML = '&times;';
+            btn.setAttribute('aria-label', 'Clear search');
+            wrapper.appendChild(btn);
+
+            function toggleBtn() {
+                btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', toggleBtn);
+            toggleBtn();
+
+            btn.addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                toggleBtn();
+                input.focus();
+            });
+        }
+
+        enableSearchClear('nameInput');
+
         function sortTable(key) {
             if (sortKey === key) sortDir *= -1;
             else { sortKey = key; sortDir = -1; }

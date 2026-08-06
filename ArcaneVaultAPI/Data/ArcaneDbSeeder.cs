@@ -31,13 +31,25 @@ namespace ArcaneVaultAPI.Data
                 context.ArcaneVaultUsers.AddRange(
                     new ArcaneVaultUser
                     {
+                        UserName = "Admin",
+                        Email = "admin@example.com",
+                        IsDeleted = false,
+                        RoleId = 1,
+                        Password = "Admin123",
+                        Country = "Singapore",
+                        AvatarUrl = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785909172/arcanevault/showoffs/ky1vusmphqminxjtaudh.jpg",
+                        IsActive = false
+                    },
+                    new ArcaneVaultUser
+                    {
                         UserName = "Admin1",
                         Email = "admin1@example.com",
                         IsDeleted = false,
                         RoleId = 1,
                         Password = "Admin123",
                         Country = "Singapore",
-                        AvatarUrl = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785661451/arcanevault/showoffs/yhvlnmpzeoy4n773kxwu.jpg"
+                        AvatarUrl = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785661451/arcanevault/showoffs/yhvlnmpzeoy4n773kxwu.jpg",
+                        IsActive = true
                     },
                     new ArcaneVaultUser
                     {
@@ -47,6 +59,7 @@ namespace ArcaneVaultAPI.Data
                         RoleId = 1,
                         Password = "Admin123",
                         Country = "Singapore",
+                        IsActive = true
                     },
                     new ArcaneVaultUser
                     {
@@ -152,6 +165,15 @@ namespace ArcaneVaultAPI.Data
                         StartingQuantity = 2,
                         CurrentQuantity = 2,
                         UserName = "Allen3"
+                    },
+                    new CollectionItem
+                    {
+                    ItemId = 7,
+                        ItemName = "Pikachu Surging Sparks SIR Card",
+                        IsDeleted = false,
+                        StartingQuantity = 1,
+                        CurrentQuantity = 1,
+                        UserName = "Allen"
                     }
                 );
                 context.SaveChanges();
@@ -203,6 +225,160 @@ namespace ArcaneVaultAPI.Data
                         IsPrivate = false,
                         IsDeleted = false,
                         CreatedAt = DateTime.UtcNow.AddDays(-1),
+                        UserName = "Allen3"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 4,
+                        ShowoffName = "Private Collection",
+                        BackgroundColor = "#e0f7fa",
+                        BackgroundImagePath = "https://res.cloudinary.com/nyj7a9za/image/upload/v1785909325/arcanevault/showoffs/moazvhkgqtcub3fjb7go.jpg",
+                        BackgroundImagePublicId = "arcanevault/showoffs/moazvhkgqtcub3fjb7go",
+                        IsPrivate = true,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-2),
+                        UserName = "Allen"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 5,
+                        ShowoffName = "Disabled Collection",
+                        BackgroundColor = "#fbe9e7",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-4),
+                        UserName = "Allen2",
+                        IsDisabled = true,
+                        DisabledAt = DateTime.UtcNow.AddDays(-1)
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 6,
+                        ShowoffName = "Deleted Collection",
+                        BackgroundColor = "#e8f5e9",
+                        IsPrivate = false,
+                        IsDeleted = true,
+                        CreatedAt = DateTime.UtcNow.AddDays(-6),
+                        UserName = "Allen3"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 7,
+                        ShowoffName = "My Action Figures",
+                        BackgroundColor = "#fff3e0",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-7),
+                        UserName = "Allen"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 8,
+                        ShowoffName = "My Coin Collection",
+                        BackgroundColor = "#f1f8e9",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-8),
+                        UserName = "Allen2"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 9,
+                        ShowoffName = "My Poster Collection",
+                        BackgroundColor = "#fce4ec",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-9),
+                        UserName = "Allen3"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 10,
+                        ShowoffName = "My Board Games",
+                        BackgroundColor = "#e0f2f1",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-10),
+                        UserName = "Allen"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 11,
+                        ShowoffName = "My Vinyl Records",
+                        BackgroundColor = "#ede7f6",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-11),
+                        UserName = "Allen2"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 12,
+                        ShowoffName = "My Comic Books",
+                        BackgroundColor = "#fff8e1",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-12),
+                        UserName = "Allen3"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 13,
+                        ShowoffName = "My Rare Coins",
+                        BackgroundColor = "#e8f5e9",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-13),
+                        UserName = "Allen"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 14,
+                        ShowoffName = "My Poster Collection",
+                        BackgroundColor = "#fce4ec",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-14),
+                        UserName = "Allen2"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 15,
+                        ShowoffName = "My Board Games",
+                        BackgroundColor = "#e0f2f1",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-15),
+                        UserName = "Allen3"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 16,
+                        ShowoffName = "My Vinyl Records",
+                        BackgroundColor = "#ede7f6",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-16),
+                        UserName = "Allen"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 17,
+                        ShowoffName = "My Comic Books",
+                        BackgroundColor = "#fff8e1",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-17),
+                        UserName = "Allen2"
+                    },
+                    new Showoff
+                    {
+                        ShowoffId = 18,
+                        ShowoffName = "My Rare Coins",
+                        BackgroundColor = "#e8f5e9",
+                        IsPrivate = false,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow.AddDays(-18),
                         UserName = "Allen3"
                     }
                 );
@@ -292,24 +468,6 @@ namespace ArcaneVaultAPI.Data
             if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
             {
                 cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN DisabledAt TEXT";
-                cmd.ExecuteNonQuery();
-            }
-
-            // Add BackgroundImagePath column to Showoffs (if not exists)
-            cmd.CommandText = @"
-                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='BackgroundImagePath'";
-            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-            {
-                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN BackgroundImagePath TEXT";
-                cmd.ExecuteNonQuery();
-            }
-
-            // Add BackgroundImagePublicId column to Showoffs (if not exists)
-            cmd.CommandText = @"
-                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='BackgroundImagePublicId'";
-            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-            {
-                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN BackgroundImagePublicId TEXT";
                 cmd.ExecuteNonQuery();
             }
 

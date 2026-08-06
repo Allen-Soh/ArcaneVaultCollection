@@ -1,543 +1,639 @@
 @page
-@model ArcaneVaultRP.Pages.InsightPages.CommunityInterestModel
+@model ArcaneVaultRP.Pages.InsightPages.MarketDemandModel
 @{
-    ViewData["Title"] = "Community Interest";
+    ViewData["Title"] = "Market Demand";
 }
 
 <div class="container mt-4" style="max-width:860px;">
 
-    <!-- Back + Header -->
+    <!-- Back link + Header -->
     <div class="mb-1">
-        <a asp-page="./Index"
-           class="text-decoration-none d-inline-flex align-items-center gap-1"
+        <a asp-page="./Index" class="text-decoration-none d-inline-flex align-items-center gap-1"
            style="font-size:13px;">
             <i class="bi bi-arrow-left" style="font-size:13px;"></i> Insights
         </a>
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-1">
-        <h1 style="font-size:22px;font-weight:500;margin:0;">Community interest</h1>
-        <select id="periodSelect"
-                onchange="window.location.href='?Days=' + this.value"
+        <h1 style="font-size:22px;font-weight:500;margin:0;">Market demand and trends</h1>
+        <select id="periodSelect" onchange="renderAll()"
                 class="form-select form-select-sm" style="width:auto;">
-            <option value="7"  selected ="@(Model.Days == 7)">Last 7 days</option>
-            <option value="30" selected = "@(Model.Days == 30)">Last 30 days</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
         </select>
     </div>
     <p class="text-muted mb-4" style="font-size:13px;">
-        Showoff engagement and search activity across the platform
+        Collection quantity changes across all users
     </p>
 
-    <!-- KPI cards -->
+    <!-- Summary cards -->
     <div class="row g-3 mb-4">
-        <div class="col">
+        <div class="col-4">
             <div class="rounded p-3" style="background:#f8f9fa;">
-                <p class="text-muted mb-1" style="font-size:12px;">Total views</p>
-                <p class="fw-500 mb-1" style="font-size:22px;">@Model.Detail.TotalViews</p>
-                <p class="text-muted mb-0" style="font-size:11px;">
-                    @(Model.Days == 7 ? "This week" : "This month")
-                </p>
+                <p class="text-muted mb-1" style="font-size:12px;">Rising items</p>
+                <p class="mb-0 fw-500" id="risingCount" style="font-size:22px;color:#0F6E56;">—</p>
             </div>
         </div>
-        <div class="col">
+        <div class="col-4">
             <div class="rounded p-3" style="background:#f8f9fa;">
-                <p class="text-muted mb-1" style="font-size:12px;">Total likes</p>
-                <p class="fw-500 mb-1" style="font-size:22px;">@Model.Detail.TotalLikes</p>
-                <p class="text-muted mb-0" style="font-size:11px;">All time</p>
+                <p class="text-muted mb-1" style="font-size:12px;">Declining items</p>
+                <p class="mb-0 fw-500" id="decliningCount" style="font-size:22px;color:#A32D2D;">—</p>
             </div>
         </div>
-        <div class="col">
+        <div class="col-4">
             <div class="rounded p-3" style="background:#f8f9fa;">
-                <p class="text-muted mb-1" style="font-size:12px;">Most searched</p>
-                @{
-                    var topSearch = Model.Detail.SearchTerms.FirstOrDefault();
-                }
-                <p class="fw-500 mb-1"
-                   style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    @(topSearch != null ? $"\"{topSearch.SearchTerm}\"" : "—")
-                </p>
-                <p class="text-muted mb-0" style="font-size:11px;">
-                    @(topSearch != null ? $"{topSearch.Count} searches" : "No searches yet")
-                </p>
-            </div>
-        </div>
-        <div class="col">
-            <div class="rounded p-3" style="background:#f8f9fa;">
-                <p class="text-muted mb-1" style="font-size:12px;">Most viewed showoff</p>
-                @{
-                    var topShowoff = Model.Detail.MostViewed.FirstOrDefault();
-                }
-                <p class="fw-500 mb-1"
-                   style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    @(topShowoff?.ShowoffName ?? "—")
-                </p>
-                <p class="text-muted mb-0" style="font-size:11px;">
-                    @(topShowoff != null ? $"{topShowoff.ViewCount} views" : "No views yet")
-                </p>
+                <p class="text-muted mb-1" style="font-size:12px;">Net platform change</p>
+                <p class="mb-0 fw-500" id="netChange" style="font-size:22px;">—</p>
             </div>
         </div>
     </div>
 
-    <!-- Views over time -->
+    <!-- Rising vs Declining chart -->
     <div class="border-top pt-4 mb-4">
-        <div class="d-flex justify-content-between align-items-start mb-1">
-            <p class="fw-500 mb-0" style="font-size:15px;">Views over time</p>
-            <span class="text-muted"
-                  style="font-size:11px;background:#f8f9fa;padding:2px 8px;
-                         border-radius:999px;border:0.5px solid #dee2e6;">
-                Grouped by day
+        <p class="fw-500 mb-1" style="font-size:15px;">Rising vs Declining — Top 10</p>
+        <p class="text-muted mb-3" style="font-size:13px;">Items ranked by absolute % change</p>
+
+        <div class="d-flex justify-content-center gap-4 mb-2">
+            <span style="font-size:11px;" class="text-muted d-flex align-items-center gap-1">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1D9E75;"></span>
+                Rising
+            </span>
+            <span style="font-size:11px;" class="text-muted d-flex align-items-center gap-1">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#E24B4A;"></span>
+                Declining
             </span>
         </div>
-        <p class="text-muted mb-3" style="font-size:13px;">
-            Daily showoff views over the last @(Model.Days == 7 ? "7 days" : "30 days")
-        </p>
-        <div style="position:relative;height:160px;width:100%;">
-            <canvas id="viewsChart" style="width:100%;height:100%;"></canvas>
-        </div>
-    </div>
 
-    <!-- Showoff engagement — most viewed + most liked -->
-    <div class="border-top pt-4 mb-4">
-        <p class="fw-500 mb-1" style="font-size:15px;">Showoff engagement</p>
-        <p class="text-muted mb-3" style="font-size:13px;">
-            Top showoffs by views and by likes
-        </p>
-        <div class="row g-4">
-            <div class="col-md-6">
-                <p class="fw-500 mb-2 d-flex align-items-center gap-1"
-                   style="font-size:13px;color:#6c757d;">
-                    <i class="bi bi-eye" style="font-size:14px;"></i> Most viewed
-                </p>
-                <div id="mostViewedBars" style="display:flex;flex-direction:column;gap:7px;"></div>
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted" style="font-size:11px;">← Declining</span>
+            <span class="text-muted" style="font-size:11px;">0%</span>
+            <span class="text-muted" style="font-size:11px;">Rising →</span>
+        </div>
+
+        <div id="chartRows" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+        <div class="d-flex justify-content-end mt-3">
+            <button id="toggleBtn" onclick="toggleTable()"
+                    class="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1"
+                    style="font-size:13px;">
+                See more <i class="bi bi-arrow-right" style="font-size:13px;"></i>
+            </button>
+        </div>
+
+        <!-- Expandable full table -->
+        <div id="tableSection" style="display:none;" class="mt-3">
+            <div class="d-flex gap-2 mb-3 flex-wrap">
+                <div class="d-flex border rounded overflow-hidden" style="background:#f8f9fa;">
+                    <select id="operator" onchange="applyFilters()"
+                            class="border-0 border-end form-select form-select-sm"
+                            style="width:auto;border-radius:0;background:#fff;">
+                        <option value="gt">&gt;</option>
+                        <option value="lt">&lt;</option>
+                        <option value="gte">&gt;=</option>
+                        <option value="lte">&lt;=</option>
+                        <option value="eq">=</option>
+                    </select>
+                    <input type="number" id="pctInput" placeholder="% change" step="1"
+                           oninput="applyFilters()"
+                           class="border-0 form-control form-control-sm"
+                           style="width:110px;border-radius:0;" />
+                </div>
+                <input type="text" id="nameInput" placeholder="Search item name"
+                       oninput="applyFilters()"
+                       class="form-control form-control-sm" style="flex:1;min-width:160px;" />
             </div>
-            <div class="col-md-6">
-                <p class="fw-500 mb-2 d-flex align-items-center gap-1"
-                   style="font-size:13px;color:#6c757d;">
-                    <i class="bi bi-heart" style="font-size:14px;"></i> Most liked
-                </p>
-                <div id="mostLikedBars" style="display:flex;flex-direction:column;gap:7px;"></div>
+
+            <div class="border rounded overflow-hidden">
+                <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;">
+                    <thead class="table-light">
+                        <tr>
+                            <th onclick="sortTable('name')" style="width:30%;cursor:pointer;">
+                                Item <i class="bi bi-arrow-down-up" style="font-size:10px;"></i>
+                            </th>
+                            <th onclick="sortTable('category')" style="width:22%;cursor:pointer;">
+                                Category <i class="bi bi-arrow-down-up" style="font-size:10px;"></i>
+                            </th>
+                            <th onclick="sortTable('start')" class="text-end" style="width:12%;cursor:pointer;">
+                                Start <i class="bi bi-arrow-down-up" style="font-size:10px;"></i>
+                            </th>
+                            <th onclick="sortTable('current')" class="text-end" style="width:13%;cursor:pointer;">
+                                Current <i class="bi bi-arrow-down-up" style="font-size:10px;"></i>
+                            </th>
+                            <th onclick="sortTable('pct')" class="text-end" style="width:13%;cursor:pointer;">
+                                % change <i class="bi bi-arrow-down-up" style="font-size:10px;"></i>
+                            </th>
+                            <th class="text-center" style="width:10%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div id="emptyState" style="display:none;"
+                     class="text-center text-muted py-4" style="font-size:13px;">
+                    No items match your filters.
+                </div>
+            </div>
+            <div class="d-flex justify-content-between mt-2" id="fullTableIndicatorRow">
+                <p class="text-muted mb-0" id="fullTableScrollIndicator" style="font-size:12px;"></p>
+                <p class="text-muted mb-0" id="fullTableScrollMoreText" style="font-size:12px;">Scroll to load more</p>
             </div>
         </div>
     </div>
 
-    <!-- Most searched terms -->
+    <!-- Category trends -->
     <div class="border-top pt-4 mb-4">
-        <p class="fw-500 mb-1" style="font-size:15px;">Most searched terms</p>
-        <p class="text-muted mb-3" style="font-size:13px;">
-            What users are looking for on the platform
-        </p>
-        <div id="searchBars" style="display:flex;flex-direction:column;gap:7px;"></div>
+        <p class="fw-500 mb-1" style="font-size:15px;">Category trends</p>
+        <p class="text-muted mb-3" style="font-size:13px;">Collection count by category</p>
+        <div id="catBars" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
 
-    <!-- Views vs likes comparison table -->
-    <div class="border-top pt-4 mb-5">
-        <p class="fw-500 mb-1" style="font-size:15px;">Views vs likes comparison</p>
-        <p class="text-muted mb-1" style="font-size:13px;">
-            Identifies passive scrolling vs genuine interest based on like rate
-        </p>
-        <p class="text-muted mb-3" style="font-size:12px;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
-                         background:#0F6E56;margin-right:4px;"></span>
-            High engagement (≥25% like rate) &nbsp;
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
-                         background:#E24B4A;margin-right:4px;"></span>
-            Low engagement (&lt;25%)
-        </p>
-
-        <!-- Filters -->
-        <div class="d-flex gap-2 mb-2 flex-wrap">
-            <input type="text" id="nameFilter"
-                   placeholder="Search showoff name"
-                   oninput="applyTableFilters()"
-                   class="form-control form-control-sm" style="flex:1;min-width:140px;" />
-            <input type="text" id="ownerFilter"
-                   placeholder="Search owner"
-                   oninput="applyTableFilters()"
-                   class="form-control form-control-sm" style="flex:1;min-width:120px;" />
-            <select id="signalFilter" onchange="applyTableFilters()"
-                    class="form-select form-select-sm" style="width:auto;flex-shrink:0;">
-                <option value="">All signals</option>
-                <option value="high">High engagement</option>
-                <option value="low">Low engagement</option>
-            </select>
-            <select id="tableSort" onchange="applyTableFilters()"
-                    class="form-select form-select-sm" style="width:auto;flex-shrink:0;">
-                <option value="views">Most views</option>
-                <option value="likes">Most likes</option>
-                <option value="rateHigh">Highest like rate</option>
-                <option value="rateLow">Lowest like rate</option>
-                <option value="name">Name A – Z</option>
-            </select>
-        </div>
-
-        <!-- Result count -->
-        <p class="text-muted mb-2" id="resultCount" style="font-size:12px;"></p>
-
-        <!-- Table -->
-        <div class="border rounded overflow-hidden">
-            <!-- Fixed header -->
-            <table class="table table-sm mb-0"
-                   style="font-size:13px;table-layout:fixed;width:100%;">
+    <!-- Starting vs Current Quantity -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-1" style="font-size:15px;">Starting vs Current Quantity</p>
+        <p class="text-muted mb-3" style="font-size:13px;">Per item across all users</p>
+    </div>
+    <div class="border rounded overflow-hidden" style="position:relative;">
+        <div id="qtyTableWrapper" style="overflow-y:auto;">
+            <table class="table table-sm mb-0" style="font-size:13px;table-layout:fixed;width:100%;">
                 <colgroup>
-                    <col style="width:32%;" />
-                    <col style="width:18%;" />
-                    <col style="width:13%;" />
-                    <col style="width:13%;" />
-                    <col style="width:14%;" />
+                    <col style="width:38%;" />
+                    <col style="width:22%;" />
+                    <col style="width:15%;" />
+                    <col style="width:15%;" />
                     <col style="width:10%;" />
                 </colgroup>
                 <thead class="table-light" style="position:sticky;top:0;z-index:2;">
                     <tr>
-                        <th style="padding:8px 12px;">Showoff</th>
-                        <th style="padding:8px 12px;">Owner</th>
-                        <th style="padding:8px 12px;text-align:right;">Views</th>
-                        <th style="padding:8px 12px;text-align:right;">Likes</th>
-                        <th style="padding:8px 12px;text-align:right;">Like rate</th>
-                        <th style="padding:8px 12px;text-align:center;">Signal</th>
+                        <th style="padding:7px 12px;">Item</th>
+                        <th style="padding:7px 12px;">Category</th>
+                        <th style="padding:7px 12px;text-align:right;">Start</th>
+                        <th style="padding:7px 12px;text-align:right;">Current</th>
+                        <th style="padding:7px 12px;text-align:center;">Status</th>
                     </tr>
                 </thead>
+                <tbody id="qtyTableBody"></tbody>
             </table>
-
-            <!-- Virtual scroll container -->
-            <div id="scrollContainer"
-                 style="height:444px;overflow-y:auto;position:relative;"
-                 onscroll="onTableScroll()">
-                <div id="spacerTop" style="height:0px;"></div>
-                <table style="width:100%;border-collapse:collapse;
-                               font-size:13px;table-layout:fixed;">
-                    <colgroup>
-                        <col style="width:32%;" />
-                        <col style="width:18%;" />
-                        <col style="width:13%;" />
-                        <col style="width:13%;" />
-                        <col style="width:14%;" />
-                        <col style="width:10%;" />
-                    </colgroup>
-                    <tbody id="virtualBody"></tbody>
-                </table>
-                <div id="spacerBottom" style="height:0px;"></div>
-            </div>
         </div>
+    </div>
+    <!-- After closing </div> of border rounded overflow-hidden -->
+    <div class="d-flex justify-content-between mt-2 mb-4" id="qtyTableIndicatorRow">
+        <p class="text-muted mb-0" id="qtyScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id="qtyScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+    </div>
 
-        <div class="d-flex justify-content-between mt-2">
-            <p class="text-muted mb-0" id="scrollIndicator" style="font-size:12px;"></p>
-            <p class="text-muted mb-0" id="scrollMoreText" style="font-size:12px;">Scroll to load more</p>
+    <!-- At-risk items -->
+    <div class="border-top pt-4 mb-5">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#BA7517;font-size:15px;"></i>
+            <p class="fw-500 mb-0" style="font-size:15px;">At-risk items</p>
         </div>
+        <p class="text-muted mb-3" style="font-size:13px;">
+            Items where current quantity is significantly below starting quantity
+        </p>
+        <div id="atRiskList" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
 
 </div>
 
 @section Scripts {
-<script>
-    // ════════════════════════════════════════════════
-    // 1. SERVER DATA
-    // ════════════════════════════════════════════════
-    const detail = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detail));
+    <script>
+        // ── Data from server ──
+        const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MarketDetail));
 
-    const viewsOverTime = detail.ViewsOverTime || detail.viewsOverTime || [];
-    const mostViewed    = detail.MostViewed    || detail.mostViewed    || [];
-    const mostLiked     = detail.MostLiked     || detail.mostLiked     || [];
-    const allShowoffs   = detail.AllShowoffs   || detail.allShowoffs   || [];
-    const searchTerms   = detail.SearchTerms   || detail.searchTerms   || [];
-
-    // Normalise property names
-    allShowoffs.forEach(s => {
-        s.name     = s.ShowoffName || s.showoffName || s.name;
-        s.owner    = s.UserName    || s.userName    || s.owner;
-        s.views    = s.ViewCount   || s.viewCount   || 0;
-        s.likes    = s.LikeCount   || s.likeCount   || 0;
-        s.likeRate = s.LikeRate    || s.likeRate    || 0;
-    });
-
-    mostViewed.forEach(s => {
-        s.name  = s.ShowoffName || s.showoffName;
-        s.views = s.ViewCount   || s.viewCount || 0;
-        s.likes = s.LikeCount   || s.likeCount || 0;
-    });
-
-    mostLiked.forEach(s => {
-        s.name  = s.ShowoffName || s.showoffName;
-        s.views = s.ViewCount   || s.viewCount || 0;
-        s.likes = s.LikeCount   || s.likeCount || 0;
-    });
-
-    searchTerms.forEach(s => {
-        s.term  = s.SearchTerm  || s.searchTerm  || s.Term  || s.term;
-        s.count = s.Count       || s.count       || 0;
-    });
-
-    // ════════════════════════════════════════════════
-    // 2. CONSTANTS
-    // ════════════════════════════════════════════════
-    const colors      = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948'];
-    const ROW_HEIGHT  = 37;
-    const VISIBLE_ROWS = 12;
-    let filteredData  = [];
-
-    // ════════════════════════════════════════════════
-    // 3. LINE CHART — canvas drawn manually
-    // ════════════════════════════════════════════════
-    function renderLineChart() {
-        const canvas = document.getElementById('viewsChart');
-        canvas.width  = canvas.offsetWidth || 800;
-        canvas.height = 160;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const data = viewsOverTime.map(d => ({
-            label: formatDate(d.Date || d.date),
-            count: d.Count || d.count || 0
-        }));
-
-        if (data.length === 0) {
-            ctx.fillStyle   = '#9ca3af';
-            ctx.font        = '13px sans-serif';
-            ctx.textAlign   = 'center';
-            ctx.fillText('No view data for this period.', canvas.width / 2, 80);
-            return;
-        }
-
-        const pad    = { top:10, right:12, bottom:28, left:32 };
-        const w      = canvas.width  - pad.left - pad.right;
-        const h      = canvas.height - pad.top  - pad.bottom;
-        const maxVal = Math.max(...data.map(d => d.count), 1);
-
-        // Grid lines
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth   = 0.5;
-        [0, 0.25, 0.5, 0.75, 1].forEach(f => {
-            const y = pad.top + h - f * h;
-            ctx.beginPath();
-            ctx.moveTo(pad.left, y);
-            ctx.lineTo(pad.left + w, y);
-            ctx.stroke();
-            ctx.fillStyle   = '#9ca3af';
-            ctx.font        = '10px sans-serif';
-            ctx.textAlign   = 'right';
-            ctx.fillText(Math.round(f * maxVal), pad.left - 4, y + 3);
+        // Compute pct on client side
+        allItems.forEach(i => {
+            i.pct = i.Start === 0 ? 0 : Math.round(((i.Current - i.Start) / i.Start) * 100);
+            i.name = i.Name || i.name;
+            i.category = i.Category || i.category;
+            i.start = i.Start || i.start || 0;
+            i.current = i.Current || i.current || 0;
         });
 
-        // X labels
-        const step = Math.max(1, Math.ceil(data.length / 8));
-        ctx.fillStyle = '#9ca3af';
-        ctx.font      = '10px sans-serif';
-        ctx.textAlign = 'center';
-        data.forEach((d, i) => {
-            if (i % step === 0 || i === data.length - 1) {
-                const x = pad.left + (data.length > 1 ? (i / (data.length - 1)) * w : w / 2);
-                ctx.fillText(d.label, x, pad.top + h + 18);
+        const colors = [
+            '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
+            '#59a14f', '#edc948', '#b07aa1', '#ff9da7'
+        ];
+
+        let sortKey = 'pct', sortDir = -1, tableOpen = false;
+
+        // ── Render all sections ──
+        function renderAll() {
+            renderSummary();
+            renderChart();
+            renderCategoryBars();
+            renderQtyTable();
+            renderAtRisk();
+            if (tableOpen) applyFilters();
+        }
+
+        // ── Summary cards ──
+        function renderSummary() {
+            const rising = allItems.filter(i => i.pct > 0).length;
+            const declining = allItems.filter(i => i.pct < 0).length;
+            const net = allItems.reduce((s, i) => s + (i.current - i.start), 0);
+
+            document.getElementById('risingCount').textContent = rising;
+            document.getElementById('decliningCount').textContent = declining;
+
+            const netEl = document.getElementById('netChange');
+            netEl.textContent = (net >= 0 ? '+' : '') + net;
+            netEl.style.color = net > 0 ? '#0F6E56' : net < 0 ? '#A32D2D' : '#212529';
+        }
+
+        // ── Diverging bar chart ──
+        function renderChart() {
+            const top10 = [...allItems]
+                .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+                .slice(0, 10)
+                .sort((a, b) => b.pct - a.pct);
+
+            const maxAbs = Math.max(...top10.map(i => Math.abs(i.pct)), 1);
+            const container = document.getElementById('chartRows');
+            container.innerHTML = '';
+
+            top10.forEach(item => {
+                const barPct = (Math.abs(item.pct) / maxAbs) * 44;
+                const isRising = item.pct >= 0;
+                const color = item.pct === 0 ? '#dee2e6' : isRising ? '#1D9E75' : '#E24B4A';
+                const labelCol = item.pct === 0 ? '#6c757d' : isRising ? '#0F6E56' : '#A32D2D';
+                const label = item.pct > 0 ? `+${item.pct}%` : `${item.pct}%`;
+
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;height:26px;';
+
+                if (isRising) {
+                    row.innerHTML = `
+                                    <div style="width:50%;display:flex;justify-content:flex-end;align-items:center;padding-right:8px;">
+                                        <span style="font-size:12px;color:#6c757d;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${item.name}</span>
+                                    </div>
+                                    <div style="width:50%;display:flex;align-items:center;border-left:0.5px solid #dee2e6;">
+                                        <div style="margin-left:1px;height:16px;width:${barPct}%;background:${color};border-radius:0 3px 3px 0;min-width:2px;"></div>
+                                        <span style="font-size:11px;font-weight:500;color:${labelCol};margin-left:5px;white-space:nowrap;">${label}</span>
+                                    </div>`;
+                } else {
+                    row.innerHTML = `
+                                    <div style="width:50%;display:flex;justify-content:flex-end;align-items:center;padding-right:8px;">
+                                        <span style="font-size:11px;font-weight:500;color:${labelCol};margin-right:5px;white-space:nowrap;">${label}</span>
+                                        <div style="height:16px;width:${barPct}%;background:${color};border-radius:3px 0 0 3px;min-width:2px;"></div>
+                                    </div>
+                                    <div style="width:50%;display:flex;align-items:center;border-left:0.5px solid #dee2e6;padding-left:8px;">
+                                        <span style="font-size:12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">${item.name}</span>
+                                    </div>`;
+                }
+
+                container.appendChild(row);
+            });
+        }
+
+        // ── Category bars ──
+        function renderCategoryBars() {
+            const cats = {};
+            allItems.forEach(i => { cats[i.category] = (cats[i.category] || 0) + i.current; });
+
+            const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+            const maxVal = Math.max(...entries.map(e => e[1]), 1);
+
+            document.getElementById('catBars').innerHTML = entries.map(([cat, val], idx) => `
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="font-size:12px;color:#6c757d;width:160px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cat}</span>
+                                <div style="flex:1;height:16px;background:#f8f9fa;border-radius:3px;overflow:hidden;">
+                                    <div style="height:100%;width:${Math.round((val / maxVal) * 100)}%;background:${colors[idx % colors.length]};border-radius:3px;"></div>
+                                </div>
+                                <span style="font-size:12px;color:#6c757d;width:24px;">${val}</span>
+                            </div>`).join('');
+        }
+
+
+        // ════════════════════════════════════════════════
+        // VIRTUAL SCROLL — revised
+        // Single table, wrapper div scrolls, thead stays sticky
+        // ════════════════════════════════════════════════
+        const ROW_HEIGHT = 37;
+        const BUFFER = 5;
+        const THRESHOLD = 12;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            // Below threshold — render all rows normally, no fixed height
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
             }
-        });
 
-        if (data.length < 2) return;
+            // Fixed visible height — 12 rows + 1 partial to hint scrollability
+            const visibleHeight = ROW_HEIGHT * 12 + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
 
-        // Fill area
-        ctx.beginPath();
-        data.forEach((d, i) => {
-            const x = pad.left + (i / (data.length - 1)) * w;
-            const y = pad.top  + h - (d.count / maxVal) * h;
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        });
-        ctx.lineTo(pad.left + w, pad.top + h);
-        ctx.lineTo(pad.left,     pad.top + h);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(229,87,89,0.10)';
-        ctx.fill();
+            // Total spacer rows to give correct scroll height
+            // We pad tbody with invisible spacer rows above and below
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    data.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
 
-        // Line
-        ctx.beginPath();
-        ctx.strokeStyle = '#e15759';
-        ctx.lineWidth   = 2;
-        data.forEach((d, i) => {
-            const x = pad.left + (i / (data.length - 1)) * w;
-            const y = pad.top  + h - (d.count / maxVal) * h;
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        });
-        ctx.stroke();
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
 
-        // Dots
-        data.forEach((d, i) => {
-            const x = pad.left + (i / (data.length - 1)) * w;
-            const y = pad.top  + h - (d.count / maxVal) * h;
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, Math.PI * 2);
-            ctx.fillStyle = '#e15759';
-            ctx.fill();
-        });
-    }
+                // Pad rows keep the scroll height correct without rendering all data
+                const topSpacer = topPad > 0
+                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
+                    : '';
+                const bottomSpacer = bottomPad > 0
+                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
+                    : '';
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
-    }
+                tbody.innerHTML =
+                    topSpacer +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    bottomSpacer;
+            }
 
-    // ════════════════════════════════════════════════
-    // 4. ENGAGEMENT BARS
-    // ════════════════════════════════════════════════
-    function renderEngagementBars() {
-        // Most viewed
-        const maxViews = Math.max(...mostViewed.map(s => s.views), 1);
-        document.getElementById('mostViewedBars').innerHTML = mostViewed.length === 0
-            ? '<p class="text-muted" style="font-size:13px;">No view data yet.</p>'
-            : mostViewed.map((s, i) => `
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:11px;color:#6c757d;width:120px;text-align:right;
-                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                                 flex-shrink:0;">${s.name}</span>
-                    <div style="flex:1;height:14px;background:#f8f9fa;border-radius:3px;overflow:hidden;">
-                        <div style="height:100%;width:${Math.round((s.views / maxViews) * 100)}%;
-                                    background:${colors[i % colors.length]};border-radius:3px;"></div>
-                    </div>
-                    <span style="font-size:11px;color:#adb5bd;width:22px;
-                                 text-align:right;flex-shrink:0;">${s.views}</span>
-                </div>`).join('');
+            // Throttle scroll events with requestAnimationFrame
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
 
-        // Most liked
-        const maxLikes = Math.max(...mostLiked.map(s => s.likes), 1);
-        document.getElementById('mostLikedBars').innerHTML = mostLiked.length === 0
-            ? '<p class="text-muted" style="font-size:13px;">No like data yet.</p>'
-            : mostLiked.map((s, i) => `
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:11px;color:#6c757d;width:120px;text-align:right;
-                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                                 flex-shrink:0;">${s.name}</span>
-                    <div style="flex:1;height:14px;background:#f8f9fa;border-radius:3px;overflow:hidden;">
-                        <div style="height:100%;width:${Math.round((s.likes / maxLikes) * 100)}%;
-                                    background:#e15759;border-radius:3px;"></div>
-                    </div>
-                    <span style="font-size:11px;color:#adb5bd;width:22px;
-                                 text-align:right;flex-shrink:0;">${s.likes}</span>
-                </div>`).join('');
-    }
-
-    // ════════════════════════════════════════════════
-    // 5. SEARCH TERM BARS
-    // ════════════════════════════════════════════════
-    function renderSearchBars() {
-        const container = document.getElementById('searchBars');
-
-        if (searchTerms.length === 0) {
-            container.innerHTML =
-                '<p class="text-muted" style="font-size:13px;">No search data yet.</p>';
-            return;
+            // Reset scroll to top when data changes
+            wrapper.scrollTop = 0;
+            render();
         }
 
-        const maxCount = Math.max(...searchTerms.map(s => s.count), 1);
-        container.innerHTML = searchTerms.map((s, i) => `
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:12px;color:#6c757d;width:110px;text-align:right;
-                             flex-shrink:0;overflow:hidden;text-overflow:ellipsis;
-                             white-space:nowrap;">${s.term}</span>
-                <div style="flex:1;height:14px;background:#f8f9fa;border-radius:3px;overflow:hidden;">
-                    <div style="height:100%;width:${Math.round((s.count / maxCount) * 100)}%;
-                                background:#76b7b2;border-radius:3px;"></div>
-                </div>
-                <span style="font-size:12px;color:#adb5bd;width:24px;
-                             text-align:right;flex-shrink:0;">${s.count}</span>
-            </div>`).join('');
-    }
+        // ════════════════════════════════════════════════
+        // STARTING VS CURRENT QTY TABLE
+        // ════════════════════════════════════════════════
+        function renderQtyTable() {
+            const wrapper = document.getElementById('qtyTableWrapper');
+            const tbody = document.getElementById('qtyTableBody');
+            const indicatorRow = document.getElementById('qtyTableIndicatorRow');
+            const moreText = document.getElementById('qtyScrollMoreText');
 
-    // ════════════════════════════════════════════════
-    // 6. COMPARISON TABLE — virtual scroll
-    // ════════════════════════════════════════════════
-    function applyTableFilters() {
-        const nameQ  = (document.getElementById('nameFilter')?.value  || '').trim().toLowerCase();
-        const ownerQ = (document.getElementById('ownerFilter')?.value || '').trim().toLowerCase();
-        const signal = document.getElementById('signalFilter')?.value || '';
-        const sort   = document.getElementById('tableSort')?.value    || 'views';
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(allItems.length, visStart + THRESHOLD - 1);
+                document.getElementById('qtyScrollIndicator').textContent =
+                    allItems.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${allItems.length}`
+                        : `${allItems.length} item${allItems.length === 1 ? '' : 's'}`;
+            }
 
-        let data = [...allShowoffs];
-
-        if (nameQ)             data = data.filter(s => s.name.toLowerCase().includes(nameQ));
-        if (ownerQ)            data = data.filter(s => s.owner.toLowerCase().includes(ownerQ));
-        if (signal === 'high') data = data.filter(s => s.likeRate >= 25);
-        if (signal === 'low')  data = data.filter(s => s.likeRate < 25);
-
-        data.sort((a, b) => {
-            if (sort === 'views')    return b.views    - a.views;
-            if (sort === 'likes')    return b.likes    - a.likes;
-            if (sort === 'rateHigh') return b.likeRate - a.likeRate;
-            if (sort === 'rateLow')  return a.likeRate - b.likeRate;
-            if (sort === 'name')     return a.name.localeCompare(b.name);
-            return 0;
-        });
-
-        filteredData = data;
-
-        document.getElementById('resultCount').textContent =
-            `${data.length} showoff${data.length === 1 ? '' : 's'} found`;
-
-        const sc = document.getElementById('scrollContainer');
-        sc.scrollTop = 0;
-        renderVirtualRows(0);
-    }
-
-    function renderVirtualRows(scrollTop) {
-        const total  = filteredData.length;
-        const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
-        const endIdx   = Math.min(total, startIdx + VISIBLE_ROWS + 4);
-
-        const sc = document.getElementById('scrollContainer');
-        if (total <= VISIBLE_ROWS) {
-            sc.style.height = `${total * ROW_HEIGHT}px`;
-            sc.style.maxHeight = `${total * ROW_HEIGHT}px`;
-        } else {
-            sc.style.height = `${VISIBLE_ROWS * ROW_HEIGHT}px`;
-            sc.style.maxHeight = `${VISIBLE_ROWS * ROW_HEIGHT}px`;
-        }
-
-        document.getElementById('spacerTop').style.height =
-            `${startIdx * ROW_HEIGHT}px`;
-        document.getElementById('spacerBottom').style.height =
-            `${(total - endIdx) * ROW_HEIGHT}px`;
-
-        const visStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) + 1);
-        const visEnd   = Math.min(total, visStart + VISIBLE_ROWS);
-
-        document.getElementById('scrollIndicator').textContent =
-            total === 0
-                ? 'No results'
-                : total > VISIBLE_ROWS
-                    ? `Showing ${visStart}–${visEnd} of ${total}`
-                    : `${total} showoff${total === 1 ? '' : 's'}`;
-
-        document.getElementById('scrollMoreText').style.display =
-            total > VISIBLE_ROWS ? 'block' : 'none';
-
-        document.getElementById('virtualBody').innerHTML =
-            filteredData.slice(startIdx, endIdx).map(s => {
-                const rate     = s.likeRate.toFixed(0);
-                const isHigh   = parseFloat(rate) >= 25;
-                const dotColor = isHigh ? '#0F6E56' : '#E24B4A';
-                const rateCol  = isHigh ? '#0F6E56' : '#E24B4A';
+            function rowFn(item, idx) {
+                const diff = item.current - item.start;
+                const dotColor = diff > 0 ? '#1D9E75' : diff < 0 ? '#E24B4A' : '#6c757d';
+                const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
                 return `
-                    <tr style="height:${ROW_HEIGHT}px;border-top:0.5px solid #dee2e6;">
-                        <td style="padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</td>
-                        <td style="padding:0 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.owner}</td>
-                        <td style="padding:0 12px;text-align:right;color:#6c757d;">${s.views}</td>
-                        <td style="padding:0 12px;text-align:right;color:#6c757d;">${s.likes}</td>
-                        <td style="padding:0 12px;text-align:right;font-weight:500;color:${rateCol};">${rate}%</td>
-                        <td style="padding:0 12px;text-align:center;">
-                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>
-                        </td>
-                    </tr>`;
+                            <tr style="${border}height:${ROW_HEIGHT}px;">
+                                <td style="padding:7px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
+                                <td style="padding:7px 12px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
+                                <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.start}</td>
+                                <td style="padding:7px 12px;text-align:right;color:#6c757d;">${item.current}</td>
+                                <td style="padding:7px 12px;text-align:center;">
+                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>
+                                </td>
+                            </tr>`;
+            }
+
+            // Row always visible now — count always shown, "scroll more" gated by threshold
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = allItems.length > THRESHOLD ? 'block' : 'none';
+
+            if (allItems.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = allItems.map((row, i) => rowFn(row, i)).join('');
+                updateIndicator();
+                return;
+            }
+
+            updateIndicator();
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(
+                    allItems.length,
+                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
+                );
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (allItems.length - endIdx) * ROW_HEIGHT;
+
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="5"></td></tr>` : '') +
+                    allItems.slice(startIdx, endIdx).map((row, i) => rowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="5"></td></tr>` : '');
+
+                updateIndicator();
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        // ── At-risk items (pct ≤ -20) ──
+        function renderAtRisk() {
+            const atRisk = allItems.filter(i => i.pct <= -20);
+            const container = document.getElementById('atRiskList');
+
+            if (atRisk.length === 0) {
+                container.innerHTML = '<p class="text-muted mb-0" style="font-size:13px;">No at-risk items detected.</p>';
+                return;
+            }
+
+            container.innerHTML = atRisk.map(item => `
+                            <div class="d-flex align-items-center justify-content-between p-3 rounded"
+                                 style="background:#FFF8E7;border:0.5px solid #f0c040;">
+                                <div>
+                                    <p class="fw-500 mb-0" style="font-size:13px;color:#BA7517;">${item.name}</p>
+                                    <p class="mb-0" style="font-size:12px;color:#BA7517;opacity:0.85;">
+                                        ${item.category} · started at ${item.start}, now ${item.current}
+                                    </p>
+                                </div>
+                                <span class="fw-500" style="font-size:13px;color:#BA7517;">${item.pct}%</span>
+                            </div>`).join('');
+        }
+
+        // ── Toggle expandable table ──
+        function toggleTable() {
+            tableOpen = !tableOpen;
+            document.getElementById('tableSection').style.display = tableOpen ? 'block' : 'none';
+            const btn = document.getElementById('toggleBtn');
+            btn.innerHTML = tableOpen
+                ? `Show less <i class="bi bi-arrow-left" style="font-size:13px;"></i>`
+                : `See more <i class="bi bi-arrow-right" style="font-size:13px;"></i>`;
+            if (tableOpen) applyFilters();
+        }
+
+        // ── Filter + sort full table ──
+        function applyFilters() {
+            const op = document.getElementById('operator').value;
+            const pctVal = document.getElementById('pctInput').value;
+            const nameQ = document.getElementById('nameInput').value.trim().toLowerCase();
+
+            let filtered = [...allItems];
+
+            if (nameQ) filtered = filtered.filter(i => i.name.toLowerCase().includes(nameQ));
+
+            if (pctVal !== '') {
+                const num = parseInt(pctVal);
+                const ops = { gt: (a, b) => a > b, lt: (a, b) => a < b, gte: (a, b) => a >= b, lte: (a, b) => a <= b, eq: (a, b) => a === b };
+                filtered = filtered.filter(i => ops[op](i.pct, num));
+            }
+
+            filtered.sort((a, b) => {
+                const av = a[sortKey], bv = b[sortKey];
+                return typeof av === 'string'
+                    ? sortDir * av.localeCompare(bv)
+                    : sortDir * (av - bv);
+            });
+
+            const tbody = document.getElementById('tableBody');
+            const empty = document.getElementById('emptyState');
+            const fullRow = document.getElementById('fullTableIndicatorRow');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                fullRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+
+            fullRow.style.removeProperty('display');
+            document.getElementById('fullTableScrollIndicator').textContent =
+                `${filtered.length} item${filtered.length === 1 ? '' : 's'} found`;
+            document.getElementById('fullTableScrollMoreText').style.display =
+                filtered.length > THRESHOLD ? 'block' : 'none';
+
+            tbody.innerHTML = filtered.map((item, idx) => {
+                const isRising = item.pct > 0, isFlat = item.pct === 0;
+                const badgeBg = isFlat ? 'rgba(166, 177, 225, 0.1)' : isRising ? 'rgba(126, 245, 166, 0.15)' : 'rgba(255, 133, 145, 0.15)';
+                const badgeColor = isFlat ? '#8d94ba' : isRising ? '#7ef5a6' : '#ff8591';
+                const icon = isFlat ? 'bi-dash' : isRising ? 'bi-arrow-up' : 'bi-arrow-down';
+                const pctLabel = item.pct > 0 ? `+${item.pct}%` : `${item.pct}%`;
+                const pctColor = isFlat ? '#8d94ba' : isRising ? '#7ef5a6' : '#ff8591';
+                const border = idx > 0 ? 'border-top:0.5px solid #dee2e6;' : '';
+
+                return `
+                                <tr style="${border}">
+                                    <td style="padding:7px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</td>
+                                    <td style="padding:7px 10px;color:#6c757d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.category}</td>
+                                    <td style="padding:7px 10px;text-align:right;color:#6c757d;">${item.start}</td>
+                                    <td style="padding:7px 10px;text-align:right;color:#6c757d;">${item.current}</td>
+                                    <td style="padding:7px 10px;text-align:right;font-weight:500;color:${pctColor};">${pctLabel}</td>
+                                    <td style="padding:7px 10px;text-align:center;">
+                                        <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 7px;border-radius:999px;background:${badgeBg};color:${badgeColor};">
+                                            <i class="bi ${icon}" style="font-size:11px;"></i>
+                                            ${isFlat ? 'Flat' : isRising ? 'Rising' : 'Declining'}
+                                        </span>
+                                    </td>
+                                </tr>`;
             }).join('');
-    }
+        }
 
-    function onTableScroll() {
-        const sc = document.getElementById('scrollContainer');
-        renderVirtualRows(sc.scrollTop);
-    }
+        function sortTable(key) {
+            if (sortKey === key) sortDir *= -1;
+            else { sortKey = key; sortDir = -1; }
+            applyFilters();
+        }
 
-    // ════════════════════════════════════════════════
-    // 7. INIT
-    // ════════════════════════════════════════════════
-    renderLineChart();
-    renderEngagementBars();
-    renderSearchBars();
-    applyTableFilters();
+        // ════════════════════════════════════════════════
+        // SEARCH CLEAR ("×") BUTTON
+        // ════════════════════════════════════════════════
+        // Adds a clear ("×") button to a search input; shows only when it has text.
+        // Wraps the input in its own dedicated box (rather than reusing a shared flex-row
+        // parent that might also contain a <select> etc.), so the button always sits
+        // against the input itself, never a sibling control.
+        function enableSearchClear(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input || input.dataset.clearEnabled) return;
 
-    window.addEventListener('resize', renderLineChart);
-</script>
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-clear-wrapper';
+
+            if (input.style.flex) {
+                wrapper.style.flex = input.style.flex;
+                input.style.flex = '';
+            } else {
+                wrapper.style.width = '100%';
+            }
+            if (input.style.minWidth) {
+                wrapper.style.minWidth = input.style.minWidth;
+                input.style.minWidth = '';
+            }
+            input.style.width = '100%';
+
+            input.parentElement.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-clear-btn';
+            btn.innerHTML = '&times;';
+            btn.setAttribute('aria-label', 'Clear search');
+            wrapper.appendChild(btn);
+
+            function toggleBtn() {
+                btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', toggleBtn);
+            toggleBtn();
+
+            btn.addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                toggleBtn();
+                input.focus();
+            });
+
+            input.dataset.clearEnabled = 'true';
+        }
+
+        // ── Init ──
+        renderAll();
+        enableSearchClear('nameInput');
+    </script>
+    <style>
+        /* Rising vs Declining — % operator input: widen slightly and hide the native
+                   number spinner, which was crowding the "% change" placeholder in the
+                   original 90px-wide box. */
+        #pctInput::-webkit-outer-spin-button,
+        #pctInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #pctInput {
+            -moz-appearance: textfield;
+        }
+    </style>
 }

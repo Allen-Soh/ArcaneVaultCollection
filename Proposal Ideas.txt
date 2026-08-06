@@ -112,8 +112,8 @@ _ Under user settings, add password reset, password change, username change and 
 *Home Page*
 
 *NEW FEATUREEEEEE*
-_ A Showoff Cosmetics Shop that uses stripe api as the payment processor, where users can buy cosmetics (Frames and Titles)
+_ A Showoff Cosmetics Shop that uses stripe api as the payment processor, where users can buy cosmetics (Frames, Titles and stickers)
 _ There will be unlimited and limited, which users can trade them with other users which requires both parties to confirm the trade, and the trade will be completed when both parties confirm the trade, and the items will be transferred to the respective users' inventories
-_ The Cosmetic Shop will be a sub page under the Showoffs page, and will have a search bar to search for cosmetics by name, type (frame or title), and will have a filter by rarity dropdown
+_ The Cosmetic Shop will be a sub page under the Showoffs page, and will have a search bar to search for cosmetics by name, type (frame, title, and sticker)
 _ Users can equip their cosmetics to their showoffs in Create and Edit, and will be able to see the equipped cosmetics in the Showoff view
 _ When the user clicks on their profile in navbar, it will give a dropdown menu, with "Settings", "Cosmetics", "Trades" and "Logout"

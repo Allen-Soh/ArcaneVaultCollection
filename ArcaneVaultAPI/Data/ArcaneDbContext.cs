@@ -20,9 +20,12 @@ namespace ArcaneVaultAPI.Data
         public DbSet<ReportAssignmentCounter> ReportAssignmentCounters { get; set; }
         public DbSet<LoginLog> LoginLogs { get; set; }
         public DbSet<SearchLog> SearchLogs { get; set; }
-        public DbSet<SupportTicket> SupportTickets { get; set; } 
+        public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<TicketAssignmentCounter> TicketAssignmentCounters { get; set; }
         public DbSet<PasswordResetCode> PasswordResetCodes { get; set; }
+        public DbSet<Frame> Frames { get; set; }
+        public DbSet<Sticker> Stickers { get; set; }
+        public DbSet<Title> Titles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

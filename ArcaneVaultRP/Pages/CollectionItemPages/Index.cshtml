@@ -318,22 +318,64 @@
                     : "No Category";
 
                 return `
-                    <tr style="${border}height:${ROW_HEIGHT}px;">
-                        <td style="padding:12px;">${truncate(item.ItemName)}</td>
-                        <td style="padding:12px;">${categoryDisplay}</td>
-                        <td style="padding:12px;">${item.CurrentQuantity}</td>
-                        <td style="padding:12px; white-space:nowrap;">
-                            <div class="d-inline-flex gap-1">
-                                <a href="/CollectionItemPages/Edit?itemid=${item.ItemId}" class="btn btn-warning btn-sm">Edit</a>
-                                <a href="/CollectionItemPages/Details?itemid=${item.ItemId}" class="btn btn-info btn-sm">View</a>
-                                <a href="/CollectionItemPages/Delete?itemid=${item.ItemId}" class="btn btn-danger btn-sm">Delete</a>
-                            </div>
-                        </td>
-                    </tr>`;
+                            <tr style="${border}height:${ROW_HEIGHT}px;">
+                                <td style="padding:12px;">${truncate(item.ItemName)}</td>
+                                <td style="padding:12px;">${categoryDisplay}</td>
+                                <td style="padding:12px;">${item.CurrentQuantity}</td>
+                                <td style="padding:12px; white-space:nowrap;">
+                                    <div class="d-inline-flex gap-1">
+                                        <a href="/CollectionItemPages/Edit?itemid=${item.ItemId}" class="btn btn-warning btn-sm">Edit</a>
+                                        <a href="/CollectionItemPages/Details?itemid=${item.ItemId}" class="btn btn-info btn-sm">View</a>
+                                        <a href="/CollectionItemPages/Delete?itemid=${item.ItemId}" class="btn btn-danger btn-sm">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>`;
             });
             updateIndicator();
         }
 
+        // Adds a clear ("×") button to a search input; shows only when it has text.
+        // Wraps the input in its own dedicated box (rather than reusing input.parentElement,
+        // which on this page is the whole label+input+suggestions column) so the × is
+        // always centered against the input itself, matching the Insights pages behavior.
+        function enableSearchClear(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input || input.dataset.clearEnabled) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-clear-wrapper';
+            wrapper.style.width = '100%';
+            input.style.width = '100%';
+
+            input.parentElement.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-clear-btn';
+            btn.innerHTML = '&times;';
+            btn.setAttribute('aria-label', 'Clear search');
+            wrapper.appendChild(btn);
+
+            function toggleBtn() {
+                btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', toggleBtn);
+            toggleBtn();
+
+            btn.addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                toggleBtn();
+                input.focus();
+            });
+
+            input.dataset.clearEnabled = 'true';
+        }
+
         renderTable(displayItems);
+        enableSearchClear('searchItemName');
+        enableSearchClear('searchCategory');
     </script>
 }

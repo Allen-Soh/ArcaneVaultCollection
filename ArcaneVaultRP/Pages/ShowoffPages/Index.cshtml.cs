@@ -30,6 +30,9 @@ public class IndexModel : PageModel
     public List<Showoff> UserShowoffs { get; set; } = new();
     public List<CollectionItemCategory> UserCollectionItems { get; set; } = new();
     public List<Category> Categories { get; set; } = new();
+    public List<Frame> Frames { get; set; } = new();
+    public List<Title> Titles { get; set; } = new();
+    public List<Sticker> Stickers { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(
         string tab = "feed",
@@ -69,6 +72,13 @@ public class IndexModel : PageModel
         Categories = await httpClient.GetFromJsonAsync<List<Category>>("Category")
                      ?? new List<Category>();
 
+        // Only bother fetching cosmetics when the Shop tab is actually being viewed —
+        // avoids unnecessary API calls on every Feed/Profile page load.
+        if (ActiveTab == "shop")
+        {
+            await LoadShopDataAsync(httpClient);
+        }
+
         await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
 
         return Page();
@@ -97,12 +107,26 @@ public class IndexModel : PageModel
 
 
         return Partial("_ShowoffGrid", this);
-        
+
         //return new PartialViewResult
         //{
-         //   ViewName = "_ShowoffGrid",
-         //   ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
+        //   ViewName = "_ShowoffGrid",
+        //   ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
         //};
+    }
+
+    private async Task LoadShopDataAsync(HttpClient httpClient)
+    {
+        // ASSUMPTION: endpoint names "Frame" / "Title" / "Sticker" — update to match your
+        // actual API controller routes if they differ.
+        Frames = await httpClient.GetFromJsonAsync<List<Frame>>("Frame")
+                 ?? new List<Frame>();
+
+        Titles = await httpClient.GetFromJsonAsync<List<Title>>("Title")
+                 ?? new List<Title>();
+
+        Stickers = await httpClient.GetFromJsonAsync<List<Sticker>>("Sticker")
+                   ?? new List<Sticker>();
     }
 
     private async Task LoadFeedDataAsync(

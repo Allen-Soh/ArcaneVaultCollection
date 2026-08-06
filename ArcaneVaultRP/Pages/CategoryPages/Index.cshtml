@@ -21,7 +21,7 @@
                    autocomplete="off" />
             <div id="categoryNameSuggestions"
                  class="list-group position-absolute z-3"
-                 style="width:100%;max-height:200px;overflow-y:auto;"></div>
+                 style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
         </div>
 
         <div class="col-md-2 d-flex align-items-end gap-2">
@@ -74,13 +74,26 @@
             const query = this.value.trim().toLowerCase();
             categoryNameSuggestions.innerHTML = '';
 
-            if (query.length === 0) return;
+            // Fix — box previously had no default display:none, so it rendered as an empty
+            // bordered box under the input at all times. Now it's hidden whenever there's
+            // no query or no matches, shown only while there are suggestions to display.
+            if (query.length === 0) {
+                categoryNameSuggestions.style.display = 'none';
+                return;
+            }
 
             const matches = categories
                 .filter(c =>
                     (c.CategoryName && c.CategoryName.toLowerCase().includes(query)) ||
                     (c.CategoryCode && c.CategoryCode.toLowerCase().includes(query)))
                 .slice(0, 5);
+
+            if (matches.length === 0) {
+                categoryNameSuggestions.style.display = 'none';
+                return;
+            }
+
+            categoryNameSuggestions.style.display = 'block';
 
             // FIXED — cat is the object, use cat.CategoryName and cat.CategoryCode
             matches.forEach(cat => {
@@ -92,6 +105,7 @@
                     e.preventDefault();
                     searchCategoryName.value = cat.CategoryName;  // ← assign string not object
                     categoryNameSuggestions.innerHTML = '';
+                    categoryNameSuggestions.style.display = 'none';
                     document.querySelector('form').submit();
                 });
                 categoryNameSuggestions.appendChild(item);
@@ -99,7 +113,10 @@
         });
 
         document.addEventListener('click', function (e) {
-            if (!searchCategoryName.contains(e.target)) categoryNameSuggestions.innerHTML = '';
+            if (!searchCategoryName.contains(e.target)) {
+                categoryNameSuggestions.innerHTML = '';
+                categoryNameSuggestions.style.display = 'none';
+            }
         });
 
         // ── Virtual Scroll Table Implementation (Copied from Insights) ──
@@ -197,21 +214,62 @@
             createVirtualTable('categoryTableWrapper', 'categoryTableBody', data, (cat, idx) => {
                 const border = idx > 0 ? 'border-top:1px solid var(--border-color);' : '';
                 return `
-                    <tr style="${border}height:${ROW_HEIGHT}px;">
-                        <td style="padding:12px;">${cat.CategoryCode}</td>
-                        <td style="padding:12px;">${truncate(cat.CategoryName)}</td>
-                        <td style="padding:12px; white-space:nowrap;">
-                            <div class="d-inline-flex gap-1">
-                                <a href="/CategoryPages/Edit?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-warning btn-sm">Edit</a>
-                                <a href="/CategoryPages/Details?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-info btn-sm">View</a>
-                                <a href="/CategoryPages/Delete?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-danger btn-sm">Delete</a>
-                            </div>
-                        </td>
-                    </tr>`;
+                            <tr style="${border}height:${ROW_HEIGHT}px;">
+                                <td style="padding:12px;">${cat.CategoryCode}</td>
+                                <td style="padding:12px;">${truncate(cat.CategoryName)}</td>
+                                <td style="padding:12px; white-space:nowrap;">
+                                    <div class="d-inline-flex gap-1">
+                                        <a href="/CategoryPages/Edit?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-warning btn-sm">Edit</a>
+                                        <a href="/CategoryPages/Details?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-info btn-sm">View</a>
+                                        <a href="/CategoryPages/Delete?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-danger btn-sm">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>`;
             });
             updateIndicator();
         }
 
+        // Adds a clear ("×") button to a search input; shows only when it has text.
+        // Wraps the input in its own dedicated box (rather than reusing input.parentElement,
+        // which on this page is the whole label+input+suggestions column) so the × is
+        // always centered against the input itself, matching the Insights pages behavior.
+        function enableSearchClear(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input || input.dataset.clearEnabled) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-clear-wrapper';
+            wrapper.style.width = '100%';
+            input.style.width = '100%';
+
+            input.parentElement.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-clear-btn';
+            btn.innerHTML = '&times;';
+            btn.setAttribute('aria-label', 'Clear search');
+            wrapper.appendChild(btn);
+
+            function toggleBtn() {
+                btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', toggleBtn);
+            toggleBtn();
+
+            btn.addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                toggleBtn();
+                input.focus();
+            });
+
+            input.dataset.clearEnabled = 'true';
+        }
+
         renderTable(categories);
+        enableSearchClear('searchCategoryName');
     </script>
 }

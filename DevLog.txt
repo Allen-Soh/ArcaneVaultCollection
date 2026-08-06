@@ -424,3 +424,14 @@ Fixed Tickets css styling
 - Can add Notifications system
 - Must think about how to add another user to be staff "RoleId = 1"
 - Continue working on shop, inventory and trades page in "Proposed Ideas"
+
+===== DEV LOG (7/8/2026) =====
+[Done]
+- Added Titles to Shop
+- Added "x" clear button in search bars
+
+[To Do]
+- Fix Page pagination for showoff feed in order to not have the same issue with shop
+- Can add Notifications system
+- Must think about how to add another user to be staff "RoleId = 1"
+- Continue working on shop, inventory and trades page in "Proposed Ideas"
