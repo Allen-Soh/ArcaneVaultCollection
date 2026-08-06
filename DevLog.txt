@@ -415,3 +415,12 @@
 - Can add Notifications system
 - Must think about how to add another user to be staff "RoleId = 1"
 - Continue working on shop, inventory and trades page in "Proposed Ideas"
+
+===== DEV LOG (6/8/2026) - Part 2 =====
+[Done]
+Fixed Tickets css styling
+
+[To Do]
+- Can add Notifications system
+- Must think about how to add another user to be staff "RoleId = 1"
+- Continue working on shop, inventory and trades page in "Proposed Ideas"

@@ -50,11 +50,28 @@
                                 <li class="nav-item">
                                     <a class="nav-link @NavActiveClass("/CategoryPages")" asp-page="/CategoryPages/Index">Categories</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link @NavActiveClass("/ShowoffPages/Reports")" asp-page="/ShowoffPages/Reports">Reports</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link @NavActiveClass("/SupportPages/Staff")" asp-page="/SupportPages/Staff">Support Tickets</a>
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Reports") + NavActiveClass("/SupportPages/Staff"))"
+                                       href="#"
+                                       id="ticketsDropdownToggle"
+                                       role="button"
+                                       data-bs-toggle="dropdown"
+                                       aria-expanded="false">
+                                        Tickets
+                                        <i class="bi bi-chevron-down dropdown-caret-icon"></i>
+                                    </a>
+                                    <ul class="dropdown-menu profile-dropdown-menu" aria-labelledby="ticketsDropdownToggle">
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/Reports">
+                                                <i class="bi bi-flag"></i> Report
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/SupportPages/Staff">
+                                                <i class="bi bi-headset"></i> Support
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
                             else

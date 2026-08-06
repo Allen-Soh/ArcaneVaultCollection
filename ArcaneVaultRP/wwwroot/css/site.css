@@ -324,9 +324,26 @@ a:hover {
     box-shadow: 0 0 10px 2px rgba(220, 214, 247, 0.9) !important;
 }
 
-/* Profile dropdown — arrow pointing up to the avatar, matches dark theme */
-#profileDropdownToggle.dropdown-toggle.no-caret::after {
-    display: none; /* suppress Bootstrap's default caret triangle — avatar circle is the trigger */
+/* Generic no-caret utility — hides Bootstrap's default ::after triangle.
+   Needed anywhere we swap in a custom icon, since the built-in caret and
+   the active-glow underline both use ::after and would otherwise collide. */
+.dropdown-toggle.no-caret::after {
+    display: none;
+}
+
+/* Custom dropdown caret (Tickets nav item) */
+.dropdown-caret-icon {
+    display: inline-block;
+    font-size: 0.7rem;
+    margin-left: 2px;
+    vertical-align: -1px; /* aligns arrow with the bottom of the text */
+    transition: transform 0.25s ease;
+    transform: rotate(0deg);
+}
+
+/* Rotate the caret to point up while its dropdown is open */
+.dropdown-toggle[aria-expanded="true"] .dropdown-caret-icon {
+    transform: rotate(180deg);
 }
 
 .profile-dropdown-menu {
@@ -339,7 +356,7 @@ a:hover {
     content: "";
     position: absolute;
     top: -8px;
-    right: 12px;
+    left: 12px; /* default: left-aligned dropdowns (e.g. Tickets) */
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
 }
@@ -351,6 +368,13 @@ a:hover {
 .profile-dropdown-menu::after {
     top: -7px;
     border-bottom: 7px solid var(--bg-card);
+}
+
+/* Right-aligned dropdowns (profile avatar menu) point the arrow to the right instead */
+.profile-dropdown-menu.dropdown-menu-end::before,
+.profile-dropdown-menu.dropdown-menu-end::after {
+    left: auto;
+    right: 12px;
 }
 
 .profile-dropdown-menu .dropdown-item.disabled {
