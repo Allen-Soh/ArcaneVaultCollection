@@ -1,3 +1,4 @@
+/*Site.css*/
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 :root {
@@ -286,6 +287,88 @@ a:hover {
     color: var(--color-light) !important;
     background-color: transparent !important;
     border-bottom: 3px solid var(--color-periwinkle) !important;
+}
+
+.navbar-nav .nav-link {
+    color: var(--text-secondary) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    transition: all 0.25s ease !important;
+    position: relative;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus {
+    color: var(--color-light) !important;
+    background-color: rgba(166, 177, 225, 0.15) !important;
+    box-shadow: 0 0 16px 2px rgba(166, 177, 225, 0.5) !important;
+}
+
+/* Active nav-link glow — current page indicator */
+.navbar-nav .nav-link.active-glow {
+    color: var(--color-light) !important;
+    background-color: rgba(166, 177, 225, 0.18) !important;
+    box-shadow: 0 0 18px 4px rgba(166, 177, 225, 0.6), inset 0 0 10px rgba(220, 214, 247, 0.25) !important;
+}
+
+.navbar-nav .nav-link.active-glow::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 14px !important;
+    right: 14px !important;
+    bottom: 2px !important;
+    height: 2px !important;
+    border-radius: 2px !important;
+    background: linear-gradient(90deg, var(--color-periwinkle), var(--color-lavender)) !important;
+    box-shadow: 0 0 10px 2px rgba(220, 214, 247, 0.9) !important;
+}
+
+/* Profile dropdown — arrow pointing up to the avatar, matches dark theme */
+#profileDropdownToggle.dropdown-toggle.no-caret::after {
+    display: none; /* suppress Bootstrap's default caret triangle — avatar circle is the trigger */
+}
+
+.profile-dropdown-menu {
+    margin-top: 14px !important; /* room for the arrow */
+    min-width: 180px;
+}
+
+.profile-dropdown-menu::before,
+.profile-dropdown-menu::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+}
+
+.profile-dropdown-menu::before {
+    border-bottom: 8px solid var(--border-color);
+}
+
+.profile-dropdown-menu::after {
+    top: -7px;
+    border-bottom: 7px solid var(--bg-card);
+}
+
+.profile-dropdown-menu .dropdown-item.disabled {
+    color: var(--text-muted) !important;
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.profile-dropdown-menu .dropdown-item i {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    color: var(--color-periwinkle);
+}
+
+.profile-dropdown-menu .dropdown-item.disabled i {
+    color: var(--text-muted) !important;
 }
 
 /* Footer override */

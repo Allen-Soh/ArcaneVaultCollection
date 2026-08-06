@@ -1,3 +1,9 @@
+@{
+    string NavActiveClass(string pagePath) =>
+        Context.Request.Path.Equals(pagePath, StringComparison.OrdinalIgnoreCase)
+            ? "active-glow"
+            : "";
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,65 +36,63 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                     <ul class="navbar-nav flex-grow-1">
+                    <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
+                            <a class="nav-link @NavActiveClass("/")" asp-area="" asp-page="/Index">Home</a>
                         </li>
                         @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)
                         {
                             @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-page="/InsightPages/Index">Insights</a>
+                                    <a class="nav-link @NavActiveClass("/InsightPages")" asp-page="/InsightPages/Index">Insights</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-page="/CategoryPages/Index">Categories</a>
+                                    <a class="nav-link @NavActiveClass("/CategoryPages")" asp-page="/CategoryPages/Index">Categories</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-page="/ShowoffPages/Reports">Reports</a>
+                                    <a class="nav-link @NavActiveClass("/ShowoffPages/Reports")" asp-page="/ShowoffPages/Reports">Reports</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-page="/SupportPages/Staff">Support Tickets</a>
+                                    <a class="nav-link @NavActiveClass("/SupportPages/Staff")" asp-page="/SupportPages/Staff">Support Tickets</a>
                                 </li>
                             }
                             else
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-page="/SupportPages/Index">User Support</a>
+                                    <a class="nav-link @NavActiveClass("/SupportPages")" asp-page="/SupportPages/Index">User Support</a>
                                 </li>
                             }
                             <li class="nav-item">
-                                    <a class="nav-link" asp-page="/ShowoffPages/Index">Showoffs</a>
+                                <a class="nav-link @NavActiveClass("/ShowoffPages")" asp-page="/ShowoffPages/Index">Showoffs</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-page="/CollectionItemPages/Index">Collection Items</a>
+                                <a class="nav-link @NavActiveClass("/CollectionItemPages")" asp-page="/CollectionItemPages/Index">Collection Items</a>
                             </li>
                         }
-                    </ul> 
-                     <!-- Right-side login/logout link changes based on session state. --> 
-                     <ul class="navbar-nav ms-auto align-items-center">
+                    </ul>
+                    <!-- Right-side login/logout link changes based on session state. -->
+                    <ul class="navbar-nav ms-auto align-items-center">
                         @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)
                         {
                             var navUserJson = Context.Session.GetString(SessionKeys.LoggedInUser);
-                            var navUser     = System.Text.Json.JsonSerializer.Deserialize<ArcaneVaultRP.Models.ArcaneVaultUser>(navUserJson);
-                            var navInitial  = navUser?.UserName?.Length > 0 ? navUser.UserName[0].ToString().ToUpper() : "?";
- 
-                            <!-- Logout link -->
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Login"
-                                   asp-page-handler="Logout">Logout</a>
-                            </li>
- 
-                            <!-- Avatar circle → Settings -->
-                            <li class="nav-item ms-2">
-                                <a asp-page="/Settings"
+                            var navUser = System.Text.Json.JsonSerializer.Deserialize<ArcaneVaultRP.Models.ArcaneVaultUser>(navUserJson);
+                            var navInitial = navUser?.UserName?.Length > 0 ? navUser.UserName[0].ToString().ToUpper() : "?";
+
+                            <!-- Avatar dropdown → Settings / Inventory / Trades / Logout -->
+                            <li class="nav-item ms-2 dropdown">
+                                <a href="#"
+                                   id="profileDropdownToggle"
+                                   class="avatar-link dropdown-toggle no-caret"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false"
                                    style="display:inline-flex;align-items:center;justify-content:center;
-                                          width:34px;height:34px;border-radius:50%;overflow:hidden;
-                                          background:linear-gradient(135deg, var(--color-indigo-dark), var(--color-periwinkle));
-                                          border: 2px solid rgba(244, 238, 255, 0.4);
-                                          text-decoration:none; transition: all 0.2s ease;"
-                                   title="Settings"
-                                   class="avatar-link">
+                                    width:34px;height:34px;border-radius:50%;overflow:hidden;
+                                    background:linear-gradient(135deg, var(--color-indigo-dark), var(--color-periwinkle));
+                                    border: 2px solid rgba(244, 238, 255, 0.4);
+                                    text-decoration:none; transition: all 0.2s ease;"
+                                   title="Account">
                                     @if (!string.IsNullOrEmpty(navUser?.AvatarUrl))
                                     {
                                         <img src="@navUser.AvatarUrl"
@@ -99,6 +103,29 @@
                                         <span style="font-size:13px;font-weight:700;color:var(--color-light);">@navInitial</span>
                                     }
                                 </a>
+
+                                <ul class="dropdown-menu dropdown-menu-end profile-dropdown-menu" aria-labelledby="profileDropdownToggle">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/Settings">
+                                            <i class="bi bi-gear"></i> Settings
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 disabled" href="#" tabindex="-1" aria-disabled="true">
+                                            <i class="bi bi-box-seam"></i> Inventory
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 disabled" href="#" tabindex="-1" aria-disabled="true">
+                                            <i class="bi bi-arrow-left-right"></i> Trades
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/Login" asp-page-handler="Logout">
+                                            <i class="bi bi-box-arrow-right"></i> Logout
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         }
                         else if (Context.Request.Path != "/Login" && Context.Request.Path != "/Registration")

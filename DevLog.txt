@@ -405,3 +405,13 @@
 - Can add Notifications system
 - Must think about how to add another user to be staff "RoleId = 1"
 - Continue working on shop, inventory and trades page in "Proposed Ideas"
+
+===== DEV LOG (6/8/2026) =====
+[Done]
+- Fixed login page length to not have scroll bar
+- Added active nav item glow to layout.cshtml
+
+[To Do]
+- Can add Notifications system
+- Must think about how to add another user to be staff "RoleId = 1"
+- Continue working on shop, inventory and trades page in "Proposed Ideas"
