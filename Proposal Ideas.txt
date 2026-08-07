@@ -117,3 +117,107 @@ _ There will be unlimited and limited, which users can trade them with other use
 _ The Cosmetic Shop will be a sub page under the Showoffs page, and will have a search bar to search for cosmetics by name, type (frame, title, and sticker)
 _ Users can equip their cosmetics to their showoffs in Create and Edit, and will be able to see the equipped cosmetics in the Showoff view
 _ When the user clicks on their profile in navbar, it will give a dropdown menu, with "Settings", "Cosmetics", "Trades" and "Logout"
+
+
+==== Implementation Plan ====
+All pages that have multiple types of filters should be hidden behind a single "Fiters" button that will show the filters when clicked.
+If there is any trace of title cosmetic or trade, delete it as it will not be implemented.
+
+Flow of Showoff Shop:
+	Decided I will only have Sticker and Frame cosmetics, removed titles.
+
+	~Both Staff and User~
+	- Can see the shop cosmetics in Showoff Page
+
+	~Staff only~
+	- On the same column as the subtabs for Feed, Shop, and Profile, there is a "Manage Shop"
+		- In "Manage Shop", the staff can create, edit and delete based on the cosmetic type in one page, where there is a dropdown to select which cosmetic type, it is not possible to create multiple cosmetic types at the same time.
+			- In create, these are the layouts for each cosmetic type:
+				Sticker:
+				- Sticker name input
+				- Image/Animated GIF upload, with modal to upload and resize with a max size of 512×512px
+				- Below the image cell, should put a note that mentions things to take note of for the image: "Sticker design should be appropriate"
+				Frame:
+				- Frame name input
+				- Frame dimension selector, either landscape or portrait
+				- Image/Video/GIF upload, which when uploaded, should automatically resize to either landscape or portrait dimensions based on initial image dimensions, so that the edge of the showoffs will be aligned with the frame when it is applied.
+				- If the initial image dimensions does not match with the selecte dimensions selector, flag the staff to "use an appropriate dimension content for selected Frame dimension" and do not allow successful creation or edit.
+				- Below the image cell, should put a note that mentions things to take note of for the image: "Background must be transparent", "Dimension should be appropriate", and "Frame design should be appropriate"
+				Both:
+				- A price value input field that will be in SGD, only accepts up till 2 decimal place, only numerical input
+				- A preview button that allows the staff to preview to assess the final draft before being able to "Create" it
+				- At the bottom before the "Preview" button will have a selector of either "Limited" or "Unlimited", where if "Limited" is selected, staff is to enter an integer.
+			- In edit, these are the layouts for each cosmetic type:
+				Sticker:
+				- Can edit the name of the sticker
+				- Can edit and change the image of the sticker
+				- These two are the only things that can be edited
+				Frame:
+				- Can edit the name of the frame
+				- Can edit and change the image of the frame
+				- These two are the only things that can be edited
+				Both:
+				- Able to edit the price
+				- Add the same note as before in create
+				- The same preview button as before in create
+			- In delete, these are the layouts for each cosmetic type:
+				Both:
+				- A confirm delete, that requests a confirmation before successful delete. When deleted, it will only remove the cosmetic listing from the shop, but not from any user who already owns it.
+
+	- In shared Navbar, for staff only, for Showoff use the same dropdown as support, but it will be "Public View" and "Cosmetic Log" and "Payment Log"
+		- "Public View" shows the normal showoffs stuff, while "Cosmetic Log" shows a log of every creation, edit, and delete in the shop. Both will be in their own separate pages
+		- In "Cosmetic Log", it will be a virtual scroller
+			- The search fields are, "Admin Id", "Time" and "Date" selector, "Cosmetic Name", "Cosmetic Id", "Cosmetic Type" and "Status"
+				- Each entry will show the following:
+					- Admin Name, Admin Id, TimeDate of log, Name of cosmetic item, "Action" taken to cosmetic item, entry hash, previous entry hash (For the first entry, the previous hash is 0), and Status (Whether there has been any tampering with previous entries)
+		- In "Payment Log", it will also be a virtual scroller
+			- The search fields are, "Payment Id", "Time" and "Date" selector, "User", "Amount", "Cosmetic Id", "Cosmetic Name', and "Payment Status" (Success, Pending, Fail)
+				- Each entry will show the following listed above in payment logs search fields
+
+	- In Insights, add a new sub tab with the existing ones called "Finance and Sales"
+		- It should show:
+			- Total value of sales
+			- Total number of sales
+			- Top 10 highest sales
+			- Frame Cosmetic ownership table
+			- Sticker Cosmetic ownership table
+
+Flow of cosmetic item listing:
+	In Shop page, will display the cosmetic name, media, Limited tag (if limited), a buy button with a shopping cart icon that shows the price of the cosmetic item starting with "SGD"
+	- When cosmetic item listing is clicked, it will show a modal that shows a larger scale of the cosmetic item, Number of quantity remaining (If limited), and everything else mentioned earlier
+
+Flow of payment:
+	- When buy button is clicked, it will use stripe webhook (Need a step by step guide to set it up)
+	- After payment is successful, the user will return to application, and be greeted by a "Payment Successful", and also send a receipt to the user
+	- If payment is unsuccessful, return to application, greeted by a "Payment Unsuccessful", and a "Try again" button
+
+Flow of inventory:
+	- Every cosmetic successfully bought will have an UID that is associated with the owner
+	- All cosmetics will be shown in a small square box that shows the media
+	- When clicked, it will show the Name, media, and Limited number (If limited)
+
+Flow of owned cosmetic items:
+	~Both~
+		- Able to equip cosmetics on showoffs, in both create and edit, no limit on how many showoffs the same cosmetic can be applied to
+	~Sticker~
+		- Able to add a max 5 stickers per showoff
+		- Able to move the sticker anywhere on the showoff display
+	~Frame~
+		- Only able to add 1 frame per showoff
+		- Fixed to the dimension of the showoff, either landscape or portrait
+
+Flow of notifications:
+	Notification bell will be on the left side of the profile photo in navbar
+	When notifications are received, the bell will have a red dot in the top right of the notifications until the user clicks on it
+	- What will show when notifications is opened based on user role:
+		~User and Staff~
+			- A section that notifies how many likes each of their showoffs have
+			- A section that notifies how many new comments have been received based on which showoff received comments
+			- A section that notifies what showoff has been disabled or re-enabled if have
+			- A section that notifies when user support has been responsed
+			- A section that notifies if showoff appeal was rejected or approved
+			- A section that notifies if a trade they sent was accepted or declined
+
+		~Staff only~ (A separate tab in the notificatins called "Staff" if the user is a staff)
+			- A section that notifies how many new user tickets they have pending
+			- A section that notifies how mant new reports they have pending

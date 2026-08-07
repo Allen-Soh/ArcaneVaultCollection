@@ -1,0 +1,62 @@
+﻿@* @model ArcaneVaultRP.Pages.Showoffs.IndexModel
+
+<div class="row row-cols-2 row-cols-md-4 g-3">
+    @if (Model.IsStaff && Model.FrameCurrentPage == 1)
+    {
+        <div class="col">
+            <div class="card h-100 text-center p-2" style="cursor:pointer;background:transparent;border:2px dashed var(--border-color,#30363d);"
+                 onclick="window.location.href='/ShowoffPages/CreateFrame'"
+                 onmouseenter="this.style.borderColor='var(--color-teal,#2dd4bf)';"
+                 onmouseleave="this.style.borderColor='var(--border-color,#30363d)';">
+                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-plus-circle" style="font-size:28px;color:var(--text-muted,#7d8590);"></i>
+                </div>
+                <div class="small fw-semibold mt-2 text-muted">Add New</div>
+            </div>
+        </div>
+    }
+
+    @foreach (var frame in Model.PagedFrames)
+    {
+        <div class="col">
+            <div class="card h-100 text-center p-2">
+                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
+                    @if (!string.IsNullOrEmpty(frame.ImagePath))
+                    {
+                        <img src="@frame.ImagePath" alt="@frame.FrameName" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                    }
+                    else
+                    {
+                        <div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;"></div>
+                    }
+                </div>
+                <div class="small fw-semibold mt-2 text-truncate">@frame.FrameName</div>
+            </div>
+        </div>
+    }
+
+    @if (!Model.PagedFrames.Any() && !(Model.IsStaff && Model.FrameCurrentPage == 1))
+    {
+        <div class="col-12 text-center text-muted py-4">No items yet.</div>
+    }
+</div>
+
+@if (Model.FrameTotalPages > 1)
+{
+    <nav class="d-flex justify-content-end mt-2">
+        <ul class="pagination pagination-sm mb-0 gap-2">
+            @if (Model.FrameCurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link cosmetic-ajax-page-link pagination-box" href="#" data-section="frames" data-page="@(Model.FrameCurrentPage - 1)">&lt;</a>
+                </li>
+            }
+            @if (Model.FrameCurrentPage < Model.FrameTotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link cosmetic-ajax-page-link pagination-box" href="#" data-section="frames" data-page="@(Model.FrameCurrentPage + 1)">&gt;</a>
+                </li>
+            }
+        </ul>
+    </nav>
+} *@

@@ -436,9 +436,16 @@ Fixed Tickets css styling
 - Must think about how to add another user to be staff "RoleId = 1"
 - Continue working on shop, inventory and trades page in "Proposed Ideas"
 
-===== DEV LOG (7/8/2026) =====
+===== DEV LOG (7/8/2026) - Part 2 =====
 [Done]
 - Fixed page pagination
 
 [To Do]
 - Continue with the others
+
+===== DEV LOG (7/8/2026) - Part 3 =====
+[Done]
+- Came up with implementation plan
+
+[To Do]
+- Continue..

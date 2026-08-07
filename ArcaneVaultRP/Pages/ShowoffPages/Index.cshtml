@@ -157,47 +157,26 @@
 
             <!-- Frames section -->
             <div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-bold mb-0">Frames</h4>
-                    <button id="framesViewMoreBtn" class="btn btn-sm btn-outline-primary"
-                            onclick="toggleCosmeticViewMore('frames')">
-                        View more
-                    </button>
+                <h4 class="fw-bold mb-3">Frames</h4>
+                <div id="framesGridContainer">
+                    @await Html.PartialAsync("_FrameGrid", Model)
                 </div>
-                <div id="framesGrid" class="row row-cols-2 row-cols-md-4 g-3"></div>
-                <nav id="framesPagination" class="d-flex justify-content-end mt-2" style="display:none;">
-                    <ul class="pagination pagination-sm mb-0" id="framesPageNumbers"></ul>
-                </nav>
             </div>
 
             <!-- Titles section -->
             <div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-bold mb-0">Titles</h4>
-                    <button id="titlesViewMoreBtn" class="btn btn-sm btn-outline-primary"
-                            onclick="toggleCosmeticViewMore('titles')">
-                        View more
-                    </button>
+                <h4 class="fw-bold mb-3">Titles</h4>
+                <div id="titlesGridContainer">
+                    @await Html.PartialAsync("_TitleGrid", Model)
                 </div>
-                <div id="titlesGrid" class="row row-cols-2 row-cols-md-4 g-3"></div>
-                <nav id="titlesPagination" class="d-flex justify-content-end mt-2" style="display:none;">
-                    <ul class="pagination pagination-sm mb-0" id="titlesPageNumbers"></ul>
-                </nav>
             </div>
 
             <!-- Stickers section -->
             <div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-bold mb-0">Stickers</h4>
-                    <button id="stickersViewMoreBtn" class="btn btn-sm btn-outline-primary"
-                            onclick="toggleCosmeticViewMore('stickers')">
-                        View more
-                    </button>
+                <h4 class="fw-bold mb-3">Stickers</h4>
+                <div id="stickersGridContainer">
+                    @await Html.PartialAsync("_StickerGrid", Model)
                 </div>
-                <div id="stickersGrid" class="row row-cols-2 row-cols-md-4 g-3"></div>
-                <nav id="stickersPagination" class="d-flex justify-content-end mt-2" style="display:none;">
-                    <ul class="pagination pagination-sm mb-0" id="stickersPageNumbers"></ul>
-                </nav>
             </div>
 
         </div>
@@ -531,8 +510,6 @@
 
 @section Scripts {
     <script>
-        console.log('[Showoffs] script block starting');
-
         // Fix — prevent aria-hidden focus warning when closing modals
         document.querySelectorAll('.modal').forEach(modalEl => {
             modalEl.addEventListener('hide.bs.modal', () => {
@@ -545,9 +522,6 @@
         // Data from server
         // Fix 5 — normalize currentUser to null when empty, so ownership/like checks behave correctly
         const currentUser = '@loggedInUser?.UserName' === '' ? null : '@loggedInUser?.UserName';
-        // ASSUMPTION: ArcaneVaultUser has a RoleId property. Swap this for whatever your actual
-        // staff/role check is (e.g. loggedInUser?.Role == "Staff") if the property differs.
-        const isStaff = @Html.Raw((loggedInUser?.RoleId == 1) ? "true" : "false");
         const apiBase = 'https://localhost:7040/api';
         const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
 
@@ -1023,7 +997,6 @@
         };
 
         async function refreshGrid(newFilters = {}) {
-            console.log('[Showoffs] refreshGrid called with', newFilters);
             Object.assign(currentFilters, newFilters);
 
             const params = new URLSearchParams({
@@ -1035,20 +1008,9 @@
                 searchCategory: currentFilters.searchCategory
             });
 
-            const url = `?handler=Filter&${params.toString()}`;
-            console.log('[Showoffs] fetching', url);
-
-            let res;
-            try {
-                res = await fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-            } catch (err) {
-                console.error('[Showoffs] fetch threw', err);
-                return;
-            }
-
-            console.log('[Showoffs] response status', res.status, res.ok);
+            const res = await fetch(`?handler=Filter&${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
 
             if (!res.ok) {
                 console.error('Failed to refresh grid');
@@ -1056,7 +1018,6 @@
             }
 
             const html = await res.text();
-            console.log('[Showoffs] response length', html.length);
             document.getElementById('showoffGridContainer').innerHTML = html;
             attachGridListeners();
 
@@ -1100,18 +1061,15 @@
             });
         }
 
-        // Pagination — delegated on `document` so registration can never be skipped by
-        // DOM timing or repeated innerHTML swaps of the container.
+        // Pagination — delegated on `document`, scoped to #showoffGridContainer.
         document.addEventListener('click', (e) => {
             const link = e.target.closest('.ajax-page-link');
             if (!link) return;
-            console.log('[Showoffs] pagination link clicked', link.dataset.page);
             if (!link.closest('#showoffGridContainer')) return;
             e.preventDefault();
             if (link.closest('.page-item')?.classList.contains('disabled')) return;
             refreshGrid({ page: parseInt(link.dataset.page) });
         });
-        console.log('[Showoffs] pagination listener registered');
 
         // Sort dropdown — AJAX instead of navigation
         document.getElementById('sortSelect')?.addEventListener('change', function () {
@@ -1171,7 +1129,6 @@
             });
         }
 
-        // Updated calls with 6 arguments
         setupSearch('searchUsers', 'userSuggestions', uniqueUsers, 'UserName', 'searchUser', 'User');
         setupSearch('searchItems', 'itemSuggestions', uniqueItems, 'ItemName', 'searchItem', 'Item');
         setupSearch('searchCategories', 'categorySuggestions', uniqueCategories, 'CategoryName', 'searchCategory', 'Category');
@@ -1181,7 +1138,6 @@
         // ════════════════════════════════════════════════
         // SEARCH CLEAR ("×") BUTTONS
         // ════════════════════════════════════════════════
-        // Adds a clear ("×") button to a search input; shows only when it has text.
         function enableSearchClear(inputId) {
             const input = document.getElementById(inputId);
             if (!input || input.dataset.clearEnabled) return;
@@ -1222,143 +1178,44 @@
         enableSearchClear('searchItems');
         enableSearchClear('searchCategories');
 
-        console.log('[Showoffs] script block finished (Feed section)');
-
-        // ── Shop tab: Frames, Titles & Stickers, independent 4-per-page pagination ──
-        const allFrames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Frames));
-        const allTitles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Titles));
-        const allStickers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Stickers));
-
-        const COSMETIC_PAGE_SIZE = 4;
-        const shopState = {
-            frames: { page: 1, viewMore: false, data: allFrames },
-            titles: { page: 1, viewMore: false, data: allTitles },
-            stickers: { page: 1, viewMore: false, data: allStickers }
+        // ════════════════════════════════════════════════
+        // SHOP TAB — Frames, Titles & Stickers, server-side AJAX pagination
+        // ════════════════════════════════════════════════
+        // Maps section key -> Razor Pages handler name (OnGet{Handler}Async)
+        const cosmeticHandlerMap = {
+            frames: 'FrameGrid',
+            titles: 'TitleGrid',
+            stickers: 'StickerGrid'
         };
 
-        // Maps a section key to the create-page route staff get routed to via the "Add New" tile.
-        const cosmeticCreateRoutes = {
-            frames: '/Showoffs/Cosmetics/CreateFrame',
-            titles: '/Showoffs/Cosmetics/CreateTitle',
-            stickers: '/Showoffs/Cosmetics/CreateSticker'
-        };
+        async function refreshCosmeticGrid(section, page) {
+            const handler = cosmeticHandlerMap[section];
+            if (!handler) return;
 
-        function goToCreateCosmetic(section) {
-            window.location.href = cosmeticCreateRoutes[section] || '/Showoffs/Cosmetics/Create';
-        }
+            const res = await fetch(`?handler=${handler}&page=${page}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
 
-        // Server sends PascalCase (FrameName/StickerName/TitleName)
-        function cosmeticName(item) {
-            return item.frameName || item.FrameName
-                || item.stickerName || item.StickerName
-                || item.titleName || item.TitleName
-                || item.name || item.Name
-                || 'Untitled';
-        }
-
-        function addNewCellHtml(section) {
-            return `
-                                        <div class="col">
-                                            <div class="card h-100 text-center p-2" style="cursor:pointer;background:transparent;border:2px dashed var(--border-color,#30363d);"
-                                                 onclick="goToCreateCosmetic('${section}')"
-                                                 onmouseenter="this.style.borderColor='var(--color-teal,#2dd4bf)';"
-                                                 onmouseleave="this.style.borderColor='var(--border-color,#30363d)';">
-                                                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
-                                                    <i class="bi bi-plus-circle" style="font-size:28px;color:var(--text-muted,#7d8590);"></i>
-                                                </div>
-                                                <div class="small fw-semibold mt-2 text-muted">Add New</div>
-                                            </div>
-                                        </div>`;
-        }
-
-        function cosmeticCellHtml(item) {
-            const img = item.imagePath || item.ImagePath;
-            const name = cosmeticName(item);
-            return `
-                                        <div class="col">
-                                            <div class="card h-100 text-center p-2">
-                                                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
-                                                    ${img
-                    ? `<img src="${img}" alt="${name}" style="max-width:100%;max-height:100%;object-fit:contain;" />`
-                    : `<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;"></div>`}
-                                                </div>
-                                                <div class="small fw-semibold mt-2 text-truncate">${name}</div>
-                                            </div>
-                                        </div>`;
-        }
-
-        function renderCosmeticSection(section) {
-            const state = shopState[section];
-            const grid = document.getElementById(`${section}Grid`);
-            if (!grid) return; // not on the Shop tab
-
-            const start = (state.page - 1) * COSMETIC_PAGE_SIZE;
-            const pageItems = state.data.slice(start, start + COSMETIC_PAGE_SIZE);
-
-            const addNewHtml = (isStaff && state.page === 1) ? addNewCellHtml(section) : '';
-
-            grid.innerHTML = (pageItems.length || addNewHtml)
-                ? addNewHtml + pageItems.map(cosmeticCellHtml).join('')
-                : `<div class="col-12 text-center text-muted py-4">No items yet.</div>`;
-
-            const totalPages = Math.max(1, Math.ceil(state.data.length / COSMETIC_PAGE_SIZE));
-            const paginationNav = document.getElementById(`${section}Pagination`);
-            const pageNumbers = document.getElementById(`${section}PageNumbers`);
-            const viewMoreBtn = document.getElementById(`${section}ViewMoreBtn`);
-
-            if (state.viewMore && totalPages > 1) {
-                paginationNav.style.display = 'block';
-                let html = `<li class="page-item ${state.page <= 1 ? 'disabled' : ''}">
-                                                        <a class="page-link cosmetic-page-link" href="#" data-section="${section}" data-page="${state.page - 1}">&lt;</a>
-                                                     </li>`;
-                for (let p = 1; p <= totalPages; p++) {
-                    html += `<li class="page-item">
-                                                        <a class="page-link cosmetic-page-link ${p === state.page ? 'active-page' : ''}"
-                                                           href="#" data-section="${section}" data-page="${p}"
-                                                           style="${p === state.page ? 'background:#0d6efd;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;' : ''}">
-                                                            ${p}
-                                                        </a>
-                                                      </li>`;
-                }
-                html += `<li class="page-item ${state.page >= totalPages ? 'disabled' : ''}">
-                                                    <a class="page-link cosmetic-page-link" href="#" data-section="${section}" data-page="${state.page + 1}">&gt;</a>
-                                                 </li>`;
-                pageNumbers.innerHTML = html;
-            } else {
-                paginationNav.style.display = 'none';
+            if (!res.ok) {
+                console.error(`Failed to refresh ${section} grid`);
+                return;
             }
 
-            viewMoreBtn.textContent = state.viewMore ? 'View less' : 'View more';
+            const html = await res.text();
+            document.getElementById(`${section}GridContainer`).innerHTML = html;
         }
 
-        function toggleCosmeticViewMore(section) {
-            const state = shopState[section];
-            state.viewMore = !state.viewMore;
-            if (!state.viewMore) state.page = 1; // reset when collapsing back
-            renderCosmeticSection(section);
-        }
-
-        // Delegated pagination clicks — one listener per section container, scoped by
-        // data-section so Frames paging never touches Stickers state, and vice versa.
-        ['frames', 'titles', 'stickers'].forEach(section => {
-            document.getElementById(`${section}Pagination`)?.addEventListener('click', (e) => {
-                const link = e.target.closest('.cosmetic-page-link');
-                if (!link) return;
-                e.preventDefault();
-                if (link.closest('.page-item')?.classList.contains('disabled')) return;
-                shopState[section].page = parseInt(link.dataset.page);
-                renderCosmeticSection(section);
-            });
+        // Delegated on `document`, scoped per section container — mirrors the Feed's
+        // pagination pattern so it survives repeated innerHTML swaps.
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.cosmetic-ajax-page-link');
+            if (!link) return;
+            const section = link.dataset.section;
+            if (!section || !link.closest(`#${section}GridContainer`)) return;
+            e.preventDefault();
+            if (link.closest('.page-item')?.classList.contains('disabled')) return;
+            refreshCosmeticGrid(section, parseInt(link.dataset.page));
         });
-
-        // Initial render if we're currently on the Shop tab
-        if (document.getElementById('framesGrid')) {
-            renderCosmeticSection('frames');
-            renderCosmeticSection('titles');
-            renderCosmeticSection('stickers');
-        }
-
-        console.log('[Showoffs] script block finished (end of file)');
     </script>
     <style>
         .pagination .page-link.pagination-box {

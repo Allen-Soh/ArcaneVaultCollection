@@ -25,7 +25,6 @@ namespace ArcaneVaultAPI.Data
         public DbSet<PasswordResetCode> PasswordResetCodes { get; set; }
         public DbSet<Frame> Frames { get; set; }
         public DbSet<Sticker> Stickers { get; set; }
-        public DbSet<Title> Titles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

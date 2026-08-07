@@ -1,0 +1,176 @@
+﻿@page
+@model ArcaneVaultRP.Pages.ShowoffPages.CreateStickerModel
+@{
+    ViewData["Title"] = "Create Sticker";
+}
+
+<div class="container mt-4 mb-5" style="max-width: 640px;">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a asp-page="./Index" asp-route-tab="shop" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <h4 class="fw-bold mb-0">Create Sticker</h4>
+    </div>
+
+    <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
+
+        <!-- Sticker Code -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Sticker Code</label>
+            <input type="text" id="stickerCode" class="form-control" maxlength="20"
+                   placeholder="e.g. STK_STAR" oninput="this.value = this.value.toUpperCase()" />
+            <small class="text-muted">A short, unique identifier. Cannot be changed later.</small>
+        </div>
+
+        <!-- Sticker Name -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Sticker Name</label>
+            <input type="text" id="stickerName" class="form-control" maxlength="60"
+                   placeholder="e.g. Gold Star" oninput="updateCharCount()" />
+            <div class="d-flex justify-content-end">
+                <small class="text-muted"><span id="nameCharCount">0</span>/60</small>
+            </div>
+        </div>
+
+        <!-- Image -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold d-block">Image</label>
+            <div id="imageDropZone"
+                 class="d-flex align-items-center justify-content-center position-relative"
+                 style="height:140px; border:2px dashed var(--border-color); border-radius:8px; cursor:pointer; overflow:hidden;"
+                 onclick="triggerFileUpload()">
+                <img id="imagePreviewThumb" src="" style="display:none; max-width:100%; max-height:100%; object-fit:contain;" />
+                <span id="imagePlaceholder" class="text-muted small"><i class="bi bi-image"></i> Click to upload image</span>
+                <input type="file" id="imageFileInput" accept=".jpg,.jpeg,.png" style="display:none;" onchange="handleImageUpload(event)" />
+            </div>
+            <div class="d-flex justify-content-end mt-1">
+                <button type="button" id="imageRemoveBtn" class="btn btn-sm btn-outline-danger"
+                        style="display:none; font-size:11px; padding:2px 8px;" onclick="removeImage()">
+                    Remove image
+                </button>
+            </div>
+        </div>
+
+        <div id="formError" class="alert alert-danger py-2" style="display:none;font-size:13px;"></div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a asp-page="./Index" asp-route-tab="shop" class="btn btn-secondary px-4">Cancel</a>
+            <button type="button" class="btn btn-primary px-4" id="saveBtn" onclick="saveSticker()">Create Sticker</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        let imagePath = null;
+        let imagePublicId = null;
+
+        function updateCharCount() {
+            document.getElementById('nameCharCount').textContent = document.getElementById('stickerName').value.length;
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('imageFileInput').click();
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                alert('Only JPG and PNG allowed.');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Max 5MB file size.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadRes = await fetch(`${apiBase}/ImageUpload`, { method: 'POST', body: formData });
+            if (!uploadRes.ok) { alert('Image upload failed.'); return; }
+            const data = await uploadRes.json();
+
+            if (imagePublicId) {
+                window.pendingImageDeletes = window.pendingImageDeletes || [];
+                window.pendingImageDeletes.push(imagePublicId);
+            }
+
+            imagePath = data.imagePath;
+            imagePublicId = data.imagePublicId;
+            renderImagePreview();
+        }
+
+        function removeImage() {
+            if (imagePublicId) {
+                window.pendingImageDeletes = window.pendingImageDeletes || [];
+                window.pendingImageDeletes.push(imagePublicId);
+            }
+            imagePath = null;
+            imagePublicId = null;
+            renderImagePreview();
+        }
+
+        function renderImagePreview() {
+            const thumb = document.getElementById('imagePreviewThumb');
+            const placeholder = document.getElementById('imagePlaceholder');
+            const removeBtn = document.getElementById('imageRemoveBtn');
+
+            if (imagePath) {
+                thumb.src = imagePath;
+                thumb.style.display = 'block';
+                placeholder.style.display = 'none';
+                removeBtn.style.display = 'inline-block';
+            } else {
+                thumb.style.display = 'none';
+                placeholder.style.display = 'block';
+                removeBtn.style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('formError');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        async function saveSticker() {
+            const stickerCode = document.getElementById('stickerCode').value.trim();
+            const stickerName = document.getElementById('stickerName').value.trim();
+
+            if (!stickerCode) { showError('Please enter a sticker code.'); return; }
+            if (!stickerName) { showError('Please enter a sticker name.'); return; }
+
+            document.getElementById('formError').style.display = 'none';
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Saving...`;
+
+            const payload = {
+                stickerCode: stickerCode,
+                stickerName: stickerName,
+                imagePath: imagePath
+            };
+
+            const res = await fetch(`${apiBase}/Sticker`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            btn.disabled = false;
+            btn.textContent = 'Create Sticker';
+
+            if (res.ok) {
+                window.location.href = '/ShowoffPages/Index?tab=shop';
+            } else {
+                const text = await res.text();
+                showError(`Failed to create sticker: ${text || 'Please check the code isn\u2019t already in use.'}`);
+            }
+        }
+    </script>
+}
