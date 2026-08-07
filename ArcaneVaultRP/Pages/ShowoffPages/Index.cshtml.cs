@@ -37,7 +37,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetAsync(
         string tab = "feed",
         string sort = "popular",
-        int page = 1,
+        [FromQuery(Name = "page")] int pageNumber = 1,
         string? searchUser = null,
         string? searchItem = null,
         string? searchCategory = null)
@@ -79,7 +79,7 @@ public class IndexModel : PageModel
             await LoadShopDataAsync(httpClient);
         }
 
-        await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
+        await LoadFeedDataAsync(httpClient, sort, pageNumber, searchUser, searchItem, searchCategory);
 
         return Page();
     }
@@ -87,7 +87,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetFilterAsync(
         string tab = "feed",
         string sort = "popular",
-        int page = 1,
+        [FromQuery(Name = "page")] int pageNumber = 1,
         string? searchUser = null,
         string? searchItem = null,
         string? searchCategory = null)
@@ -103,16 +103,9 @@ public class IndexModel : PageModel
         var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
         HttpClientHelper.AttachJwtToken(httpClient, token);
 
-        await LoadFeedDataAsync(httpClient, sort, page, searchUser, searchItem, searchCategory);
-
+        await LoadFeedDataAsync(httpClient, sort, pageNumber, searchUser, searchItem, searchCategory);
 
         return Partial("_ShowoffGrid", this);
-
-        //return new PartialViewResult
-        //{
-        //   ViewName = "_ShowoffGrid",
-        //   ViewData = new ViewDataDictionary<IndexModel>(ViewData, this)
-        //};
     }
 
     private async Task LoadShopDataAsync(HttpClient httpClient)
@@ -132,13 +125,13 @@ public class IndexModel : PageModel
     private async Task LoadFeedDataAsync(
         HttpClient httpClient,
         string sort,
-        int page,
+        int pageNumber,
         string? searchUser,
         string? searchItem,
         string? searchCategory)
     {
         SortBy = string.IsNullOrEmpty(sort) ? "popular" : sort;
-        CurrentPage = page < 1 ? 1 : page;
+        CurrentPage = pageNumber < 1 ? 1 : pageNumber;
         SearchUser = searchUser;
         SearchItem = searchItem;
         SearchCategory = searchCategory;

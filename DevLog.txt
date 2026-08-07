@@ -435,3 +435,10 @@ Fixed Tickets css styling
 - Can add Notifications system
 - Must think about how to add another user to be staff "RoleId = 1"
 - Continue working on shop, inventory and trades page in "Proposed Ideas"
+
+===== DEV LOG (7/8/2026) =====
+[Done]
+- Fixed page pagination
+
+[To Do]
+- Continue with the others
