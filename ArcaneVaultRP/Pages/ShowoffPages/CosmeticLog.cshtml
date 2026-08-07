@@ -1,0 +1,226 @@
+@page
+@model ArcaneVaultRP.Pages.ShowoffPages.CosmeticLogModel
+@{
+    ViewData["Title"] = "Cosmetic Log";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1">Cosmetic Log</h4>
+            <p class="text-muted small mb-0" id="logCountText"></p>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#logFiltersPanel"
+                    aria-expanded="false" aria-controls="logFiltersPanel">
+                <i class="bi bi-funnel"></i> Filters
+                <span class="filters-badge" id="logFiltersBadge" style="display:none;"></span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse filters-panel" id="logFiltersPanel">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+            <input type="text" id="filterAdminId" class="form-control form-control-sm"
+                   placeholder="Admin Id..." style="width:160px;" oninput="applyFilters()" />
+            <input type="date" id="filterDate" class="form-control form-control-sm" style="width:auto;" onchange="applyFilters()" />
+            <input type="text" id="filterCosmeticName" class="form-control form-control-sm"
+                   placeholder="Cosmetic name..." style="width:180px;" oninput="applyFilters()" />
+            <input type="text" id="filterCosmeticId" class="form-control form-control-sm"
+                   placeholder="Cosmetic Id..." style="width:160px;" oninput="applyFilters()" />
+            <label class="text-muted small" style="white-space:nowrap;">Type:</label>
+            <select id="filterType" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+                <option value="All">All</option>
+                <option value="Frame">Frame</option>
+                <option value="Sticker">Sticker</option>
+            </select>
+            <label class="text-muted small" style="white-space:nowrap;">Status:</label>
+            <select id="filterStatus" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+                <option value="All">All</option>
+                <option value="Verified">Verified</option>
+                <option value="Tampered">Tampered</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Virtual scroll table -->
+    <div class="border rounded overflow-hidden" style="position:relative;">
+        <div id="logTableWrapper" style="overflow-y:auto;">
+            <table class="table mb-0" style="width:100%;">
+                <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                    <tr>
+                        <th style="padding:10px 12px;">Timestamp</th>
+                        <th style="padding:10px 12px;">Admin</th>
+                        <th style="padding:10px 12px;">Cosmetic</th>
+                        <th style="padding:10px 12px;">Type</th>
+                        <th style="padding:10px 12px;">Action</th>
+                        <th style="padding:10px 12px;">Entry Hash</th>
+                        <th style="padding:10px 12px;">Previous Hash</th>
+                        <th style="padding:10px 12px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
+        </div>
+        <div id="tableEmpty" style="display:none;" class="text-center text-muted py-5">
+            <i class="bi bi-journal-text fs-2 d-block mb-2"></i>
+            <span id="emptyText">No log entries yet.</span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-2 mb-4" id="logTableIndicatorRow">
+        <p class="text-muted mb-0" id="logScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id="logScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const allLogEntries = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LogEntries));
+        let filteredLogEntries = [...allLogEntries];
+
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
+        function applyFilters() {
+            const adminId = document.getElementById('filterAdminId').value.trim().toLowerCase();
+            const date = document.getElementById('filterDate').value;
+            const cosmeticName = document.getElementById('filterCosmeticName').value.trim().toLowerCase();
+            const cosmeticId = document.getElementById('filterCosmeticId').value.trim().toLowerCase();
+            const type = document.getElementById('filterType').value;
+            const status = document.getElementById('filterStatus').value;
+
+            updateFiltersBadge('logFiltersBadge',
+                (adminId ? 1 : 0) + (date ? 1 : 0) + (cosmeticName ? 1 : 0) +
+                (cosmeticId ? 1 : 0) + (type !== 'All' ? 1 : 0) + (status !== 'All' ? 1 : 0));
+
+            filteredLogEntries = allLogEntries.filter(e => {
+                if (adminId && !e.AdminId.toLowerCase().includes(adminId)) return false;
+                if (date && !e.Timestamp.startsWith(date)) return false;
+                if (cosmeticName && !e.CosmeticName.toLowerCase().includes(cosmeticName)) return false;
+                if (cosmeticId && !e.CosmeticId.toLowerCase().includes(cosmeticId)) return false;
+                if (type !== 'All' && e.CosmeticType !== type) return false;
+                if (status !== 'All' && e.Status !== status) return false;
+                return true;
+            });
+
+            renderLogTable(filteredLogEntries);
+        }
+
+        // ── Virtual Scroll Implementation ──
+        const ROW_HEIGHT = 48;
+        const BUFFER = 5;
+        const THRESHOLD = 12;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(data.length, Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER);
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="8"></td></tr>` : '') +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="8"></td></tr>` : '');
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function truncateHash(hash) {
+            if (!hash || hash === '0') return hash || '0';
+            return hash.substring(0, 12) + '…';
+        }
+
+        function renderLogTable(entries) {
+            const empty = document.getElementById('tableEmpty');
+            const wrapper = document.getElementById('logTableWrapper');
+            const indicatorRow = document.getElementById('logTableIndicatorRow');
+            const moreText = document.getElementById('logScrollMoreText');
+
+            document.getElementById('logCountText').textContent =
+                `${entries.length} log entr${entries.length !== 1 ? 'ies' : 'y'}`;
+
+            if (entries.length === 0) {
+                empty.style.display = 'block';
+                document.getElementById('logTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = entries.length > THRESHOLD ? 'block' : 'none';
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(entries.length, visStart + THRESHOLD - 1);
+                document.getElementById('logScrollIndicator').textContent =
+                    entries.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${entries.length}`
+                        : `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`;
+            }
+
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
+
+            createVirtualTable('logTableWrapper', 'logTableBody', entries, (e) => {
+                const statusBadge = e.Status === 'Tampered'
+                    ? `<span class="badge" style="background:#dc3545;">Tampered</span>`
+                    : `<span class="badge" style="background:#198754;">Verified</span>`;
+                const dateStr = new Date(e.Timestamp).toLocaleString();
+
+                return `
+                    <tr style="height:${ROW_HEIGHT}px;">
+                        <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${dateStr}</td>
+                        <td style="padding:8px 12px;font-size:12px;">${e.AdminName} <span class="text-muted">(${e.AdminId})</span></td>
+                        <td style="padding:8px 12px;font-size:12px;">${e.CosmeticName} <span class="text-muted">(${e.CosmeticId})</span></td>
+                        <td style="padding:8px 12px;font-size:12px;">${e.CosmeticType}</td>
+                        <td style="padding:8px 12px;font-size:12px;">${e.Action}</td>
+                        <td style="padding:8px 12px;font-size:11px;font-family:monospace;" title="${e.EntryHash}">${truncateHash(e.EntryHash)}</td>
+                        <td style="padding:8px 12px;font-size:11px;font-family:monospace;" title="${e.PreviousEntryHash}">${truncateHash(e.PreviousEntryHash)}</td>
+                        <td style="padding:8px 12px;">${statusBadge}</td>
+                    </tr>`;
+            });
+            updateIndicator();
+        }
+
+        // Initial render
+        applyFilters();
+    </script>
+}

@@ -12,7 +12,19 @@
             <h4 class="fw-bold mb-1">Showoff Reports</h4>
             <p class="text-muted small mb-0" id="reportCountText"></p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div>
+            <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#reportsFiltersPanel"
+                    aria-expanded="false" aria-controls="reportsFiltersPanel">
+                <i class="bi bi-funnel"></i> Filters
+                <span class="filters-badge" id="reportsFiltersBadge" style="display:none;"></span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse filters-panel" id="reportsFiltersPanel">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
             <input type="text" id="searchInput" class="form-control form-control-sm"
                    placeholder="Search username or showoff..." style="width:220px;" oninput="applyFilters()" />
             <label class="text-muted small" style="white-space:nowrap;">Status:</label>
@@ -205,10 +217,20 @@
         }
 
         // Combined filter: category + status + search (username / showoff name)
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
         function applyFilters() {
             const cat = document.getElementById('filterCategory').value;
             const status = document.getElementById('filterStatus').value;
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            updateFiltersBadge('reportsFiltersBadge',
+                (cat !== 'All' ? 1 : 0) + (status !== 'All' ? 1 : 0) + (query ? 1 : 0));
 
             filteredReports = allReports.filter(r => {
                 if (cat !== 'All' && r.Category !== cat) return false;

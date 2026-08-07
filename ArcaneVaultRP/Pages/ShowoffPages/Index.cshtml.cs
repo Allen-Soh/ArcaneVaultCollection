@@ -88,7 +88,7 @@ public class IndexModel : PageModel
         // avoids unnecessary API calls on every Feed/Profile page load.
         if (ActiveTab == "shop")
         {
-            await LoadShopDataAsync(httpClient, 1, 1, 1);
+            await LoadShopDataAsync(httpClient, 1, 1);
         }
 
         await LoadFeedDataAsync(httpClient, sort, pageNumber, searchUser, searchItem, searchCategory);
@@ -135,6 +135,7 @@ public class IndexModel : PageModel
         HttpClientHelper.AttachJwtToken(httpClient, token);
 
         var allFrames = (await httpClient.GetFromJsonAsync<List<Frame>>("Frame") ?? new List<Frame>())
+            .Where(f => !f.IsDelisted)
             .OrderBy(f => f.FrameName)
             .ToList();
 
@@ -158,6 +159,7 @@ public class IndexModel : PageModel
         HttpClientHelper.AttachJwtToken(httpClient, token);
 
         var allStickers = (await httpClient.GetFromJsonAsync<List<Sticker>>("Sticker") ?? new List<Sticker>())
+            .Where(s => !s.IsDelisted)
             .OrderBy(s => s.StickerName)
             .ToList();
 
@@ -190,11 +192,10 @@ public class IndexModel : PageModel
         return (paged, totalPages, currentPage);
     }
 
-    private async Task LoadShopDataAsync(HttpClient httpClient, int framePage, int titlePage, int stickerPage)
+    private async Task LoadShopDataAsync(HttpClient httpClient, int framePage, int stickerPage)
     {
-        // ASSUMPTION: endpoint names "Frame" / "Title" / "Sticker" — update to match your
-        // actual API controller routes if they differ.
         var allFrames = (await httpClient.GetFromJsonAsync<List<Frame>>("Frame") ?? new List<Frame>())
+            .Where(f => !f.IsDelisted)
             .OrderBy(f => f.FrameName)
             .ToList();
         var (pagedFrames, frameTotalPages, frameCurrentPage) = PageCosmetics(allFrames, framePage);
@@ -203,6 +204,7 @@ public class IndexModel : PageModel
         FrameCurrentPage = frameCurrentPage;
 
         var allStickers = (await httpClient.GetFromJsonAsync<List<Sticker>>("Sticker") ?? new List<Sticker>())
+            .Where(s => !s.IsDelisted)
             .OrderBy(s => s.StickerName)
             .ToList();
         var (pagedStickers, stickerTotalPages, stickerCurrentPage) = PageCosmetics(allStickers, stickerPage);

@@ -480,6 +480,86 @@ namespace ArcaneVaultAPI.Data
                 cmd.ExecuteNonQuery();
             }
 
+            // Add ImagePublicId column to Frames (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Frames') WHERE name='ImagePublicId'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Frames ADD COLUMN ImagePublicId TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add ImagePublicId column to Stickers (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Stickers') WHERE name='ImagePublicId'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Stickers ADD COLUMN ImagePublicId TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add Shop columns (Price/IsLimited/LimitedQuantity/IsDelisted) to Frames and Stickers,
+            // plus Orientation on Frames only.
+            foreach (var table in new[] { "Frames", "Stickers" })
+            {
+                cmd.CommandText = $@"
+                    SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='Price'";
+                if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                {
+                    cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN Price REAL DEFAULT 0";
+                    cmd.ExecuteNonQuery();
+                }
+
+                cmd.CommandText = $@"
+                    SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='IsLimited'";
+                if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                {
+                    cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN IsLimited INTEGER DEFAULT 0";
+                    cmd.ExecuteNonQuery();
+                }
+
+                cmd.CommandText = $@"
+                    SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='LimitedQuantity'";
+                if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                {
+                    cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN LimitedQuantity INTEGER";
+                    cmd.ExecuteNonQuery();
+                }
+
+                cmd.CommandText = $@"
+                    SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='IsDelisted'";
+                if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                {
+                    cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN IsDelisted INTEGER DEFAULT 0";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            // Add Orientation column to Frames (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Frames') WHERE name='Orientation'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Frames ADD COLUMN Orientation TEXT DEFAULT 'Landscape'";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Create CosmeticAuditLog table — tamper-evident hash-chained log of Manage Shop actions
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS CosmeticAuditLog (
+                    LogId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    AdminId TEXT NOT NULL,
+                    AdminName TEXT NOT NULL,
+                    Timestamp TEXT NOT NULL,
+                    CosmeticId TEXT NOT NULL,
+                    CosmeticName TEXT NOT NULL,
+                    CosmeticType TEXT NOT NULL,
+                    Action TEXT NOT NULL,
+                    EntryHash TEXT NOT NULL,
+                    PreviousEntryHash TEXT NOT NULL
+                )";
+            cmd.ExecuteNonQuery();
+
             // Create ShowoffComments table
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS ShowoffComments (

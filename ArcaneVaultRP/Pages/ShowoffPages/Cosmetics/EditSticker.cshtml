@@ -1,0 +1,195 @@
+@page "{code}"
+@model ArcaneVaultRP.Pages.ShowoffPages.EditStickerModel
+@{
+    ViewData["Title"] = "Edit Sticker";
+}
+
+<div class="container mt-4 mb-5" style="max-width: 640px;">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a asp-page="./ManageShop" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <h4 class="fw-bold mb-0">Edit Sticker</h4>
+    </div>
+
+    <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
+
+        <!-- Sticker Code (read-only) -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Sticker Code</label>
+            <input type="text" id="stickerCode" class="form-control" value="@Model.StickerData?.StickerCode" readonly disabled />
+        </div>
+
+        <!-- Sticker Name -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Sticker Name</label>
+            <input type="text" id="stickerName" class="form-control" maxlength="60"
+                   value="@Model.StickerData?.StickerName" oninput="updateCharCount()" />
+            <div class="d-flex justify-content-end">
+                <small class="text-muted"><span id="nameCharCount">@(Model.StickerData?.StickerName?.Length ?? 0)</span>/60</small>
+            </div>
+        </div>
+
+        <!-- Image -->
+        <div class="mb-2">
+            <label class="form-label fw-semibold d-block">Image</label>
+            <div id="stickerImageContainer"
+                 style="width:100%;height:160px;border:2px dashed var(--border-color);border-radius:8px;
+                    overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;
+                    background:rgba(166, 177, 225, 0.03);position:relative;"
+                 onclick="openStickerUploadModal()">
+                <img id="stickerImagePreview" src="@Model.StickerData?.ImagePath" alt=""
+                     style="display:@(string.IsNullOrEmpty(Model.StickerData?.ImagePath) ? "none" : "block");max-width:100%;max-height:100%;object-fit:contain;" />
+                <div id="stickerImagePlaceholder" style="display:@(string.IsNullOrEmpty(Model.StickerData?.ImagePath) ? "block" : "none");text-align:center;pointer-events:none;">
+                    <i class="bi bi-image" style="font-size:28px;color:var(--text-secondary);display:block;margin-bottom:6px;"></i>
+                    <span style="font-size:13px;color:var(--text-secondary);">Click to upload image or GIF</span>
+                </div>
+                <button type="button" id="stickerRemoveImageBtn" onclick="removeStickerImage(event)"
+                        style="display:@(string.IsNullOrEmpty(Model.StickerData?.ImagePath) ? "none" : "flex");position:absolute;top:8px;right:8px;width:28px;height:28px;
+                    border-radius:50%;background:rgba(0,0,0,0.6);border:none;align-items:center;
+                    justify-content:center;cursor:pointer;">
+                    <i class="bi bi-x" style="color:#fff;font-size:14px;"></i>
+                </button>
+            </div>
+            <input type="hidden" id="stickerImageUrl" value="@Model.StickerData?.ImagePath" />
+            <input type="hidden" id="stickerImagePublicId" value="@Model.StickerData?.ImagePublicId" />
+        </div>
+        <div class="mb-4">
+            <small class="text-muted d-block">Sticker design should be appropriate</small>
+        </div>
+
+        <!-- Price -->
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Price (SGD)</label>
+            <input type="number" id="priceInput" class="form-control" step="0.01" min="0" value="@Model.StickerData?.Price.ToString("0.00")" />
+        </div>
+
+        <!-- Limited / Unlimited -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold d-block">Availability</label>
+            <select id="limitedSelect" class="form-select" onchange="toggleLimitedQty()">
+                <option value="unlimited" selected="@(Model.StickerData?.IsLimited != true)">Unlimited</option>
+                <option value="limited" selected="@(Model.StickerData?.IsLimited == true)">Limited</option>
+            </select>
+            <div id="limitedQtyWrapper" class="mt-2" style="display:@(Model.StickerData?.IsLimited == true ? "block" : "none");">
+                <label class="form-label fw-semibold small">Quantity</label>
+                <input type="number" id="limitedQtyInput" class="form-control" min="1" step="1" value="@Model.StickerData?.LimitedQuantity" />
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openPreview()">
+                <i class="bi bi-eye"></i> Preview
+            </button>
+        </div>
+
+        <div id="formError" class="alert alert-danger py-2" style="display:none;font-size:13px;"></div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a asp-page="./ManageShop" class="btn btn-secondary px-4">Cancel</a>
+            <button type="button" class="btn btn-primary px-4" id="saveBtn" onclick="saveSticker()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_StickerCropModal")
+
+<!-- Preview modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card, #161b22); border: 1px solid var(--border-color, #30363d); border-radius: 14px;">
+            <div class="modal-header border-bottom" style="border-color:var(--border-color,#21262d) !important;">
+                <h5 class="modal-title fw-bold">Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card p-2 position-relative mx-auto" style="max-width:220px;">
+                    <span class="shop-limited-badge" id="previewLimitedBadge" style="display:none;">Limited</span>
+                    <div class="text-center" style="height:140px;display:flex;align-items:center;justify-content:center;">
+                        <img id="previewImage" src="" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                    </div>
+                    <div class="small fw-semibold mt-2 text-center text-truncate" id="previewName"></div>
+                    <button type="button" class="btn btn-sm btn-primary w-100 mt-2 shop-buy-btn" disabled>
+                        <i class="bi bi-cart"></i> <span id="previewPrice"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/stickerImageCrop.js"></script>
+    <script>
+        function updateCharCount() {
+            document.getElementById('nameCharCount').textContent = document.getElementById('stickerName').value.length;
+        }
+
+        function toggleLimitedQty() {
+            const wrapper = document.getElementById('limitedQtyWrapper');
+            wrapper.style.display = document.getElementById('limitedSelect').value === 'limited' ? 'block' : 'none';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('formError');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function openPreview() {
+            document.getElementById('previewName').textContent = document.getElementById('stickerName').value.trim() || '(no name)';
+            document.getElementById('previewImage').src = document.getElementById('stickerImageUrl').value || '';
+            const price = parseFloat(document.getElementById('priceInput').value) || 0;
+            document.getElementById('previewPrice').textContent = 'SGD ' + price.toFixed(2);
+            document.getElementById('previewLimitedBadge').style.display =
+                document.getElementById('limitedSelect').value === 'limited' ? 'inline-block' : 'none';
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        }
+
+        async function saveSticker() {
+            const stickerCode = document.getElementById('stickerCode').value.trim();
+            const stickerName = document.getElementById('stickerName').value.trim();
+            const priceRaw = document.getElementById('priceInput').value.trim();
+            const isLimited = document.getElementById('limitedSelect').value === 'limited';
+            const limitedQtyRaw = document.getElementById('limitedQtyInput').value.trim();
+
+            if (!stickerName) { showError('Please enter a sticker name.'); return; }
+            if (!/^\d+(\.\d{1,2})?$/.test(priceRaw)) { showError('Enter a valid price (up to 2 decimal places).'); return; }
+            if (isLimited && (!limitedQtyRaw || parseInt(limitedQtyRaw) < 1)) { showError('Enter a limited quantity of at least 1.'); return; }
+
+            document.getElementById('formError').style.display = 'none';
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Saving...`;
+
+            const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+            const payload = {
+                stickerCode: stickerCode,
+                stickerName: stickerName,
+                imagePath: document.getElementById('stickerImageUrl').value || null,
+                imagePublicId: document.getElementById('stickerImagePublicId').value || null,
+                price: parseFloat(priceRaw),
+                isLimited: isLimited,
+                limitedQuantity: isLimited ? parseInt(limitedQtyRaw) : null,
+                isDelisted: false
+            };
+
+            const res = await fetch(`${apiBase}/Sticker/${encodeURIComponent(stickerCode)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            btn.disabled = false;
+            btn.textContent = 'Save Changes';
+
+            if (res.ok) {
+                window.location.href = '/ShowoffPages/Cosmetics/ManageShop';
+            } else {
+                const text = await res.text();
+                showError(`Failed to save sticker: ${text || 'Please try again.'}`);
+            }
+        }
+    </script>
+}

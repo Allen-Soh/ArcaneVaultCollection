@@ -17,7 +17,7 @@ public class CreateStickerModel : PageModel
         var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
         var loggedInUser = JsonSerializer.Deserialize<ArcaneVaultUser>(userJson);
         if (loggedInUser?.RoleId != 1)
-            return RedirectToPage("./Index", new { tab = "shop" });
+            return RedirectToPage("/ShowoffPages/Index", new { tab = "shop" });
 
         return Page();
     }

@@ -33,38 +33,48 @@
     {
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold mb-0">Community Showoffs</h4>
-            <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#feedFiltersPanel"
+                    aria-expanded="false" aria-controls="feedFiltersPanel">
+                <i class="bi bi-funnel"></i> Filters
+                <span class="filters-badge" id="feedFiltersBadge" style="display:none;"></span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+
+        <div class="collapse filters-panel" id="feedFiltersPanel">
+            <div class="d-flex justify-content-end gap-2 mb-2">
                 <select id="sortSelect" class="form-select form-select-sm" style="width:auto;">
                     <option value="popular" selected="@(Model.SortBy == "popular")">Most Popular</option>
                     <option value="newest" selected="@(Model.SortBy == "newest")">Newest</option>
                     <option value="least" selected="@(Model.SortBy == "least")">Least Popular</option>
                 </select>
             </div>
-        </div>
 
-        <div class="row g-2 mb-4">
-            <div class="col-md-4 position-relative">
-                <input type="text" id="searchUsers" class="form-control"
-                       placeholder="Search users..." autocomplete="off"
-                       value="@Model.SearchUser" />
-                <div id="userSuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+            <div class="row g-2 mb-4">
+                <div class="col-md-4 position-relative">
+                    <input type="text" id="searchUsers" class="form-control"
+                           placeholder="Search users..." autocomplete="off"
+                           value="@Model.SearchUser" />
+                    <div id="userSuggestions" class="list-group position-absolute z-3"
+                         style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4 position-relative">
-                <input type="text" id="searchItems" class="form-control"
-                       placeholder="Search items..." autocomplete="off"
-                       value="@Model.SearchItem" />
-                <div id="itemSuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                <div class="col-md-4 position-relative">
+                    <input type="text" id="searchItems" class="form-control"
+                           placeholder="Search items..." autocomplete="off"
+                           value="@Model.SearchItem" />
+                    <div id="itemSuggestions" class="list-group position-absolute z-3"
+                         style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4 position-relative">
-                <input type="text" id="searchCategories" class="form-control"
-                       placeholder="Search categories..." autocomplete="off"
-                       value="@Model.SearchCategory" />
-                <div id="categorySuggestions" class="list-group position-absolute z-3"
-                     style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                <div class="col-md-4 position-relative">
+                    <input type="text" id="searchCategories" class="form-control"
+                           placeholder="Search categories..." autocomplete="off"
+                           value="@Model.SearchCategory" />
+                    <div id="categorySuggestions" class="list-group position-absolute z-3"
+                         style="width:100%;max-height:200px;overflow-y:auto;display:none;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -160,14 +170,6 @@
                 <h4 class="fw-bold mb-3">Frames</h4>
                 <div id="framesGridContainer">
                     @await Html.PartialAsync("_FrameGrid", Model)
-                </div>
-            </div>
-
-            <!-- Titles section -->
-            <div>
-                <h4 class="fw-bold mb-3">Titles</h4>
-                <div id="titlesGridContainer">
-                    @await Html.PartialAsync("_TitleGrid", Model)
                 </div>
             </div>
 
@@ -503,6 +505,27 @@
                     Our support team will review it shortly.
                 </p>
                 <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cosmetic (Frame/Sticker) detail modal -->
+<div class="modal fade" id="cosmeticDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card, #161b22); border: 1px solid var(--border-color, #30363d); border-radius: 14px;">
+            <div class="modal-header border-bottom" style="border-color:var(--border-color,#21262d) !important;">
+                <h5 class="modal-title fw-bold" id="cosmeticDetailName"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center mb-3" style="height:220px;">
+                    <img id="cosmeticDetailImage" src="" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold" id="cosmeticDetailPrice" style="font-size:16px;"></span>
+                    <span id="cosmeticDetailQty" class="badge shop-limited-badge" style="display:none;"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -996,8 +1019,21 @@
             page: 1
         };
 
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
         async function refreshGrid(newFilters = {}) {
             Object.assign(currentFilters, newFilters);
+
+            updateFiltersBadge('feedFiltersBadge',
+                (currentFilters.sort !== 'popular' ? 1 : 0) +
+                (currentFilters.searchUser ? 1 : 0) +
+                (currentFilters.searchItem ? 1 : 0) +
+                (currentFilters.searchCategory ? 1 : 0));
 
             const params = new URLSearchParams({
                 tab: 'feed',
@@ -1178,13 +1214,18 @@
         enableSearchClear('searchItems');
         enableSearchClear('searchCategories');
 
+        updateFiltersBadge('feedFiltersBadge',
+            (currentFilters.sort !== 'popular' ? 1 : 0) +
+            (currentFilters.searchUser ? 1 : 0) +
+            (currentFilters.searchItem ? 1 : 0) +
+            (currentFilters.searchCategory ? 1 : 0));
+
         // ════════════════════════════════════════════════
-        // SHOP TAB — Frames, Titles & Stickers, server-side AJAX pagination
+        // SHOP TAB — Frames & Stickers, server-side AJAX pagination
         // ════════════════════════════════════════════════
         // Maps section key -> Razor Pages handler name (OnGet{Handler}Async)
         const cosmeticHandlerMap = {
             frames: 'FrameGrid',
-            titles: 'TitleGrid',
             stickers: 'StickerGrid'
         };
 
@@ -1216,6 +1257,30 @@
             if (link.closest('.page-item')?.classList.contains('disabled')) return;
             refreshCosmeticGrid(section, parseInt(link.dataset.page));
         });
+
+        // ── Cosmetic detail modal — populated straight from the clicked card's
+        // own data-* attributes, no extra fetch needed. ──
+        function openCosmeticDetail(el) {
+            document.getElementById('cosmeticDetailName').textContent = el.dataset.name;
+            document.getElementById('cosmeticDetailImage').src = el.dataset.image || '';
+            document.getElementById('cosmeticDetailPrice').textContent = 'SGD ' + el.dataset.price;
+
+            const qtyEl = document.getElementById('cosmeticDetailQty');
+            if (el.dataset.limited === 'true') {
+                qtyEl.textContent = `Limited — ${el.dataset.qty} available`;
+                qtyEl.style.display = 'inline-block';
+            } else {
+                qtyEl.style.display = 'none';
+            }
+
+            new bootstrap.Modal(document.getElementById('cosmeticDetailModal')).show();
+        }
+
+        // Payments (Stripe) aren't wired up yet — placeholder until that phase lands.
+        function buyCosmetic(e) {
+            e.stopPropagation();
+            alert('Payments are coming soon!');
+        }
     </script>
     <style>
         .pagination .page-link.pagination-box {

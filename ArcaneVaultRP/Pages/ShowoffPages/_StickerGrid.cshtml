@@ -1,11 +1,11 @@
-﻿@model ArcaneVaultRP.Pages.Showoffs.IndexModel
+@model ArcaneVaultRP.Pages.Showoffs.IndexModel
 
 <div class="row row-cols-2 row-cols-md-4 g-3">
     @if (Model.IsStaff && Model.StickerCurrentPage == 1)
     {
         <div class="col">
             <div class="card h-100 text-center p-2" style="cursor:pointer;background:transparent;border:2px dashed var(--border-color,#30363d);"
-                 onclick="window.location.href='/ShowoffPages/CreateSticker'"
+                 onclick="window.location.href='/ShowoffPages/Cosmetics/CreateSticker'"
                  onmouseenter="this.style.borderColor='var(--color-teal,#2dd4bf)';"
                  onmouseleave="this.style.borderColor='var(--border-color,#30363d)';">
                 <div style="height:100px;display:flex;align-items:center;justify-content:center;">
@@ -19,8 +19,20 @@
     @foreach (var sticker in Model.PagedStickers)
     {
         <div class="col">
-            <div class="card h-100 text-center p-2">
-                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
+            <div class="card h-100 p-2 shop-cosmetic-card position-relative" style="cursor:pointer;"
+                 onclick="openCosmeticDetail(this)"
+                 data-type="sticker"
+                 data-code="@sticker.StickerCode"
+                 data-name="@sticker.StickerName"
+                 data-image="@sticker.ImagePath"
+                 data-price="@sticker.Price.ToString("0.00")"
+                 data-limited="@sticker.IsLimited.ToString().ToLower()"
+                 data-qty="@(sticker.LimitedQuantity?.ToString() ?? "")">
+                @if (sticker.IsLimited)
+                {
+                    <span class="shop-limited-badge">Limited</span>
+                }
+                <div class="text-center" style="height:100px;display:flex;align-items:center;justify-content:center;">
                     @if (!string.IsNullOrEmpty(sticker.ImagePath))
                     {
                         <img src="@sticker.ImagePath" alt="@sticker.StickerName" style="max-width:100%;max-height:100%;object-fit:contain;" />
@@ -30,7 +42,10 @@
                         <div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;"></div>
                     }
                 </div>
-                <div class="small fw-semibold mt-2 text-truncate">@sticker.StickerName</div>
+                <div class="small fw-semibold mt-2 text-center text-truncate">@sticker.StickerName</div>
+                <button type="button" class="btn btn-sm btn-primary w-100 mt-2 shop-buy-btn" onclick="buyCosmetic(event)">
+                    <i class="bi bi-cart"></i> SGD @sticker.Price.ToString("0.00")
+                </button>
             </div>
         </div>
     }

@@ -10,7 +10,19 @@
             <h4 class="fw-bold mb-1">User Support Tickets</h4>
             <p class="text-muted small mb-0" id="ticketCountText"></p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div>
+            <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#staffFiltersPanel"
+                    aria-expanded="false" aria-controls="staffFiltersPanel">
+                <i class="bi bi-funnel"></i> Filters
+                <span class="filters-badge" id="staffFiltersBadge" style="display:none;"></span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse filters-panel" id="staffFiltersPanel">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
             <input type="text" id="uidSearchInput" class="form-control form-control-sm"
                    placeholder="Search ticket UID..." style="width:200px;" oninput="applyFilters()" />
             <label class="text-muted small" style="white-space:nowrap;">Status:</label>
@@ -109,9 +121,18 @@
         let allTickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveTab == "my" ? Model.MyTickets : Model.AllTickets));
         let currentReviewTicket = null;
 
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
         function applyFilters() {
             const status = document.getElementById('filterStatus').value;
             const query = document.getElementById('uidSearchInput').value.trim().toLowerCase();
+
+            updateFiltersBadge('staffFiltersBadge', (status !== 'All' ? 1 : 0) + (query ? 1 : 0));
 
             let filtered = [...allTickets];
 

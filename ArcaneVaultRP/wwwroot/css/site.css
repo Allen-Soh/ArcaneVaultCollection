@@ -351,6 +351,70 @@ a:hover {
     transform: rotate(180deg);
 }
 
+/* Global "Filters" collapse-button pattern — reused on any page with >1 filter control */
+.filters-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filters-toggle-btn .bi-chevron-down {
+    font-size: 0.7rem;
+    transition: transform 0.25s ease;
+    transform: rotate(0deg);
+}
+
+.filters-toggle-btn[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+.filters-badge {
+    background: var(--color-periwinkle, #6f7ffb);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 6px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.filters-panel {
+    padding-top: 12px;
+}
+
+/* Shop tab — cosmetic card redesign (Frames/Stickers) */
+.shop-cosmetic-card {
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.shop-cosmetic-card:hover {
+    border-color: var(--color-teal, #2dd4bf);
+    transform: translateY(-2px);
+}
+
+.shop-limited-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: var(--color-periwinkle, #6f7ffb);
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.shop-buy-btn {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
 .profile-dropdown-menu {
     margin-top: 14px !important; /* room for the arrow */
     min-width: 180px;

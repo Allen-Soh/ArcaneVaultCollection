@@ -1,0 +1,179 @@
+@page
+@model ArcaneVaultRP.Pages.ShowoffPages.ManageShopModel
+@{
+    ViewData["Title"] = "Manage Shop";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <h4 class="fw-bold mb-0">Manage Shop</h4>
+        <div class="d-flex align-items-center gap-2">
+            <select id="typeSelect" class="form-select form-select-sm" style="width:auto;" onchange="switchType()">
+                <option value="sticker">Sticker</option>
+                <option value="frame">Frame</option>
+            </select>
+            <a id="createNewBtn" href="/ShowoffPages/Cosmetics/CreateSticker" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Create New
+            </a>
+        </div>
+    </div>
+
+    <!-- Sticker list -->
+    <div id="stickerList">
+        @if (!Model.AllStickers.Any())
+        {
+            <div class="text-center text-muted py-4">No stickers yet.</div>
+        }
+        @foreach (var sticker in Model.AllStickers)
+        {
+            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" style="@(sticker.IsDelisted ? "opacity:0.55;" : "")">
+                <div style="width:56px;height:56px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:8px;">
+                    @if (!string.IsNullOrEmpty(sticker.ImagePath))
+                    {
+                        <img src="@sticker.ImagePath" alt="@sticker.StickerName" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                    }
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">
+                        @sticker.StickerName
+                        @if (sticker.IsLimited)
+                        {
+                            <span class="shop-limited-badge ms-1" style="position:static;">Limited</span>
+                        }
+                        @if (sticker.IsDelisted)
+                        {
+                            <span class="badge bg-secondary ms-1">Delisted</span>
+                        }
+                    </div>
+                    <div class="text-muted small">SGD @sticker.Price.ToString("0.00") · @sticker.StickerCode</div>
+                </div>
+                <a href="/ShowoffPages/Cosmetics/EditSticker/@sticker.StickerCode" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                @if (sticker.IsDelisted)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="confirmToggle('sticker', '@sticker.StickerCode', '@sticker.StickerName', false)">
+                        Relist
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmToggle('sticker', '@sticker.StickerCode', '@sticker.StickerName', true)">
+                        Delist
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Frame list -->
+    <div id="frameList" style="display:none;">
+        @if (!Model.AllFrames.Any())
+        {
+            <div class="text-center text-muted py-4">No frames yet.</div>
+        }
+        @foreach (var frame in Model.AllFrames)
+        {
+            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" style="@(frame.IsDelisted ? "opacity:0.55;" : "")">
+                <div style="width:56px;height:56px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:8px;">
+                    @if (!string.IsNullOrEmpty(frame.ImagePath))
+                    {
+                        <img src="@frame.ImagePath" alt="@frame.FrameName" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                    }
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">
+                        @frame.FrameName
+                        <span class="badge bg-dark-subtle text-body ms-1">@frame.Orientation</span>
+                        @if (frame.IsLimited)
+                        {
+                            <span class="shop-limited-badge ms-1" style="position:static;">Limited</span>
+                        }
+                        @if (frame.IsDelisted)
+                        {
+                            <span class="badge bg-secondary ms-1">Delisted</span>
+                        }
+                    </div>
+                    <div class="text-muted small">SGD @frame.Price.ToString("0.00") · @frame.FrameCode</div>
+                </div>
+                <a href="/ShowoffPages/Cosmetics/EditFrame/@frame.FrameCode" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                @if (frame.IsDelisted)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="confirmToggle('frame', '@frame.FrameCode', '@frame.FrameName', false)">
+                        Relist
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmToggle('frame', '@frame.FrameCode', '@frame.FrameName', true)">
+                        Delist
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Delist/Relist confirmation modal -->
+<div class="modal fade" id="toggleConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="toggleConfirmTitle">Delist item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="toggleConfirmText"></p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="toggleConfirmBtn" onclick="doToggle()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        let pendingToggle = null; // { type, code, delist }
+
+        function switchType() {
+            const type = document.getElementById('typeSelect').value;
+            document.getElementById('stickerList').style.display = type === 'sticker' ? 'block' : 'none';
+            document.getElementById('frameList').style.display = type === 'frame' ? 'block' : 'none';
+            document.getElementById('createNewBtn').href = type === 'frame'
+                ? '/ShowoffPages/Cosmetics/CreateFrame'
+                : '/ShowoffPages/Cosmetics/CreateSticker';
+        }
+
+        function confirmToggle(type, code, name, delist) {
+            pendingToggle = { type, code, delist };
+            document.getElementById('toggleConfirmTitle').textContent = delist ? 'Delist item' : 'Relist item';
+            document.getElementById('toggleConfirmText').innerHTML = delist
+                ? `Delist <strong>${name}</strong>? It will disappear from the public Shop tab, but stays owned by anyone who already has it.`
+                : `Relist <strong>${name}</strong>? It will reappear in the public Shop tab.`;
+            document.getElementById('toggleConfirmBtn').className = delist ? 'btn btn-danger' : 'btn btn-success';
+            new bootstrap.Modal(document.getElementById('toggleConfirmModal')).show();
+        }
+
+        async function doToggle() {
+            if (!pendingToggle) return;
+            const { type, code, delist } = pendingToggle;
+            const controller = type === 'frame' ? 'Frame' : 'Sticker';
+            const action = delist ? 'delist' : 'relist';
+
+            const res = await fetch(`${apiBase}/${controller}/${encodeURIComponent(code)}/${action}`, { method: 'PUT' });
+
+            bootstrap.Modal.getInstance(document.getElementById('toggleConfirmModal'))?.hide();
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to update item. Please try again.');
+            }
+        }
+    </script>
+}

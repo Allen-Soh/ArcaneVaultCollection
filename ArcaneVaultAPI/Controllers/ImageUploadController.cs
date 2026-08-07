@@ -18,20 +18,24 @@ public class ImageUploadController : ControllerBase
     public async Task<ActionResult> UploadImage(IFormFile file)
     {
         // Validate file type
-        var allowedTypes = new[] { "image/jpeg", "image/png" };
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif" };
         if (!allowedTypes.Contains(file.ContentType.ToLower()))
-            return BadRequest("Only JPG and PNG files are allowed.");
+            return BadRequest("Only JPG, PNG, and GIF files are allowed.");
 
         // Validate file size — 5MB max
         if (file.Length > 5 * 1024 * 1024)
             return BadRequest("File size must not exceed 5MB.");
+
+        var isGif = file.ContentType.ToLower() == "image/gif";
 
         using var stream = file.OpenReadStream();
         var uploadParams = new ImageUploadParams
         {
             File = new FileDescription(file.FileName, stream),
             Folder = "arcanevault/showoffs",
-            Transformation = new Transformation()
+            // Skip the auto quality/format transform for GIFs — it can flatten
+            // an animated GIF down to a single still frame.
+            Transformation = isGif ? null : new Transformation()
                 .Quality("auto")
                 .FetchFormat("auto")
         };
