@@ -465,3 +465,10 @@ Fixed Tickets css styling
 
 [To Do]
 - Implement the rest..
+
+===== DEV LOG (8/8/2026) - Part 2 =====
+[Done]
+- Implemented notifications
+
+[To Do]
+- Fix the bugs...

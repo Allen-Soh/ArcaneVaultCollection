@@ -18,6 +18,10 @@ namespace ArcaneVaultRP.Models
         public int ViewCount { get; set; }
         public int CommentCount { get; set; }
         public int ReportCount { get; set; }
+        public string Orientation { get; set; } = "Landscape";
+        public string? EquippedFrameCode { get; set; }
+        public string? EquippedFrameImagePath { get; set; }
         public List<ShowoffItem> Items { get; set; } = new();
+        public List<ShowoffStickerPlacement> StickerPlacements { get; set; } = new();
     }
 }

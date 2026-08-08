@@ -121,7 +121,7 @@
         <!-- Community Interest -->
         <a asp-page="./CommunityInterest"
            class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
-           style="transition: background 0.2s;"
+           style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
            onmouseenter="this.style.background='var(--bg-card-hover)'"
            onmouseleave="this.style.background='transparent'">
             <div style="flex:1;">
@@ -142,6 +142,31 @@
                 <p class="mb-0 text-muted" style="font-size:13px;">
                     Most searched: "@(topSearch?.SearchTerm ?? "—")" ·
                     Most viewed showoff: "@(topShowoff?.ShowoffName ?? "—")"
+                </p>
+            </div>
+            <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>
+        </a>
+
+        <!-- Finance and Sales -->
+        <a asp-page="./FinanceAndSales"
+           class="d-flex justify-content-between align-items-start py-3 px-3 text-decoration-none"
+           style="transition: background 0.2s;"
+           onmouseenter="this.style.background='var(--bg-card-hover)'"
+           onmouseleave="this.style.background='transparent'">
+            <div style="flex:1;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-cash-coin text-success" style="font-size:16px;"></i>
+                    <span class="fw-bold" style="font-size:16px; color: var(--text-primary);">Finance and sales</span>
+                </div>
+                @{
+                    var topSale = Model.FinanceAndSales.TopSales.FirstOrDefault();
+                }
+                <p class="mb-1 text-light" style="font-size:14px;">
+                    <strong class="text-white">SGD @Model.FinanceAndSales.TotalSalesValue.ToString("0.00")</strong> total revenue ·
+                    <strong>@Model.FinanceAndSales.TotalSalesCount</strong> sales
+                </p>
+                <p class="mb-0 text-muted" style="font-size:13px;">
+                    Highest sale: @(topSale != null ? $"{topSale.CosmeticName} ({topSale.Currency} {topSale.Amount:0.00})" : "—")
                 </p>
             </div>
             <i class="bi bi-chevron-right text-muted ms-3 mt-1" style="font-size:15px;"></i>

@@ -23,6 +23,7 @@ namespace ArcaneVaultAPI.Controllers
             public int? CopyNumber { get; set; }
             public int? LimitedQuantity { get; set; }
             public string AcquiredAt { get; set; }
+            public string? Orientation { get; set; } // Frame only, null for Stickers
         }
 
         // GET: api/CosmeticInventory/user/{username}
@@ -61,11 +62,12 @@ namespace ArcaneVaultAPI.Controllers
                 string name, imagePath;
                 bool isLimited;
                 int? limitedQuantity;
+                string? orientation = null;
 
                 if (row.CosmeticType == "Frame")
                 {
                     var cmd = new SqliteCommand(
-                        "SELECT FrameName, ImagePath, IsLimited, LimitedQuantity FROM Frames WHERE FrameCode = @Code",
+                        "SELECT FrameName, ImagePath, IsLimited, LimitedQuantity, Orientation FROM Frames WHERE FrameCode = @Code",
                         connection);
                     cmd.Parameters.AddWithValue("@Code", row.CosmeticId);
                     using var reader = cmd.ExecuteReader();
@@ -74,6 +76,7 @@ namespace ArcaneVaultAPI.Controllers
                     imagePath = reader["ImagePath"] == DBNull.Value ? null : reader["ImagePath"].ToString();
                     isLimited = Convert.ToBoolean(Convert.ToInt32(reader["IsLimited"]));
                     limitedQuantity = reader["LimitedQuantity"] == DBNull.Value ? null : Convert.ToInt32(reader["LimitedQuantity"]);
+                    orientation = reader["Orientation"] == DBNull.Value ? "Landscape" : reader["Orientation"].ToString();
                 }
                 else
                 {
@@ -113,7 +116,8 @@ namespace ArcaneVaultAPI.Controllers
                     IsLimited = isLimited,
                     CopyNumber = copyNumber,
                     LimitedQuantity = limitedQuantity,
-                    AcquiredAt = row.AcquiredAt
+                    AcquiredAt = row.AcquiredAt,
+                    Orientation = orientation
                 });
             }
 

@@ -60,8 +60,8 @@ public class SupportTicketController : ControllerBase
         string? assignedStaff = GetNextStaffAssignee(connection);
 
         var insertCommand = new SqliteCommand(
-            @"INSERT INTO SupportTickets (TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt)
-              VALUES ('', @Name, @Email, @Subject, @Issue, 0, @AssignedStaff, @CreatedAt);
+            @"INSERT INTO SupportTickets (TicketUid, Name, Email, Subject, Issue, IsResolved, AssignedStaffUserName, CreatedAt, UserName)
+              VALUES ('', @Name, @Email, @Subject, @Issue, 0, @AssignedStaff, @CreatedAt, @UserName);
               SELECT last_insert_rowid();",
             connection);
         insertCommand.Parameters.AddWithValue("@Name", dto.Name);
@@ -70,6 +70,7 @@ public class SupportTicketController : ControllerBase
         insertCommand.Parameters.AddWithValue("@Issue", dto.Issue);
         insertCommand.Parameters.AddWithValue("@AssignedStaff", (object?)assignedStaff ?? DBNull.Value);
         insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+        insertCommand.Parameters.AddWithValue("@UserName", (object?)dto.UserName ?? DBNull.Value);
 
         var newId = Convert.ToInt32(insertCommand.ExecuteScalar());
         var ticketUid = $"CS-{newId:D6}";
@@ -231,8 +232,9 @@ public class SupportTicketController : ControllerBase
         }
 
         var resolveCommand = new SqliteCommand(
-            "UPDATE SupportTickets SET IsResolved = 1 WHERE TicketId = @TicketId",
+            "UPDATE SupportTickets SET IsResolved = 1, RepliedAt = @RepliedAt WHERE TicketId = @TicketId",
             connection);
+        resolveCommand.Parameters.AddWithValue("@RepliedAt", DateTime.UtcNow);
         resolveCommand.Parameters.AddWithValue("@TicketId", id);
         resolveCommand.ExecuteNonQuery();
 

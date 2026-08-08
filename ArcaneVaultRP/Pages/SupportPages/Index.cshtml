@@ -2,6 +2,8 @@
 @model ArcaneVaultRP.Pages.SupportPages.IndexModel
 @{
     ViewData["Title"] = "Customer Support";
+    var userJson = HttpContext.Session.GetString(SessionKeys.LoggedInUser);
+    var loggedInUser = userJson != null ? System.Text.Json.JsonSerializer.Deserialize<Models.ArcaneVaultUser>(userJson) : null;
 }
 
 <div class="container mt-4" style="max-width:600px;">
@@ -45,6 +47,7 @@
 @section Scripts {
     <script>
         const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        const currentUser = '@loggedInUser?.UserName' === '' ? null : '@loggedInUser?.UserName';
 
         function clearForm() {
             document.getElementById('ticketName').value = '';
@@ -92,7 +95,7 @@
                 const res = await fetch(`${apiBase}/SupportTicket`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ Name: name, Email: email, Subject: subject, Issue: issue })
+                    body: JSON.stringify({ Name: name, Email: email, Subject: subject, Issue: issue, UserName: currentUser })
                 });
 
                 if (!res.ok) {

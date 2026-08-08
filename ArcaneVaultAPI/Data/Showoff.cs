@@ -25,6 +25,9 @@ namespace ArcaneVaultAPI.Data
 
         public string UserName { get; set; }
 
+        public string Orientation { get; set; } = "Landscape";
+        public string? EquippedFrameCode { get; set; }
+
         [ForeignKey("UserName")]
         public ArcaneVaultUser? User { get; set; }
     }

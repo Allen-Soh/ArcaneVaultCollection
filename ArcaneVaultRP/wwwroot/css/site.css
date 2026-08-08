@@ -464,6 +464,15 @@ a:hover {
     color: var(--text-muted) !important;
 }
 
+.notification-dropdown-menu {
+    min-width: 340px;
+}
+
+.notification-dropdown-menu .btn-group .btn {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
 /* Footer override */
 .footer {
     background-color: var(--bg-dark) !important;

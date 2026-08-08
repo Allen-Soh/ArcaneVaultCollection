@@ -118,6 +118,18 @@
                         <!-- Rendered dynamically -->
                     </div>
                 </div>
+
+                <!-- Cosmetics Section -->
+                <div class="border-top pt-3" style="border-color: var(--border-color) !important;">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold mb-2 d-block">Stickers (up to 5) — click a thumbnail to add</label>
+                        <div id="stickerPickerList" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold mb-2 d-block">Frame (0 or 1) — click to equip/unequip</label>
+                        <div id="framePickerList" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -189,6 +201,211 @@
         let bgMode = 'color'; // 'color' | 'image'
         let bgImagePath = null;
         let bgImagePublicId = null;
+
+        // ── Equipped cosmetics ──
+        let ownedStickers = []; // [{ code, name, imagePath }]
+        let ownedFrames = [];   // [{ code, name, imagePath, orientation }]
+        let placedStickers = []; // [{ stickerCode, imagePath, x, y, scale, rotation }]
+        let equippedFrameCode = null;
+        let selectedStickerIdx = null;
+        let dragState = null;
+
+        async function loadOwnedCosmetics() {
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
+            const res = await fetch(`${apiBase}/CosmeticInventory/user/${currentUser}`, {
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
+            });
+            if (!res.ok) return;
+            const items = await res.json();
+
+            const stickerMap = new Map();
+            const frameMap = new Map();
+            items.forEach(i => {
+                if (i.cosmeticType === 'Sticker' && !stickerMap.has(i.cosmeticId)) {
+                    stickerMap.set(i.cosmeticId, { code: i.cosmeticId, name: i.cosmeticName, imagePath: i.imagePath });
+                }
+                if (i.cosmeticType === 'Frame' && !frameMap.has(i.cosmeticId)) {
+                    frameMap.set(i.cosmeticId, { code: i.cosmeticId, name: i.cosmeticName, imagePath: i.imagePath, orientation: i.orientation });
+                }
+            });
+            ownedStickers = Array.from(stickerMap.values());
+            ownedFrames = Array.from(frameMap.values());
+            renderStickerPicker();
+            renderFramePicker();
+        }
+
+        function renderStickerPicker() {
+            const container = document.getElementById('stickerPickerList');
+            if (ownedStickers.length === 0) {
+                container.innerHTML = '<div class="text-muted small">You don\'t own any stickers yet.</div>';
+                return;
+            }
+            container.innerHTML = ownedStickers.map(s => `
+                <div class="cosmetic-picker-thumb" onclick="addStickerPlacement('${s.code}')" title="${s.name}">
+                    ${s.imagePath ? `<img src="${s.imagePath}" />` : '<i class="bi bi-image text-muted"></i>'}
+                </div>
+            `).join('');
+        }
+
+        function renderFramePicker() {
+            const container = document.getElementById('framePickerList');
+            const compatible = ownedFrames.filter(f => f.orientation === (isLandscape ? 'Landscape' : 'Portrait'));
+            if (compatible.length === 0) {
+                container.innerHTML = '<div class="text-muted small">No owned frames match this orientation.</div>';
+                return;
+            }
+            container.innerHTML = compatible.map(f => `
+                <div class="cosmetic-picker-thumb ${equippedFrameCode === f.code ? 'selected' : ''}" onclick="toggleFrame('${f.code}')" title="${f.name}">
+                    ${f.imagePath ? `<img src="${f.imagePath}" />` : '<i class="bi bi-image text-muted"></i>'}
+                </div>
+            `).join('');
+        }
+
+        function toggleFrame(code) {
+            equippedFrameCode = (equippedFrameCode === code) ? null : code;
+            renderFramePicker();
+            updatePreview();
+        }
+
+        function addStickerPlacement(code) {
+            if (placedStickers.length >= 5) {
+                alert('Maximum of 5 stickers allowed on a showoff.');
+                return;
+            }
+            const sticker = ownedStickers.find(s => s.code === code);
+            const offset = (placedStickers.length % 4) * 8;
+            placedStickers.push({
+                stickerCode: code,
+                imagePath: sticker.imagePath,
+                x: 50 - 12 + offset,
+                y: 50 - 12 + offset,
+                scale: 1,
+                rotation: 0
+            });
+            selectedStickerIdx = placedStickers.length - 1;
+            updatePreview();
+        }
+
+        function removeSticker(idx) {
+            placedStickers.splice(idx, 1);
+            selectedStickerIdx = null;
+            updatePreview();
+        }
+
+        function buildOverlayHtml() {
+            let html = '';
+            if (equippedFrameCode) {
+                const frame = ownedFrames.find(f => f.code === equippedFrameCode);
+                if (frame && frame.imagePath) {
+                    html += `<img src="${frame.imagePath}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2;" />`;
+                }
+            }
+            placedStickers.forEach((s, idx) => {
+                const selected = selectedStickerIdx === idx;
+                html += `
+                    <div class="showoff-sticker ${selected ? 'selected' : ''}" data-idx="${idx}"
+                         style="position:absolute; left:${s.x}%; top:${s.y}%; width:${15 * s.scale}%; transform: translate(-50%,-50%) rotate(${s.rotation}deg); z-index:3;"
+                         onpointerdown="onStickerPointerDown(event, ${idx})">
+                        <img src="${s.imagePath}" style="width:100%; display:block; pointer-events:none;" draggable="false" />
+                        ${selected ? `
+                            <div class="sticker-handle sticker-delete" onclick="removeSticker(${idx})" title="Delete">&times;</div>
+                            <div class="sticker-handle sticker-rotate" onpointerdown="onRotateHandleDown(event, ${idx})" title="Rotate"><i class="bi bi-arrow-clockwise"></i></div>
+                            <div class="sticker-handle sticker-resize" onpointerdown="onResizeHandleDown(event, ${idx})" title="Resize"></div>
+                        ` : ''}
+                    </div>`;
+            });
+            return html;
+        }
+
+        function onStickerPointerDown(event, idx) {
+            event.stopPropagation();
+            selectedStickerIdx = idx;
+            const canvasEl = event.currentTarget.closest('.canvas-box');
+            const rect = canvasEl.getBoundingClientRect();
+            dragState = {
+                type: 'move', idx,
+                startPointerX: event.clientX, startPointerY: event.clientY,
+                startX: placedStickers[idx].x, startY: placedStickers[idx].y,
+                canvasRect: rect
+            };
+            document.addEventListener('pointermove', onDragPointerMove);
+            document.addEventListener('pointerup', onDragPointerUp);
+            updatePreview();
+        }
+
+        function onResizeHandleDown(event, idx) {
+            event.stopPropagation();
+            const canvasEl = event.currentTarget.closest('.canvas-box');
+            const rect = canvasEl.getBoundingClientRect();
+            const s = placedStickers[idx];
+            const centerX = rect.left + (s.x / 100) * rect.width;
+            const centerY = rect.top + (s.y / 100) * rect.height;
+            dragState = {
+                type: 'resize', idx, centerX, centerY,
+                startDist: Math.max(1, Math.hypot(event.clientX - centerX, event.clientY - centerY)),
+                startScale: s.scale
+            };
+            document.addEventListener('pointermove', onDragPointerMove);
+            document.addEventListener('pointerup', onDragPointerUp);
+        }
+
+        function onRotateHandleDown(event, idx) {
+            event.stopPropagation();
+            const canvasEl = event.currentTarget.closest('.canvas-box');
+            const rect = canvasEl.getBoundingClientRect();
+            const s = placedStickers[idx];
+            const centerX = rect.left + (s.x / 100) * rect.width;
+            const centerY = rect.top + (s.y / 100) * rect.height;
+            dragState = {
+                type: 'rotate', idx, centerX, centerY,
+                startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI,
+                startRotation: s.rotation
+            };
+            document.addEventListener('pointermove', onDragPointerMove);
+            document.addEventListener('pointerup', onDragPointerUp);
+        }
+
+        function onDragPointerMove(event) {
+            if (!dragState) return;
+            const s = placedStickers[dragState.idx];
+            if (!s) return;
+
+            if (dragState.type === 'move') {
+                const dxPct = ((event.clientX - dragState.startPointerX) / dragState.canvasRect.width) * 100;
+                const dyPct = ((event.clientY - dragState.startPointerY) / dragState.canvasRect.height) * 100;
+                s.x = Math.min(100, Math.max(0, dragState.startX + dxPct));
+                s.y = Math.min(100, Math.max(0, dragState.startY + dyPct));
+            } else if (dragState.type === 'resize') {
+                const dist = Math.hypot(event.clientX - dragState.centerX, event.clientY - dragState.centerY);
+                s.scale = Math.min(3, Math.max(0.3, dragState.startScale * (dist / dragState.startDist)));
+            } else if (dragState.type === 'rotate') {
+                const angle = Math.atan2(event.clientY - dragState.centerY, event.clientX - dragState.centerX) * 180 / Math.PI;
+                s.rotation = dragState.startRotation + (angle - dragState.startAngle);
+            }
+
+            document.querySelectorAll(`.showoff-sticker[data-idx="${dragState.idx}"]`).forEach(el => {
+                el.style.left = s.x + '%';
+                el.style.top = s.y + '%';
+                el.style.width = (15 * s.scale) + '%';
+                el.style.transform = `translate(-50%,-50%) rotate(${s.rotation}deg)`;
+            });
+        }
+
+        function onDragPointerUp() {
+            dragState = null;
+            document.removeEventListener('pointermove', onDragPointerMove);
+            document.removeEventListener('pointerup', onDragPointerUp);
+        }
+
+        // Deselect when clicking empty canvas
+        document.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.canvas-box') && !e.target.closest('.showoff-sticker')) {
+                if (selectedStickerIdx !== null) {
+                    selectedStickerIdx = null;
+                    updatePreview();
+                }
+            }
+        });
 
         function setBgMode(mode) {
             bgMode = mode;
@@ -264,6 +481,7 @@
         // Initialize with 1 item slot on start
         window.addEventListener('DOMContentLoaded', () => {
             addItemSlot();
+            loadOwnedCosmetics();
         });
 
         // ── Category Tag Selector ──
@@ -545,6 +763,11 @@
                 label.textContent = 'Portrait';
             }
 
+            // An equipped frame that no longer matches the new orientation gets dropped.
+            const stillCompatible = ownedFrames.some(f => f.code === equippedFrameCode && f.orientation === (isLandscape ? 'Landscape' : 'Portrait'));
+            if (!stillCompatible) equippedFrameCode = null;
+            renderFramePicker();
+
             updatePreview();
         }
 
@@ -650,8 +873,9 @@
                 }
             }
 
-            mainCanvas.innerHTML = html;
-            fullCanvas.innerHTML = html;
+            const overlayHtml = buildOverlayHtml();
+            mainCanvas.innerHTML = html + overlayHtml;
+            fullCanvas.innerHTML = html + overlayHtml;
         }
 
         // ── Save Showoff payload submission ──
@@ -680,6 +904,16 @@
                     imagePath: i.imagePath,
                     imagePublicId: i.imagePublicId,
                     displayOrder: idx
+                })),
+                orientation: isLandscape ? 'Landscape' : 'Portrait',
+                equippedFrameCode: equippedFrameCode,
+                stickerPlacements: placedStickers.map(s => ({
+                    stickerCode: s.stickerCode,
+                    imagePath: s.imagePath,
+                    x: s.x,
+                    y: s.y,
+                    scale: s.scale,
+                    rotation: s.rotation
                 }))
             };
 
@@ -695,9 +929,10 @@
                 window.pendingImageDeletes = [];
             }
 
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
             const res = await fetch(`${apiBase}/Showoff`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
                 body: JSON.stringify(payload)
             });
 
@@ -714,6 +949,82 @@
 <style>
     .canvas-box {
         transition: all 0.2s ease-in-out;
+        position: relative;
+    }
+
+    .cosmetic-picker-thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        cursor: pointer;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.15s;
+    }
+
+    .cosmetic-picker-thumb:hover {
+        border-color: var(--color-teal, #2dd4bf);
+    }
+
+    .cosmetic-picker-thumb.selected {
+        border-color: var(--color-teal, #2dd4bf);
+    }
+
+    .cosmetic-picker-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .showoff-sticker {
+        touch-action: none;
+    }
+
+    .showoff-sticker.selected > img {
+        outline: 2px dashed var(--color-teal, #2dd4bf);
+        outline-offset: 3px;
+    }
+
+    .sticker-handle {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        cursor: pointer;
+        z-index: 4;
+        touch-action: none;
+    }
+
+    .sticker-delete {
+        top: -10px;
+        right: -10px;
+        background: #dc3545;
+        color: #fff;
+        line-height: 1;
+    }
+
+    .sticker-rotate {
+        top: -28px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-teal, #2dd4bf);
+        color: #0d1117;
+        cursor: grab;
+    }
+
+    .sticker-resize {
+        bottom: -10px;
+        right: -10px;
+        background: var(--color-teal, #2dd4bf);
+        cursor: nwse-resize;
     }
 
     .bg-mode-btn {

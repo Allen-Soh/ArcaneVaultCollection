@@ -15,6 +15,7 @@ namespace ArcaneVaultAPI.Data
         public string Country { get; set; }
         public string? AvatarUrl { get; set; }
         public bool IsActive { get; set; } = true;
+        public string? LastNotificationCheck { get; set; }
 
         [ForeignKey("RoleId")]
         public ArcaneVaultUserRoles Role { get; set; }

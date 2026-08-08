@@ -715,5 +715,93 @@ public class InsightsController : ControllerBase
         });
     }
 
+    // GET: api/Insights/financeandsales/detail — staff-only (handles real money data,
+    // so it's locked down tighter than this controller's other bare-[Authorize] endpoints)
+    [Authorize(Roles = "Staff")]
+    [HttpGet("financeandsales/detail")]
+    public ActionResult GetFinanceAndSalesDetail()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // Total value + count of successful sales
+        var totalsCmd = new SqliteCommand(
+            @"SELECT COALESCE(SUM(Amount), 0) as TotalValue, COUNT(*) as TotalCount
+              FROM Payment WHERE Status = 'Success'",
+            connection);
+        decimal totalSalesValue;
+        int totalSalesCount;
+        using (var reader = totalsCmd.ExecuteReader())
+        {
+            reader.Read();
+            totalSalesValue = Convert.ToDecimal(reader["TotalValue"]);
+            totalSalesCount = Convert.ToInt32(reader["TotalCount"]);
+        }
+
+        // Top 10 highest-value individual sales
+        var topSalesCmd = new SqliteCommand(
+            @"SELECT PaymentId, UserName, CosmeticName, CosmeticType, Amount, Currency, CreatedAt
+              FROM Payment WHERE Status = 'Success'
+              ORDER BY Amount DESC LIMIT 10",
+            connection);
+        var topSales = new List<object>();
+        using (var reader = topSalesCmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                topSales.Add(new
+                {
+                    PaymentId = Convert.ToInt32(reader["PaymentId"]),
+                    UserName = reader["UserName"].ToString(),
+                    CosmeticName = reader["CosmeticName"].ToString(),
+                    CosmeticType = reader["CosmeticType"].ToString(),
+                    Amount = Convert.ToDecimal(reader["Amount"]),
+                    Currency = reader["Currency"].ToString(),
+                    CreatedAt = reader["CreatedAt"].ToString()
+                });
+            }
+        }
+
+        var frameOwnership = GetCosmeticOwnership(connection, "Frame", "Frames", "FrameCode", "FrameName");
+        var stickerOwnership = GetCosmeticOwnership(connection, "Sticker", "Stickers", "StickerCode", "StickerName");
+
+        return Ok(new
+        {
+            TotalSalesValue = totalSalesValue,
+            TotalSalesCount = totalSalesCount,
+            TopSales = topSales,
+            FrameOwnership = frameOwnership,
+            StickerOwnership = stickerOwnership
+        });
+    }
+
+    // Helper — owner counts for a cosmetic catalog, grouped by CosmeticInventory.CosmeticId
+    // and joined to the live catalog table for the display name.
+    private List<object> GetCosmeticOwnership(SqliteConnection connection, string cosmeticType, string catalogTable, string codeColumn, string nameColumn)
+    {
+        var command = new SqliteCommand(
+            $@"SELECT cat.{codeColumn} as Code, cat.{nameColumn} as Name, COUNT(DISTINCT ci.UserName) as OwnerCount
+               FROM {catalogTable} cat
+               LEFT JOIN CosmeticInventory ci ON ci.CosmeticId = cat.{codeColumn} AND ci.CosmeticType = @CosmeticType
+               GROUP BY cat.{codeColumn}, cat.{nameColumn}
+               ORDER BY OwnerCount DESC",
+            connection);
+        command.Parameters.AddWithValue("@CosmeticType", cosmeticType);
+
+        var results = new List<object>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            results.Add(new
+            {
+                Code = reader["Code"].ToString(),
+                Name = reader["Name"].ToString(),
+                OwnerCount = Convert.ToInt32(reader["OwnerCount"])
+            });
+        }
+
+        return results;
+    }
+
 
 }

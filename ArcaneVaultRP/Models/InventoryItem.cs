@@ -11,5 +11,6 @@ namespace ArcaneVaultRP.Models
         public int? CopyNumber { get; set; }
         public int? LimitedQuantity { get; set; }
         public string AcquiredAt { get; set; }
+        public string? Orientation { get; set; }
     }
 }

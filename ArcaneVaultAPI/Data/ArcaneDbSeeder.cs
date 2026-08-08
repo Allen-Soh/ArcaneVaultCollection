@@ -471,12 +471,57 @@ namespace ArcaneVaultAPI.Data
                 cmd.ExecuteNonQuery();
             }
 
+            // Add Orientation column to Showoffs (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='Orientation'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN Orientation TEXT DEFAULT 'Landscape'";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add EquippedFrameCode column to Showoffs (if not exists)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('Showoffs') WHERE name='EquippedFrameCode'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE Showoffs ADD COLUMN EquippedFrameCode TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
             // Add IsActive column to ArcaneVaultUsers (staff availability toggle)
             cmd.CommandText = @"
                 SELECT COUNT(*) FROM pragma_table_info('ArcaneVaultUsers') WHERE name='IsActive'";
             if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
             {
                 cmd.CommandText = "ALTER TABLE ArcaneVaultUsers ADD COLUMN IsActive INTEGER DEFAULT 1";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add LastNotificationCheck column to ArcaneVaultUsers (Phase 11 notifications)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('ArcaneVaultUsers') WHERE name='LastNotificationCheck'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE ArcaneVaultUsers ADD COLUMN LastNotificationCheck TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add UserName column to SupportTickets — captures the logged-in submitter, if any (Phase 11 notifications)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('SupportTickets') WHERE name='UserName'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE SupportTickets ADD COLUMN UserName TEXT";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Add RepliedAt column to SupportTickets (Phase 11 notifications)
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('SupportTickets') WHERE name='RepliedAt'";
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+            {
+                cmd.CommandText = "ALTER TABLE SupportTickets ADD COLUMN RepliedAt TEXT";
                 cmd.ExecuteNonQuery();
             }
 
@@ -543,6 +588,49 @@ namespace ArcaneVaultAPI.Data
                 cmd.CommandText = "ALTER TABLE Frames ADD COLUMN Orientation TEXT DEFAULT 'Landscape'";
                 cmd.ExecuteNonQuery();
             }
+
+            // Create ShowoffModerationEvent table — history of disable/re-enable actions (Phase 11 notifications)
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ShowoffModerationEvent (
+                    EventId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ShowoffId INTEGER NOT NULL,
+                    ShowoffName TEXT NOT NULL,
+                    EventType TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL,
+                    FOREIGN KEY (ShowoffId) REFERENCES Showoffs(ShowoffId)
+                )";
+            cmd.ExecuteNonQuery();
+
+            // Create ShowoffAppeal table — persists appeal message + staff decision (Phase 11 notifications)
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ShowoffAppeal (
+                    AppealId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ShowoffId INTEGER NOT NULL,
+                    ShowoffName TEXT NOT NULL,
+                    UserName TEXT NOT NULL,
+                    AppealMessage TEXT NOT NULL,
+                    Status TEXT NOT NULL,
+                    StaffNote TEXT,
+                    SubmittedAt TEXT NOT NULL,
+                    DecidedAt TEXT,
+                    FOREIGN KEY (ShowoffId) REFERENCES Showoffs(ShowoffId)
+                )";
+            cmd.ExecuteNonQuery();
+
+            // Create ShowoffStickerPlacement table — per-showoff sticker positions (Phase 10 equipping)
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS ShowoffStickerPlacement (
+                    PlacementId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ShowoffId INTEGER NOT NULL,
+                    StickerCode TEXT NOT NULL,
+                    ImagePath TEXT,
+                    X REAL NOT NULL,
+                    Y REAL NOT NULL,
+                    Scale REAL NOT NULL DEFAULT 1.0,
+                    Rotation REAL NOT NULL DEFAULT 0,
+                    FOREIGN KEY (ShowoffId) REFERENCES Showoffs(ShowoffId)
+                )";
+            cmd.ExecuteNonQuery();
 
             // Create CosmeticAuditLog table — tamper-evident hash-chained log of Manage Shop actions
             cmd.CommandText = @"

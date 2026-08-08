@@ -28,6 +28,9 @@ namespace ArcaneVaultAPI.Data
         public DbSet<CosmeticAuditLogEntry> CosmeticAuditLogs { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<CosmeticInventory> CosmeticInventories { get; set; }
+        public DbSet<ShowoffStickerPlacement> ShowoffStickerPlacements { get; set; }
+        public DbSet<ShowoffModerationEvent> ShowoffModerationEvents { get; set; }
+        public DbSet<ShowoffAppeal> ShowoffAppeals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

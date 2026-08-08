@@ -34,6 +34,9 @@ public class IndexModel : PageModel
     public List<SearchTrend> SearchTrends { get; set; } = new();
     public List<TimeSeriesPoint> CommunityOverTime { get; set; } = new();
 
+    // Finance and Sales
+    public FinanceAndSalesDetail FinanceAndSales { get; set; } = new();
+
     [BindProperty(SupportsGet = true)]
     public int MarketDays { get; set; } = 7;
 
@@ -101,6 +104,11 @@ public class IndexModel : PageModel
         CommunityOverTime = await httpClient
             .GetFromJsonAsync<List<TimeSeriesPoint>>($"Insights/communityinterest/overtime?days={CommunityDays}")
             ?? new List<TimeSeriesPoint>();
+
+        // Finance and Sales
+        FinanceAndSales = await httpClient
+            .GetFromJsonAsync<FinanceAndSalesDetail>("Insights/financeandsales/detail")
+            ?? new FinanceAndSalesDetail();
 
         return Page();
     }

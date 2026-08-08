@@ -137,4 +137,31 @@
         public List<ShowoffComparison> AllShowoffs { get; set; } = new();
         public List<SearchTrend> SearchTerms { get; set; } = new();
     }
+
+    public class TopSale
+    {
+        public int PaymentId { get; set; }
+        public string UserName { get; set; }
+        public string CosmeticName { get; set; }
+        public string CosmeticType { get; set; }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public string CreatedAt { get; set; }
+    }
+
+    public class CosmeticOwnership
+    {
+        public string Code { get; set; }
+        public string Name { get; set; }
+        public int OwnerCount { get; set; }
+    }
+
+    public class FinanceAndSalesDetail
+    {
+        public decimal TotalSalesValue { get; set; }
+        public int TotalSalesCount { get; set; }
+        public List<TopSale> TopSales { get; set; } = new();
+        public List<CosmeticOwnership> FrameOwnership { get; set; } = new();
+        public List<CosmeticOwnership> StickerOwnership { get; set; } = new();
+    }
 }

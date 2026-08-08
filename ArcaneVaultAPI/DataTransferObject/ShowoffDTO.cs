@@ -18,7 +18,11 @@ namespace ArcaneVaultAPI.DataTransferObject
         public int ViewCount { get; set; }
         public int CommentCount { get; set; }
         public int ReportCount { get; set; }
+        public string Orientation { get; set; } = "Landscape";
+        public string? EquippedFrameCode { get; set; }
+        public string? EquippedFrameImagePath { get; set; }
         public List<ShowoffItemDTO> Items { get; set; } = new();
+        public List<ShowoffStickerPlacementDTO> StickerPlacements { get; set; } = new();
     }
 
     public class CreateShowoffDTO
@@ -30,7 +34,10 @@ namespace ArcaneVaultAPI.DataTransferObject
         public bool IsPrivate { get; set; }
         public string UserName { get; set; }
         public string? Description { get; set; }
+        public string Orientation { get; set; } = "Landscape";
+        public string? EquippedFrameCode { get; set; }
         public List<ShowoffItemInputDTO> Items { get; set; } = new();
+        public List<ShowoffStickerPlacementInputDTO> StickerPlacements { get; set; } = new();
     }
 
     public class UpdateShowoffDTO
@@ -41,7 +48,10 @@ namespace ArcaneVaultAPI.DataTransferObject
         public string? BackgroundImagePublicId { get; set; }
         public bool IsPrivate { get; set; }
         public string? Description { get; set; }
+        public string Orientation { get; set; } = "Landscape";
+        public string? EquippedFrameCode { get; set; }
         public List<ShowoffItemInputDTO> Items { get; set; } = new();
+        public List<ShowoffStickerPlacementInputDTO> StickerPlacements { get; set; } = new();
         public List<string> ImagePublicIdsToDelete { get; set; } = new();
     }
 
@@ -62,6 +72,28 @@ namespace ArcaneVaultAPI.DataTransferObject
         public string? ImagePath { get; set; }
         public string? ImagePublicId { get; set; }
         public int DisplayOrder { get; set; }
+    }
+
+    public class ShowoffStickerPlacementDTO
+    {
+        public int PlacementId { get; set; }
+        public int ShowoffId { get; set; }
+        public string StickerCode { get; set; }
+        public string? ImagePath { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Scale { get; set; } = 1.0;
+        public double Rotation { get; set; } = 0;
+    }
+
+    public class ShowoffStickerPlacementInputDTO
+    {
+        public string StickerCode { get; set; }
+        public string? ImagePath { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Scale { get; set; } = 1.0;
+        public double Rotation { get; set; } = 0;
     }
 
     public class ShowoffCommentDTO

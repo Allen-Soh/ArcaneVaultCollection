@@ -1,0 +1,140 @@
+@page
+@model ArcaneVaultRP.Pages.InsightPages.FinanceAndSalesModel
+@{
+    ViewData["Title"] = "Finance and Sales";
+}
+
+<div class="container mt-4" style="max-width:860px;">
+
+    <!-- Back link + Header -->
+    <div class="mb-1">
+        <a asp-page="./Index" class="text-decoration-none d-inline-flex align-items-center gap-1"
+           style="font-size:13px;">
+            <i class="bi bi-arrow-left" style="font-size:13px;"></i> Insights
+        </a>
+    </div>
+
+    <h1 style="font-size:22px;font-weight:500;margin:0;">Finance and sales</h1>
+    <p class="text-muted mb-4" style="font-size:13px;">
+        Revenue and cosmetic ownership across all users
+    </p>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <div class="rounded p-3" style="background:#f8f9fa;">
+                <p class="text-muted mb-1" style="font-size:12px;">Total value of sales</p>
+                <p class="mb-0 fw-500" style="font-size:22px;color:#0F6E56;">SGD @Model.Detail.TotalSalesValue.ToString("0.00")</p>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="rounded p-3" style="background:#f8f9fa;">
+                <p class="text-muted mb-1" style="font-size:12px;">Total number of sales</p>
+                <p class="mb-0 fw-500" style="font-size:22px;">@Model.Detail.TotalSalesCount</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 10 sales -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-3" style="font-size:15px;">Top 10 highest-value sales</p>
+
+        @if (!Model.Detail.TopSales.Any())
+        {
+            <p class="text-muted" style="font-size:13px;">No sales yet.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr style="font-size:12px;color:var(--text-muted, #7d8590);">
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Cosmetic</th>
+                        <th>Type</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Date</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size:13px;">
+                    @for (int i = 0; i < Model.Detail.TopSales.Count; i++)
+                    {
+                        var sale = Model.Detail.TopSales[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td>@sale.UserName</td>
+                            <td>@sale.CosmeticName</td>
+                            <td>@sale.CosmeticType</td>
+                            <td class="text-end">@sale.Currency @sale.Amount.ToString("0.00")</td>
+                            <td class="text-end text-muted">@sale.CreatedAt</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Frame ownership -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-3" style="font-size:15px;">Frame ownership</p>
+
+        @if (!Model.Detail.FrameOwnership.Any())
+        {
+            <p class="text-muted" style="font-size:13px;">No frames in the catalog yet.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr style="font-size:12px;color:var(--text-muted, #7d8590);">
+                        <th>Frame</th>
+                        <th>Code</th>
+                        <th class="text-end">Owners</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size:13px;">
+                    @foreach (var frame in Model.Detail.FrameOwnership)
+                    {
+                        <tr>
+                            <td>@frame.Name</td>
+                            <td class="text-muted">@frame.Code</td>
+                            <td class="text-end">@frame.OwnerCount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Sticker ownership -->
+    <div class="border-top pt-4 mb-4">
+        <p class="fw-500 mb-3" style="font-size:15px;">Sticker ownership</p>
+
+        @if (!Model.Detail.StickerOwnership.Any())
+        {
+            <p class="text-muted" style="font-size:13px;">No stickers in the catalog yet.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr style="font-size:12px;color:var(--text-muted, #7d8590);">
+                        <th>Sticker</th>
+                        <th>Code</th>
+                        <th class="text-end">Owners</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size:13px;">
+                    @foreach (var sticker in Model.Detail.StickerOwnership)
+                    {
+                        <tr>
+                            <td>@sticker.Name</td>
+                            <td class="text-muted">@sticker.Code</td>
+                            <td class="text-end">@sticker.OwnerCount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

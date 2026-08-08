@@ -133,6 +133,39 @@
                             var navUser = System.Text.Json.JsonSerializer.Deserialize<ArcaneVaultRP.Models.ArcaneVaultUser>(navUserJson);
                             var navInitial = navUser?.UserName?.Length > 0 ? navUser.UserName[0].ToString().ToUpper() : "?";
 
+                            <!-- Notification bell → likes/comments/moderation/ticket-reply/appeal sections, staff gets a pending-count toggle -->
+                            <li class="nav-item ms-2 dropdown" id="notificationBellItem">
+                                <a href="#"
+                                   id="notificationBellToggle"
+                                   class="nav-link dropdown-toggle no-caret position-relative"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false"
+                                   style="font-size:18px; padding-right:1.25rem;"
+                                   title="Notifications">
+                                    <i class="bi bi-bell"></i>
+                                    <span id="notificationDot" style="display:none; position:absolute; top:4px; right:14px; width:8px; height:8px; border-radius:50%; background:#e74c3c; border:1px solid var(--bg-card);"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end profile-dropdown-menu notification-dropdown-menu" aria-labelledby="notificationBellToggle">
+                                    <li class="d-flex justify-content-between align-items-center px-3 pt-1 pb-2">
+                                        <span class="fw-bold small">Notifications</span>
+                                        @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
+                                        {
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-secondary active" id="notifTabPersonal" onclick="switchNotifTab('personal')">Personal</button>
+                                                <button type="button" class="btn btn-outline-secondary" id="notifTabStaff" onclick="switchNotifTab('staff')">Staff</button>
+                                            </div>
+                                        }
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li class="px-3" style="max-height:380px; overflow-y:auto;">
+                                        <div id="notificationPanelBody">
+                                            <div class="text-muted small text-center py-3">Loading…</div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+
                             <!-- Avatar dropdown → Settings / Inventory / Trades / Logout -->
                             <li class="nav-item ms-2 dropdown">
                                 <a href="#"
@@ -167,11 +200,6 @@
                                     <li>
                                         <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/InventoryPages/Index">
                                             <i class="bi bi-box-seam"></i> Inventory
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2 disabled" href="#" tabindex="-1" aria-disabled="true">
-                                            <i class="bi bi-arrow-left-right"></i> Trades
                                         </a>
                                     </li>
                                     <li>
@@ -222,5 +250,103 @@
     <input type="hidden" id="apiBaseInput" value="https://localhost:7040/api" />
     <!-- Session JWT for client-side fetch calls to [Authorize]'d API endpoints — hidden -->
     <input type="hidden" id="jwtTokenInput" value="@Context.Session.GetString(SessionKeys.JwtToken)" />
+
+    @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)
+    {
+        <script>
+            (function () {
+                const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+                const jwtToken = document.getElementById('jwtTokenInput')?.value || '';
+                const authHeaders = { 'Authorization': `Bearer ${jwtToken}` };
+
+                function escapeHtml(str) {
+                    const div = document.createElement('div');
+                    div.textContent = str ?? '';
+                    return div.innerHTML;
+                }
+
+                function formatWhen(iso) {
+                    try { return new Date(iso).toLocaleString(); } catch { return ''; }
+                }
+
+                async function refreshNotificationDot() {
+                    try {
+                        const res = await fetch(`${apiBase}/Notification/unread`, { headers: authHeaders });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        const hasUnread = data.hasUnread ?? data.HasUnread ?? false;
+                        document.getElementById('notificationDot').style.display = hasUnread ? 'block' : 'none';
+                    } catch { /* best-effort — dot just won't light up */ }
+                }
+
+                function section(title, items, renderItem) {
+                    if (!items || items.length === 0) {
+                        return `<div class="mb-3"><div class="fw-semibold small mb-1">${title}</div><div class="text-muted small">Nothing new</div></div>`;
+                    }
+                    return `<div class="mb-3"><div class="fw-semibold small mb-1">${title}</div>${items.map(renderItem).join('')}</div>`;
+                }
+
+                function renderPersonalPanel(data) {
+                    const likes = data.likes ?? data.Likes ?? [];
+                    const comments = data.comments ?? data.Comments ?? [];
+                    const moderationEvents = data.moderationEvents ?? data.ModerationEvents ?? [];
+                    const ticketReplies = data.ticketReplies ?? data.TicketReplies ?? [];
+                    const appealDecisions = data.appealDecisions ?? data.AppealDecisions ?? [];
+
+                    let html = '';
+                    html += section('Likes on your showoffs', likes, l =>
+                        `<div class="small mb-1">${escapeHtml(l.showoffName ?? l.ShowoffName)} — ${l.likeCount ?? l.LikeCount} like(s)</div>`);
+                    html += section('New comments', comments, c =>
+                        `<div class="small mb-1"><strong>${escapeHtml(c.commenterUserName ?? c.CommenterUserName)}</strong> on ${escapeHtml(c.showoffName ?? c.ShowoffName)}: "${escapeHtml(c.text ?? c.Text)}"</div>`);
+                    html += section('Showoff moderation', moderationEvents, m =>
+                        `<div class="small mb-1">${escapeHtml(m.showoffName ?? m.ShowoffName)} was ${(m.eventType ?? m.EventType ?? '').toLowerCase()}</div>`);
+                    html += section('Support ticket replies', ticketReplies, t =>
+                        `<div class="small mb-1">${escapeHtml(t.ticketUid ?? t.TicketUid)} — ${escapeHtml(t.subject ?? t.Subject)} was replied to</div>`);
+                    html += section('Appeal decisions', appealDecisions, a =>
+                        `<div class="small mb-1">${escapeHtml(a.showoffName ?? a.ShowoffName)} appeal was <strong>${escapeHtml(a.status ?? a.Status)}</strong></div>`);
+                    return html;
+                }
+
+                function renderStaffPanel(data) {
+                    const pendingTickets = data.pendingTicketCount ?? data.PendingTicketCount ?? 0;
+                    const pendingReports = data.pendingReportCount ?? data.PendingReportCount ?? 0;
+                    return `
+                        <div class="small mb-2">Pending tickets assigned to you: <strong>${pendingTickets}</strong></div>
+                        <div class="small mb-2">Pending reports assigned to you: <strong>${pendingReports}</strong></div>`;
+                }
+
+                let lastPanelData = null;
+
+                function switchNotifTab(tab) {
+                    document.getElementById('notifTabPersonal')?.classList.toggle('active', tab === 'personal');
+                    document.getElementById('notifTabStaff')?.classList.toggle('active', tab === 'staff');
+                    if (!lastPanelData) return;
+                    document.getElementById('notificationPanelBody').innerHTML =
+                        tab === 'staff' ? renderStaffPanel(lastPanelData) : renderPersonalPanel(lastPanelData);
+                }
+                window.switchNotifTab = switchNotifTab;
+
+                async function loadNotificationPanel() {
+                    const bodyEl = document.getElementById('notificationPanelBody');
+                    bodyEl.innerHTML = '<div class="text-muted small text-center py-3">Loading…</div>';
+                    try {
+                        const res = await fetch(`${apiBase}/Notification/panel`, { headers: authHeaders });
+                        if (!res.ok) {
+                            bodyEl.innerHTML = '<div class="text-muted small text-center py-3">Couldn\'t load notifications</div>';
+                            return;
+                        }
+                        lastPanelData = await res.json();
+                        bodyEl.innerHTML = renderPersonalPanel(lastPanelData);
+                        document.getElementById('notificationDot').style.display = 'none';
+                    } catch {
+                        bodyEl.innerHTML = '<div class="text-muted small text-center py-3">Couldn\'t load notifications</div>';
+                    }
+                }
+
+                refreshNotificationDot();
+                document.getElementById('notificationBellItem')?.addEventListener('shown.bs.dropdown', loadNotificationPanel);
+            })();
+        </script>
+    }
 </body>
 </html>

@@ -14,6 +14,8 @@ namespace ArcaneVaultAPI.Data
         public bool IsResolved { get; set; }
         public string? AssignedStaffUserName { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? UserName { get; set; }
+        public string? RepliedAt { get; set; }
     }
 
     public class TicketAssignmentCounter
