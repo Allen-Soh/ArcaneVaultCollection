@@ -1,0 +1,217 @@
+@page
+@model ArcaneVaultRP.Pages.ShowoffPages.PaymentLogModel
+@{
+    ViewData["Title"] = "Payment Log";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1">Payment Log</h4>
+            <p class="text-muted small mb-0" id="logCountText"></p>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#logFiltersPanel"
+                    aria-expanded="false" aria-controls="logFiltersPanel">
+                <i class="bi bi-funnel"></i> Filters
+                <span class="filters-badge" id="logFiltersBadge" style="display:none;"></span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse filters-panel" id="logFiltersPanel">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+            <input type="text" id="filterPaymentId" class="form-control form-control-sm"
+                   placeholder="Payment Id..." style="width:130px;" oninput="applyFilters()" />
+            <input type="date" id="filterDate" class="form-control form-control-sm" style="width:auto;" onchange="applyFilters()" />
+            <input type="text" id="filterUser" class="form-control form-control-sm"
+                   placeholder="User..." style="width:150px;" oninput="applyFilters()" />
+            <input type="number" id="filterAmount" class="form-control form-control-sm" step="0.01"
+                   placeholder="Amount..." style="width:120px;" oninput="applyFilters()" />
+            <input type="text" id="filterCosmeticId" class="form-control form-control-sm"
+                   placeholder="Cosmetic Id..." style="width:150px;" oninput="applyFilters()" />
+            <input type="text" id="filterCosmeticName" class="form-control form-control-sm"
+                   placeholder="Cosmetic name..." style="width:170px;" oninput="applyFilters()" />
+            <label class="text-muted small" style="white-space:nowrap;">Status:</label>
+            <select id="filterStatus" class="form-select form-select-sm" style="width:auto;" onchange="applyFilters()">
+                <option value="All">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Success">Success</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Virtual scroll table -->
+    <div class="border rounded overflow-hidden" style="position:relative;">
+        <div id="logTableWrapper" style="overflow-y:auto;">
+            <table class="table mb-0" style="width:100%;">
+                <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                    <tr>
+                        <th style="padding:10px 12px;">Payment Id</th>
+                        <th style="padding:10px 12px;">Date</th>
+                        <th style="padding:10px 12px;">User</th>
+                        <th style="padding:10px 12px;">Cosmetic</th>
+                        <th style="padding:10px 12px;">Amount</th>
+                        <th style="padding:10px 12px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
+        </div>
+        <div id="tableEmpty" style="display:none;" class="text-center text-muted py-5">
+            <i class="bi bi-receipt fs-2 d-block mb-2"></i>
+            <span id="emptyText">No payments yet.</span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-2 mb-4" id="logTableIndicatorRow">
+        <p class="text-muted mb-0" id="logScrollIndicator" style="font-size:12px;"></p>
+        <p class="text-muted mb-0" id="logScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const allPayments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Payments));
+        let filteredPayments = [...allPayments];
+
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
+        function applyFilters() {
+            const paymentId = document.getElementById('filterPaymentId').value.trim();
+            const date = document.getElementById('filterDate').value;
+            const user = document.getElementById('filterUser').value.trim().toLowerCase();
+            const amount = document.getElementById('filterAmount').value.trim();
+            const cosmeticId = document.getElementById('filterCosmeticId').value.trim().toLowerCase();
+            const cosmeticName = document.getElementById('filterCosmeticName').value.trim().toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+
+            updateFiltersBadge('logFiltersBadge',
+                (paymentId ? 1 : 0) + (date ? 1 : 0) + (user ? 1 : 0) + (amount ? 1 : 0) +
+                (cosmeticId ? 1 : 0) + (cosmeticName ? 1 : 0) + (status !== 'All' ? 1 : 0));
+
+            filteredPayments = allPayments.filter(p => {
+                if (paymentId && String(p.PaymentId) !== paymentId) return false;
+                if (date && !p.CreatedAt.startsWith(date)) return false;
+                if (user && !p.UserName.toLowerCase().includes(user)) return false;
+                if (amount && Number(p.Amount).toFixed(2) !== Number(amount).toFixed(2)) return false;
+                if (cosmeticId && !p.CosmeticId.toLowerCase().includes(cosmeticId)) return false;
+                if (cosmeticName && !p.CosmeticName.toLowerCase().includes(cosmeticName)) return false;
+                if (status !== 'All' && p.Status !== status) return false;
+                return true;
+            });
+
+            renderLogTable(filteredPayments);
+        }
+
+        // ── Virtual Scroll Implementation ──
+        const ROW_HEIGHT = 48;
+        const BUFFER = 5;
+        const THRESHOLD = 12;
+
+        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
+            const wrapper = document.getElementById(wrapperId);
+            const tbody = document.getElementById(tbodyId);
+            if (!wrapper || !tbody) return;
+
+            if (data.length <= THRESHOLD) {
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
+                return;
+            }
+
+            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
+            wrapper.style.height = `${visibleHeight}px`;
+            wrapper.style.maxHeight = `${visibleHeight}px`;
+            wrapper.style.overflowY = 'auto';
+
+            function render() {
+                const scrollTop = wrapper.scrollTop;
+                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+                const endIdx = Math.min(data.length, Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER);
+                const topPad = startIdx * ROW_HEIGHT;
+                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
+                tbody.innerHTML =
+                    (topPad > 0 ? `<tr style="height:${topPad}px;"><td colspan="6"></td></tr>` : '') +
+                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
+                    (bottomPad > 0 ? `<tr style="height:${bottomPad}px;"><td colspan="6"></td></tr>` : '');
+            }
+
+            let ticking = false;
+            wrapper.onscroll = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => { render(); ticking = false; });
+                    ticking = true;
+                }
+            };
+            wrapper.scrollTop = 0;
+            render();
+        }
+
+        function renderLogTable(payments) {
+            const empty = document.getElementById('tableEmpty');
+            const wrapper = document.getElementById('logTableWrapper');
+            const indicatorRow = document.getElementById('logTableIndicatorRow');
+            const moreText = document.getElementById('logScrollMoreText');
+
+            document.getElementById('logCountText').textContent =
+                `${payments.length} payment${payments.length !== 1 ? 's' : ''}`;
+
+            if (payments.length === 0) {
+                empty.style.display = 'block';
+                document.getElementById('logTableBody').innerHTML = '';
+                wrapper.style.height = '';
+                wrapper.style.maxHeight = '';
+                wrapper.onscroll = null;
+                indicatorRow.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            indicatorRow.style.removeProperty('display');
+            moreText.style.display = payments.length > THRESHOLD ? 'block' : 'none';
+
+            function updateIndicator() {
+                const scrollTop = wrapper.scrollTop;
+                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
+                const visEnd = Math.min(payments.length, visStart + THRESHOLD - 1);
+                document.getElementById('logScrollIndicator').textContent =
+                    payments.length > THRESHOLD
+                        ? `Showing ${visStart}–${visEnd} of ${payments.length}`
+                        : `${payments.length} payment${payments.length === 1 ? '' : 's'}`;
+            }
+
+            wrapper.removeEventListener('scroll', updateIndicator);
+            wrapper.addEventListener('scroll', updateIndicator);
+
+            createVirtualTable('logTableWrapper', 'logTableBody', payments, (p) => {
+                const statusBadge = p.Status === 'Success'
+                    ? `<span class="badge" style="background:#198754;">Success</span>`
+                    : `<span class="badge" style="background:#6c757d;">Pending</span>`;
+                const dateStr = new Date(p.CreatedAt).toLocaleString();
+
+                return `
+                    <tr style="height:${ROW_HEIGHT}px;">
+                        <td style="padding:8px 12px;font-size:12px;">${p.PaymentId}</td>
+                        <td style="padding:8px 12px;font-size:12px;white-space:nowrap;">${dateStr}</td>
+                        <td style="padding:8px 12px;font-size:12px;">${p.UserName}</td>
+                        <td style="padding:8px 12px;font-size:12px;">${p.CosmeticName} <span class="text-muted">(${p.CosmeticId})</span></td>
+                        <td style="padding:8px 12px;font-size:12px;">${p.Currency} ${Number(p.Amount).toFixed(2)}</td>
+                        <td style="padding:8px 12px;">${statusBadge}</td>
+                    </tr>`;
+            });
+            updateIndicator();
+        }
+
+        // Initial render
+        applyFilters();
+    </script>
+}

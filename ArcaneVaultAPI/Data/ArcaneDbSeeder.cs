@@ -560,6 +560,36 @@ namespace ArcaneVaultAPI.Data
                 )";
             cmd.ExecuteNonQuery();
 
+            // Create Payment table
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Payment (
+                    PaymentId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    UserName TEXT NOT NULL,
+                    CosmeticId TEXT NOT NULL,
+                    CosmeticName TEXT NOT NULL,
+                    CosmeticType TEXT NOT NULL,
+                    Amount REAL NOT NULL,
+                    Currency TEXT NOT NULL,
+                    StripeSessionId TEXT NOT NULL,
+                    Status TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL
+                )";
+            cmd.ExecuteNonQuery();
+
+            // Create CosmeticInventory table — minimal ownership record written by
+            // the Stripe webhook on a successful Payment (full Inventory UI is Phase 9)
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS CosmeticInventory (
+                    Uid TEXT PRIMARY KEY,
+                    UserName TEXT NOT NULL,
+                    CosmeticId TEXT NOT NULL,
+                    CosmeticType TEXT NOT NULL,
+                    AcquiredAt TEXT NOT NULL,
+                    PaymentId INTEGER NOT NULL,
+                    FOREIGN KEY (PaymentId) REFERENCES Payment(PaymentId)
+                )";
+            cmd.ExecuteNonQuery();
+
             // Create ShowoffComments table
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS ShowoffComments (

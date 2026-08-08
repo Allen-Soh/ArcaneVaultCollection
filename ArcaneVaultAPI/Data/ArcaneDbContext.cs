@@ -26,6 +26,8 @@ namespace ArcaneVaultAPI.Data
         public DbSet<Frame> Frames { get; set; }
         public DbSet<Sticker> Stickers { get; set; }
         public DbSet<CosmeticAuditLogEntry> CosmeticAuditLogs { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<CosmeticInventory> CosmeticInventories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

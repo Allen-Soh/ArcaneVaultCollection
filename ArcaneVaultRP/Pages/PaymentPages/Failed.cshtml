@@ -1,0 +1,17 @@
+@page
+@model ArcaneVaultRP.Pages.PaymentPages.FailedModel
+@{
+    ViewData["Title"] = "Payment Unsuccessful";
+}
+
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card border-0 shadow-sm p-4 text-center" style="max-width:420px; background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
+        <i class="bi bi-x-circle-fill text-danger" style="font-size:48px;"></i>
+        <h4 class="fw-bold mt-3">Payment Unsuccessful</h4>
+        <p class="text-muted mt-2">Your payment was not completed. You have not been charged.</p>
+
+        <div class="d-flex gap-2 justify-content-center mt-3">
+            <a asp-page="/ShowoffPages/Index" asp-route-tab="shop" class="btn btn-primary">Try Again</a>
+        </div>
+    </div>
+</div>

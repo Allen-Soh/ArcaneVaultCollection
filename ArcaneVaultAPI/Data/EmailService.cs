@@ -48,6 +48,12 @@ namespace ArcaneVaultAPI.Services
             return SendAsync(toEmail, emailSubject, body);
         }
 
+        public Task SendPaymentReceiptAsync(string toEmail, string userName, string cosmeticName, decimal amount, string currency)
+        {
+            var (emailSubject, body) = EmailTemplates.PaymentReceipt(userName, cosmeticName, amount, currency);
+            return SendAsync(toEmail, emailSubject, body);
+        }
+
         // Single low-level sender — every email type funnels through here
         private async Task SendAsync(string toEmail, string subject, string htmlBody)
         {

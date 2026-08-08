@@ -1,0 +1,28 @@
+@page
+@model ArcaneVaultRP.Pages.PaymentPages.SuccessModel
+@{
+    ViewData["Title"] = "Payment Successful";
+}
+
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card border-0 shadow-sm p-4 text-center" style="max-width:420px; background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:48px;"></i>
+        <h4 class="fw-bold mt-3">Payment Successful</h4>
+
+        @if (Model.Found)
+        {
+            <p class="text-muted mt-2 mb-1">You purchased <strong>@Model.CosmeticName</strong></p>
+            <p class="text-muted">@Model.Currency @Model.Amount.ToString("0.00")</p>
+            @if (Model.Status != "Success")
+            {
+                <p class="small text-muted">Finalizing your purchase — this usually takes just a moment. Your item will appear in your inventory shortly.</p>
+            }
+        }
+        else
+        {
+            <p class="text-muted mt-2">Thanks for your purchase! A receipt has been emailed to you.</p>
+        }
+
+        <a asp-page="/ShowoffPages/Index" asp-route-tab="shop" class="btn btn-primary mt-3">Back to Shop</a>
+    </div>
+</div>

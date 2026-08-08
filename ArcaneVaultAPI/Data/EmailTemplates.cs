@@ -83,6 +83,21 @@
             return (emailSubject, body);
         }
 
+        // ── Payment receipt ──
+        public static (string Subject, string Body) PaymentReceipt(string userName, string cosmeticName, decimal amount, string currency)
+        {
+            var emailSubject = $"Receipt for your purchase of \"{cosmeticName}\"";
+            var body = Wrap("Payment receipt", $@"
+                <p>Hi {userName},</p>
+                <p>Thanks for your purchase! Here's your receipt:</p>
+                <table style=""width:100%; border-collapse:collapse; font-size:14px;"">
+                    <tr><td style=""padding:6px 0; color:#7d8590;"">Item</td><td style=""padding:6px 0; text-align:right;"">{cosmeticName}</td></tr>
+                    <tr><td style=""padding:6px 0; color:#7d8590;"">Amount</td><td style=""padding:6px 0; text-align:right;"">{currency.ToUpper()} {amount:0.00}</td></tr>
+                </table>
+                <p>Your new cosmetic is now in your inventory.</p>");
+            return (emailSubject, body);
+        }
+
         // ── Showoff appeal response ──
         public static (string Subject, string Body) ShowoffAppealResponse(string userName, string showoffName, bool approved, string? staffNote)
         {

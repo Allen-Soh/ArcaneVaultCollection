@@ -449,3 +449,19 @@ Fixed Tickets css styling
 
 [To Do]
 - Continue..
+
+===== DEV LOG (7/8/2026) - Part 4 =====
+[Done]
+- Implemented Cosmetic Create, Edit and Delete
+- Implemented cosmetic log
+- Implemented stripe payment (missing webhook secret)
+
+[To Do]
+- Implement the rest..
+
+===== DEV LOG (8/8/2026) =====
+[Done]
+- Implemented inventory that is accessible to all users
+
+[To Do]
+- Implement the rest..

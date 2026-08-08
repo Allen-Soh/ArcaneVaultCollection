@@ -1276,10 +1276,43 @@
             new bootstrap.Modal(document.getElementById('cosmeticDetailModal')).show();
         }
 
-        // Payments (Stripe) aren't wired up yet — placeholder until that phase lands.
-        function buyCosmetic(e) {
+        async function buyCosmetic(e) {
             e.stopPropagation();
-            alert('Payments are coming soon!');
+
+            const card = e.target.closest('.shop-cosmetic-card');
+            if (!card) return;
+
+            const type = card.dataset.type === 'frame' ? 'Frame' : 'Sticker';
+            const code = card.dataset.code;
+
+            const btn = e.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+            try {
+                const jwtToken = document.getElementById('jwtTokenInput')?.value;
+                const res = await fetch(`${apiBase}/Payment/checkout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                    body: JSON.stringify({ cosmeticType: type, cosmeticCode: code })
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    alert(text || 'Could not start checkout. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    return;
+                }
+
+                const data = await res.json();
+                window.location.href = data.url;
+            } catch {
+                alert('Could not start checkout. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
     </script>
     <style>

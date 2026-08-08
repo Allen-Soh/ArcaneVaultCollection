@@ -165,7 +165,11 @@
             const controller = type === 'frame' ? 'Frame' : 'Sticker';
             const action = delist ? 'delist' : 'relist';
 
-            const res = await fetch(`${apiBase}/${controller}/${encodeURIComponent(code)}/${action}`, { method: 'PUT' });
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
+            const res = await fetch(`${apiBase}/${controller}/${encodeURIComponent(code)}/${action}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
+            });
 
             bootstrap.Modal.getInstance(document.getElementById('toggleConfirmModal'))?.hide();
 

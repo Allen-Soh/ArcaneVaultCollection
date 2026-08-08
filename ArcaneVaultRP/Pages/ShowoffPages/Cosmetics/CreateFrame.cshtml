@@ -297,9 +297,10 @@
                 isDelisted: false
             };
 
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
             const res = await fetch(`${apiBase}/Frame`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
                 body: JSON.stringify(payload)
             });
 

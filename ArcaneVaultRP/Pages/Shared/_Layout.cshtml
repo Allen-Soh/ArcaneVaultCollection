@@ -53,9 +53,6 @@
                                 <li class="nav-item">
                                     <a class="nav-link @NavActiveClass("/ShowoffPages/Cosmetics/ManageShop")" asp-page="/ShowoffPages/Cosmetics/ManageShop">Manage Shop</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link @NavActiveClass("/ShowoffPages/CosmeticLog")" asp-page="/ShowoffPages/CosmeticLog">Cosmetic Log</a>
-                                </li>
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Reports") + NavActiveClass("/SupportPages/Staff"))"
                                        href="#"
@@ -86,9 +83,43 @@
                                     <a class="nav-link @NavActiveClass("/SupportPages")" asp-page="/SupportPages/Index">User Support</a>
                                 </li>
                             }
-                            <li class="nav-item">
-                                <a class="nav-link @NavActiveClass("/ShowoffPages")" asp-page="/ShowoffPages/Index">Showoffs</a>
-                            </li>
+                            @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Index") + NavActiveClass("/ShowoffPages/CosmeticLog") + NavActiveClass("/ShowoffPages/PaymentLog"))"
+                                       href="#"
+                                       id="showoffsDropdownToggle"
+                                       role="button"
+                                       data-bs-toggle="dropdown"
+                                       aria-expanded="false">
+                                        Showoffs
+                                        <i class="bi bi-chevron-down dropdown-caret-icon"></i>
+                                    </a>
+                                    <ul class="dropdown-menu profile-dropdown-menu" aria-labelledby="showoffsDropdownToggle">
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/Index">
+                                                <i class="bi bi-eye"></i> Public View
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/CosmeticLog">
+                                                <i class="bi bi-journal-text"></i> Cosmetic Log
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/PaymentLog">
+                                                <i class="bi bi-receipt"></i> Payment Log
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @NavActiveClass("/ShowoffPages")" asp-page="/ShowoffPages/Index">Showoffs</a>
+                                </li>
+                            }
                             <li class="nav-item">
                                 <a class="nav-link @NavActiveClass("/CollectionItemPages")" asp-page="/CollectionItemPages/Index">Collection Items</a>
                             </li>
@@ -134,7 +165,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item d-flex align-items-center gap-2 disabled" href="#" tabindex="-1" aria-disabled="true">
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/InventoryPages/Index">
                                             <i class="bi bi-box-seam"></i> Inventory
                                         </a>
                                     </li>
@@ -189,5 +220,7 @@
     @await RenderSectionAsync("Scripts", required: false)
     <!-- API base for shared JS — hidden -->
     <input type="hidden" id="apiBaseInput" value="https://localhost:7040/api" />
+    <!-- Session JWT for client-side fetch calls to [Authorize]'d API endpoints — hidden -->
+    <input type="hidden" id="jwtTokenInput" value="@Context.Session.GetString(SessionKeys.JwtToken)" />
 </body>
 </html>
