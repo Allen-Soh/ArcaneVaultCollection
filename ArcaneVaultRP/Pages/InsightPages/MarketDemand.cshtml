@@ -236,7 +236,7 @@
 
             const netEl = document.getElementById('netChange');
             netEl.textContent = (net >= 0 ? '+' : '') + net;
-            netEl.style.color = net > 0 ? '#0F6E56' : net < 0 ? '#A32D2D' : '#212529';
+            netEl.style.color = net > 0 ? '#0F6E56' : net < 0 ? '#A32D2D' : 'var(--text-primary)';
         }
 
         // ── Diverging bar chart ──

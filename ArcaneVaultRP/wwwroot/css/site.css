@@ -100,6 +100,7 @@ a:hover {
 /* Cards customization */
 .card {
     background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25) !important;
@@ -165,6 +166,18 @@ a:hover {
     background-color: var(--color-periwinkle) !important;
     color: var(--bg-darkest) !important;
     transform: translateY(-1px);
+}
+
+.btn-outline-secondary {
+    color: var(--text-muted) !important;
+    border-color: var(--border-color, #30363d) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-secondary:hover, .btn-outline-secondary:focus, .btn-outline-secondary.active {
+    background-color: var(--text-muted) !important;
+    color: var(--bg-darkest) !important;
+    border-color: var(--text-muted) !important;
 }
 
 .btn-success {
@@ -473,6 +486,23 @@ a:hover {
     padding: 2px 8px;
 }
 
+.notif-tab-btn {
+    color: var(--text-muted) !important;
+    border-color: var(--border-color, #30363d) !important;
+    background-color: transparent !important;
+}
+
+.notif-tab-btn:hover, .notif-tab-btn:focus {
+    color: var(--color-periwinkle) !important;
+    border-color: var(--color-periwinkle) !important;
+}
+
+.notif-tab-btn.active {
+    background-color: var(--color-periwinkle) !important;
+    border-color: var(--color-periwinkle) !important;
+    color: var(--bg-darkest) !important;
+}
+
 /* Footer override */
 .footer {
     background-color: var(--bg-dark) !important;
@@ -547,6 +577,7 @@ a:hover {
 /* Dropdown override */
 .dropdown-menu {
     background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
     border: 1px solid var(--border-color) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
 }
@@ -620,10 +651,6 @@ a:hover {
 
 [style*="color:#adb5bd"], [style*="color: #adb5bd"] {
     color: var(--text-muted) !important;
-}
-
-[style*="color:#212529"], [style*="color: #212529"] {
-    color: var(--text-primary) !important;
 }
 
 /* Green rise indicators (originally dark green #0F6E56) */

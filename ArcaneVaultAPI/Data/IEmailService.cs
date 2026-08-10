@@ -8,6 +8,6 @@
         Task SendShowoffAppealSubmittedAsync(string toEmail, string ownerUserName, string showoffName, string appealMessage, int showoffId);
         Task SendShowoffAppealConfirmationAsync(string toEmail, string userName, string showoffName);
         Task SendTicketReplyAsync(string toEmail, string name, string ticketUid, string subject, string replyMessage);
-        Task SendPaymentReceiptAsync(string toEmail, string userName, string cosmeticName, decimal amount, string currency);
+        Task SendPaymentReceiptAsync(string toEmail, string userName, string cosmeticName, decimal amount, string currency, int paymentId, string cosmeticId, int? copyNumber);
     }
 }

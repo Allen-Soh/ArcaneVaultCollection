@@ -14,14 +14,6 @@
 
     <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
 
-        <!-- Frame Code -->
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Frame Code</label>
-            <input type="text" id="frameCode" class="form-control" maxlength="20"
-                   placeholder="e.g. FRM_GOLD" oninput="this.value = this.value.toUpperCase()" />
-            <small class="text-muted">A short, unique identifier. Cannot be changed later.</small>
-        </div>
-
         <!-- Frame Name -->
         <div class="mb-3">
             <label class="form-label fw-semibold">Frame Name</label>
@@ -268,13 +260,11 @@
         }
 
         async function saveFrame() {
-            const frameCode = document.getElementById('frameCode').value.trim();
             const frameName = document.getElementById('frameName').value.trim();
             const priceRaw = document.getElementById('priceInput').value.trim();
             const isLimited = document.getElementById('limitedSelect').value === 'limited';
             const limitedQtyRaw = document.getElementById('limitedQtyInput').value.trim();
 
-            if (!frameCode) { showError('Please enter a frame code.'); return; }
             if (!frameName) { showError('Please enter a frame name.'); return; }
             if (!/^\d+(\.\d{1,2})?$/.test(priceRaw)) { showError('Enter a valid price (up to 2 decimal places).'); return; }
             if (isLimited && (!limitedQtyRaw || parseInt(limitedQtyRaw) < 1)) { showError('Enter a limited quantity of at least 1.'); return; }
@@ -286,7 +276,6 @@
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Saving...`;
 
             const payload = {
-                frameCode: frameCode,
                 frameName: frameName,
                 imagePath: imagePath,
                 imagePublicId: imagePublicId,
@@ -311,7 +300,7 @@
                 window.location.href = '/ShowoffPages/Index?tab=shop';
             } else {
                 const text = await res.text();
-                showError(`Failed to create frame: ${text || 'Please check the code isn’t already in use.'}`);
+                showError(`Failed to create frame: ${text || 'Please try again.'}`);
             }
         }
     </script>

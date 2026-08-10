@@ -140,6 +140,7 @@
                                    class="nav-link dropdown-toggle no-caret position-relative"
                                    role="button"
                                    data-bs-toggle="dropdown"
+                                   data-bs-auto-close="outside"
                                    aria-expanded="false"
                                    style="font-size:18px; padding-right:1.25rem;"
                                    title="Notifications">
@@ -152,8 +153,8 @@
                                         @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
                                         {
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <button type="button" class="btn btn-outline-secondary active" id="notifTabPersonal" onclick="switchNotifTab('personal')">Personal</button>
-                                                <button type="button" class="btn btn-outline-secondary" id="notifTabStaff" onclick="switchNotifTab('staff')">Staff</button>
+                                                <button type="button" class="btn notif-tab-btn active" id="notifTabPersonal" onclick="switchNotifTab('personal')">Personal</button>
+                                                <button type="button" class="btn notif-tab-btn" id="notifTabStaff" onclick="switchNotifTab('staff')">Staff</button>
                                             </div>
                                         }
                                     </li>
@@ -316,18 +317,27 @@
                 }
 
                 let lastPanelData = null;
+                let activeNotifTab = 'personal';
 
-                function switchNotifTab(tab) {
-                    document.getElementById('notifTabPersonal')?.classList.toggle('active', tab === 'personal');
-                    document.getElementById('notifTabStaff')?.classList.toggle('active', tab === 'staff');
+                function renderActiveTab() {
                     if (!lastPanelData) return;
                     document.getElementById('notificationPanelBody').innerHTML =
-                        tab === 'staff' ? renderStaffPanel(lastPanelData) : renderPersonalPanel(lastPanelData);
+                        activeNotifTab === 'staff' ? renderStaffPanel(lastPanelData) : renderPersonalPanel(lastPanelData);
+                }
+
+                function switchNotifTab(tab) {
+                    activeNotifTab = tab;
+                    document.getElementById('notifTabPersonal')?.classList.toggle('active', tab === 'personal');
+                    document.getElementById('notifTabStaff')?.classList.toggle('active', tab === 'staff');
+                    renderActiveTab();
                 }
                 window.switchNotifTab = switchNotifTab;
 
                 async function loadNotificationPanel() {
                     const bodyEl = document.getElementById('notificationPanelBody');
+                    activeNotifTab = 'personal';
+                    document.getElementById('notifTabPersonal')?.classList.add('active');
+                    document.getElementById('notifTabStaff')?.classList.remove('active');
                     bodyEl.innerHTML = '<div class="text-muted small text-center py-3">Loading…</div>';
                     try {
                         const res = await fetch(`${apiBase}/Notification/panel`, { headers: authHeaders });
@@ -336,7 +346,7 @@
                             return;
                         }
                         lastPanelData = await res.json();
-                        bodyEl.innerHTML = renderPersonalPanel(lastPanelData);
+                        renderActiveTab();
                         document.getElementById('notificationDot').style.display = 'none';
                     } catch {
                         bodyEl.innerHTML = '<div class="text-muted small text-center py-3">Couldn\'t load notifications</div>';

@@ -14,14 +14,6 @@
 
     <div class="card border-0 shadow-sm p-4" style="background: rgba(166, 177, 225, 0.02); border: 1px solid var(--border-color) !important;">
 
-        <!-- Sticker Code -->
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Sticker Code</label>
-            <input type="text" id="stickerCode" class="form-control" maxlength="20"
-                   placeholder="e.g. STK_STAR" oninput="this.value = this.value.toUpperCase()" />
-            <small class="text-muted">A short, unique identifier. Cannot be changed later.</small>
-        </div>
-
         <!-- Sticker Name -->
         <div class="mb-3">
             <label class="form-label fw-semibold">Sticker Name</label>
@@ -149,13 +141,11 @@
         }
 
         async function saveSticker() {
-            const stickerCode = document.getElementById('stickerCode').value.trim();
             const stickerName = document.getElementById('stickerName').value.trim();
             const priceRaw = document.getElementById('priceInput').value.trim();
             const isLimited = document.getElementById('limitedSelect').value === 'limited';
             const limitedQtyRaw = document.getElementById('limitedQtyInput').value.trim();
 
-            if (!stickerCode) { showError('Please enter a sticker code.'); return; }
             if (!stickerName) { showError('Please enter a sticker name.'); return; }
             if (!/^\d+(\.\d{1,2})?$/.test(priceRaw)) { showError('Enter a valid price (up to 2 decimal places).'); return; }
             if (isLimited && (!limitedQtyRaw || parseInt(limitedQtyRaw) < 1)) { showError('Enter a limited quantity of at least 1.'); return; }
@@ -168,7 +158,6 @@
 
             const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
             const payload = {
-                stickerCode: stickerCode,
                 stickerName: stickerName,
                 imagePath: document.getElementById('stickerImageUrl').value || null,
                 imagePublicId: document.getElementById('stickerImagePublicId').value || null,
@@ -192,7 +181,7 @@
                 window.location.href = '/ShowoffPages/Index?tab=shop';
             } else {
                 const text = await res.text();
-                showError(`Failed to create sticker: ${text || 'Please check the code isn’t already in use.'}`);
+                showError(`Failed to create sticker: ${text || 'Please try again.'}`);
             }
         }
     </script>

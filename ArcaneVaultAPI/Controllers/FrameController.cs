@@ -17,6 +17,19 @@ public class FrameController : ControllerBase
         CosmeticAuditLogger.Log(_connectionString, adminName, adminName, frameCode, frameName, "Frame", action);
     }
 
+    private string GenerateUniqueFrameCode(SqliteConnection connection)
+    {
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            var code = "FRM_" + Guid.NewGuid().ToString("N")[..6].ToUpper();
+            var checkCommand = new SqliteCommand("SELECT COUNT(*) FROM Frames WHERE FrameCode = @Code", connection);
+            checkCommand.Parameters.AddWithValue("@Code", code);
+            if (Convert.ToInt32(checkCommand.ExecuteScalar()) == 0)
+                return code;
+        }
+        throw new InvalidOperationException("Failed to generate a unique frame code after 5 attempts.");
+    }
+
     private static Frame ReadFrame(SqliteDataReader reader)
     {
         return new Frame
@@ -140,6 +153,8 @@ public class FrameController : ControllerBase
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+
+        frame.FrameCode = GenerateUniqueFrameCode(connection);
 
         var command = new SqliteCommand(
             @"INSERT INTO Frames (FrameCode, FrameName, ImagePath, ImagePublicId, Orientation, Price, IsLimited, LimitedQuantity, IsDelisted)

@@ -17,6 +17,19 @@ public class StickerController : ControllerBase
         CosmeticAuditLogger.Log(_connectionString, adminName, adminName, stickerCode, stickerName, "Sticker", action);
     }
 
+    private string GenerateUniqueStickerCode(SqliteConnection connection)
+    {
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            var code = "STK_" + Guid.NewGuid().ToString("N")[..6].ToUpper();
+            var checkCommand = new SqliteCommand("SELECT COUNT(*) FROM Stickers WHERE StickerCode = @Code", connection);
+            checkCommand.Parameters.AddWithValue("@Code", code);
+            if (Convert.ToInt32(checkCommand.ExecuteScalar()) == 0)
+                return code;
+        }
+        throw new InvalidOperationException("Failed to generate a unique sticker code after 5 attempts.");
+    }
+
     private static Sticker ReadSticker(SqliteDataReader reader)
     {
         return new Sticker
@@ -137,6 +150,8 @@ public class StickerController : ControllerBase
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+
+        sticker.StickerCode = GenerateUniqueStickerCode(connection);
 
         var command = new SqliteCommand(
             @"INSERT INTO Stickers (StickerCode, StickerName, ImagePath, ImagePublicId, Price, IsLimited, LimitedQuantity, IsDelisted)

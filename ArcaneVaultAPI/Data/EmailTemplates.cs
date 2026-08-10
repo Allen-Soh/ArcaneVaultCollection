@@ -84,15 +84,21 @@
         }
 
         // ── Payment receipt ──
-        public static (string Subject, string Body) PaymentReceipt(string userName, string cosmeticName, decimal amount, string currency)
+        public static (string Subject, string Body) PaymentReceipt(string userName, string cosmeticName, decimal amount, string currency, int paymentId, string cosmeticId, int? copyNumber)
         {
             var emailSubject = $"Receipt for your purchase of \"{cosmeticName}\"";
+            var copyNumberRow = copyNumber.HasValue
+                ? $@"<tr><td style=""padding:6px 0; color:#7d8590;"">Limited copy</td><td style=""padding:6px 0; text-align:right;"">#{copyNumber}</td></tr>"
+                : "";
             var body = Wrap("Payment receipt", $@"
                 <p>Hi {userName},</p>
                 <p>Thanks for your purchase! Here's your receipt:</p>
                 <table style=""width:100%; border-collapse:collapse; font-size:14px;"">
                     <tr><td style=""padding:6px 0; color:#7d8590;"">Item</td><td style=""padding:6px 0; text-align:right;"">{cosmeticName}</td></tr>
+                    <tr><td style=""padding:6px 0; color:#7d8590;"">Item ID</td><td style=""padding:6px 0; text-align:right;"">{cosmeticId}</td></tr>
                     <tr><td style=""padding:6px 0; color:#7d8590;"">Amount</td><td style=""padding:6px 0; text-align:right;"">{currency.ToUpper()} {amount:0.00}</td></tr>
+                    <tr><td style=""padding:6px 0; color:#7d8590;"">Payment ID</td><td style=""padding:6px 0; text-align:right;"">{paymentId}</td></tr>
+                    {copyNumberRow}
                 </table>
                 <p>Your new cosmetic is now in your inventory.</p>");
             return (emailSubject, body);

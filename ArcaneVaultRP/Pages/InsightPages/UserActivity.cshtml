@@ -146,7 +146,7 @@
                         <div style="width:80px;display:flex;align-items:center;
                             gap:4px;flex-shrink:0;">
                             <span style="font-size:12px;font-weight:@(isTop ? "500" : "400");
-                                color:@(isTop ? "#212529" : "#adb5bd");">
+                                color:@(isTop ? "var(--text-primary)" : "var(--text-muted)");">
                                 @country.UserCount
                             </span>
                             <span style="font-size:11px;color:#adb5bd;">
@@ -441,7 +441,7 @@
                                                 border-radius:3px;"></div>
                                 </div>
                                 <span style="font-size:12px;
-                                             color:${isMax ? '#212529' : '#adb5bd'};
+                                             color:${isMax ? 'var(--text-primary)' : 'var(--text-muted)'};
                                              font-weight:${isMax ? '500' : '400'};
                                              width:24px;text-align:right;flex-shrink:0;">${val}</span>
                             </div>`;
@@ -467,7 +467,7 @@
                                                 border-radius:3px;"></div>
                                 </div>
                                 <span style="font-size:12px;
-                                             color:${isMax ? '#212529' : '#adb5bd'};
+                                             color:${isMax ? 'var(--text-primary)' : 'var(--text-muted)'};
                                              font-weight:${isMax ? '500' : '400'};
                                              width:24px;text-align:right;flex-shrink:0;">${val}</span>
                             </div>`;

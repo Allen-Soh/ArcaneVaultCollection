@@ -16,21 +16,23 @@ namespace ArcaneVaultAPI.Controllers
         private readonly string _connectionString = "Data Source=ArcaneVault.db";
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
+        private readonly ILogger<PaymentController> _logger;
 
         // Dev-only base URL for the Razor Pages front end — matches the CORS
         // origin already hardcoded for it in Program.cs.
         private const string RpBaseUrl = "https://localhost:7051";
 
-        public PaymentController(IConfiguration config, IEmailService emailService)
+        public PaymentController(IConfiguration config, IEmailService emailService, ILogger<PaymentController> logger)
         {
             _config = config;
             _emailService = emailService;
+            _logger = logger;
         }
 
         // GET: api/Payment
         [Authorize(Roles = "Staff")]
         [HttpGet]
-        public ActionResult<IEnumerable<Payment>> GetPayments()
+        public async Task<ActionResult<IEnumerable<Payment>>> GetPayments()
         {
             var payments = new List<Payment>();
 
@@ -42,22 +44,31 @@ namespace ArcaneVaultAPI.Controllers
                   FROM Payment ORDER BY PaymentId DESC",
                 connection);
 
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
+            using (var reader = command.ExecuteReader())
             {
-                payments.Add(new Payment
+                while (reader.Read())
                 {
-                    PaymentId = Convert.ToInt32(reader["PaymentId"]),
-                    UserName = reader["UserName"].ToString(),
-                    CosmeticId = reader["CosmeticId"].ToString(),
-                    CosmeticName = reader["CosmeticName"].ToString(),
-                    CosmeticType = reader["CosmeticType"].ToString(),
-                    Amount = Convert.ToDecimal(reader["Amount"]),
-                    Currency = reader["Currency"].ToString(),
-                    StripeSessionId = reader["StripeSessionId"].ToString(),
-                    Status = reader["Status"].ToString(),
-                    CreatedAt = reader["CreatedAt"].ToString()
-                });
+                    payments.Add(new Payment
+                    {
+                        PaymentId = Convert.ToInt32(reader["PaymentId"]),
+                        UserName = reader["UserName"].ToString(),
+                        CosmeticId = reader["CosmeticId"].ToString(),
+                        CosmeticName = reader["CosmeticName"].ToString(),
+                        CosmeticType = reader["CosmeticType"].ToString(),
+                        Amount = Convert.ToDecimal(reader["Amount"]),
+                        Currency = reader["Currency"].ToString(),
+                        StripeSessionId = reader["StripeSessionId"].ToString(),
+                        Status = reader["Status"].ToString(),
+                        CreatedAt = reader["CreatedAt"].ToString()
+                    });
+                }
+            }
+
+            // Self-heal any still-Pending rows against Stripe directly — a low-traffic staff log,
+            // so a per-row live lookup here is acceptable.
+            foreach (var payment in payments.Where(p => p.Status == "Pending"))
+            {
+                payment.Status = await ReconcilePendingAsync(payment.StripeSessionId, payment.Status);
             }
 
             return payments;
@@ -246,23 +257,56 @@ namespace ArcaneVaultAPI.Controllers
 
             if (status == "Success") return; // Already processed — Stripe can retry webhook delivery
 
-            var updateCmd = new SqliteCommand(
-                "UPDATE Payment SET Status = 'Success' WHERE PaymentId = @PaymentId",
-                connection);
-            updateCmd.Parameters.AddWithValue("@PaymentId", paymentId);
-            updateCmd.ExecuteNonQuery();
+            var acquiredAt = DateTime.UtcNow.ToString("o");
+            int? copyNumber = null;
 
-            var inventoryCmd = new SqliteCommand(
-                @"INSERT INTO CosmeticInventory (Uid, UserName, CosmeticId, CosmeticType, AcquiredAt, PaymentId)
-                  VALUES (@Uid, @UserName, @CosmeticId, @CosmeticType, @AcquiredAt, @PaymentId)",
-                connection);
-            inventoryCmd.Parameters.AddWithValue("@Uid", Guid.NewGuid().ToString());
-            inventoryCmd.Parameters.AddWithValue("@UserName", userName);
-            inventoryCmd.Parameters.AddWithValue("@CosmeticId", cosmeticId);
-            inventoryCmd.Parameters.AddWithValue("@CosmeticType", cosmeticType);
-            inventoryCmd.Parameters.AddWithValue("@AcquiredAt", DateTime.UtcNow.ToString("o"));
-            inventoryCmd.Parameters.AddWithValue("@PaymentId", paymentId);
-            inventoryCmd.ExecuteNonQuery();
+            // Status flip + inventory grant must land together — a failure partway through must not
+            // leave a payment marked Success with no cosmetic granted, since the guard above would
+            // then skip ever retrying it.
+            using (var transaction = connection.BeginTransaction())
+            {
+                var updateCmd = new SqliteCommand(
+                    "UPDATE Payment SET Status = 'Success' WHERE PaymentId = @PaymentId",
+                    connection, transaction);
+                updateCmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                updateCmd.ExecuteNonQuery();
+
+                var inventoryCmd = new SqliteCommand(
+                    @"INSERT INTO CosmeticInventory (Uid, UserName, CosmeticId, CosmeticType, AcquiredAt, PaymentId)
+                      VALUES (@Uid, @UserName, @CosmeticId, @CosmeticType, @AcquiredAt, @PaymentId)",
+                    connection, transaction);
+                inventoryCmd.Parameters.AddWithValue("@Uid", Guid.NewGuid().ToString());
+                inventoryCmd.Parameters.AddWithValue("@UserName", userName);
+                inventoryCmd.Parameters.AddWithValue("@CosmeticId", cosmeticId);
+                inventoryCmd.Parameters.AddWithValue("@CosmeticType", cosmeticType);
+                inventoryCmd.Parameters.AddWithValue("@AcquiredAt", acquiredAt);
+                inventoryCmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                inventoryCmd.ExecuteNonQuery();
+
+                var catalogTable = cosmeticType == "Frame" ? "Frames" : "Stickers";
+                var codeColumn = cosmeticType == "Frame" ? "FrameCode" : "StickerCode";
+                var limitedCmd = new SqliteCommand(
+                    $"SELECT IsLimited FROM {catalogTable} WHERE {codeColumn} = @Code",
+                    connection, transaction);
+                limitedCmd.Parameters.AddWithValue("@Code", cosmeticId);
+                var isLimited = limitedCmd.ExecuteScalar() is object v && Convert.ToBoolean(Convert.ToInt32(v));
+
+                if (isLimited)
+                {
+                    // 1-based rank of this copy's AcquiredAt among all copies of the same cosmetic —
+                    // same ranking convention as CosmeticInventoryController.GetForUser.
+                    var rankCmd = new SqliteCommand(
+                        @"SELECT COUNT(*) FROM CosmeticInventory
+                          WHERE CosmeticId = @CosmeticId AND CosmeticType = @CosmeticType AND AcquiredAt <= @AcquiredAt",
+                        connection, transaction);
+                    rankCmd.Parameters.AddWithValue("@CosmeticId", cosmeticId);
+                    rankCmd.Parameters.AddWithValue("@CosmeticType", cosmeticType);
+                    rankCmd.Parameters.AddWithValue("@AcquiredAt", acquiredAt);
+                    copyNumber = Convert.ToInt32(rankCmd.ExecuteScalar());
+                }
+
+                transaction.Commit();
+            }
 
             var emailCmd = new SqliteCommand(
                 "SELECT Email FROM ArcaneVaultUsers WHERE UserName = @UserName",
@@ -270,17 +314,57 @@ namespace ArcaneVaultAPI.Controllers
             emailCmd.Parameters.AddWithValue("@UserName", userName);
             var email = emailCmd.ExecuteScalar() as string;
 
-            if (!string.IsNullOrEmpty(email))
+            if (string.IsNullOrEmpty(email))
             {
-                await _emailService.SendPaymentReceiptAsync(email, userName, cosmeticName, amount, currency);
+                _logger.LogWarning("Skipping receipt email for PaymentId {PaymentId} — no email on file for user {UserName}", paymentId, userName);
+                return;
             }
+
+            // Fire-and-forget — SMTP shouldn't block the webhook response, and a send failure
+            // here must never propagate back into the webhook request.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendPaymentReceiptAsync(email, userName, cosmeticName, amount, currency, paymentId, cosmeticId, copyNumber);
+                    _logger.LogInformation("Receipt email sent for PaymentId {PaymentId} to {Email}", paymentId, email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Receipt email failed for PaymentId {PaymentId}", paymentId);
+                }
+            });
+        }
+
+        // Fallback for when the Stripe webhook never reaches this app (tunnel/config issues, etc.) —
+        // checks the session directly with Stripe and finalizes it here if Stripe confirms it was paid.
+        // A genuinely abandoned/incomplete checkout is left untouched and correctly stays Pending.
+        private async Task<string> ReconcilePendingAsync(string stripeSessionId, string currentStatus)
+        {
+            if (currentStatus != "Pending") return currentStatus;
+
+            try
+            {
+                var session = await new SessionService().GetAsync(stripeSessionId);
+                if (session.PaymentStatus == "paid")
+                {
+                    await MarkPaymentSuccessAsync(stripeSessionId);
+                    return "Success";
+                }
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogWarning(ex, "Failed to reconcile pending payment for session {SessionId} against Stripe", stripeSessionId);
+            }
+
+            return currentStatus;
         }
 
         // GET: api/Payment/by-session/{sessionId}
         // Used by the Success page to display real DB state rather than trusting the query string.
         [Authorize]
         [HttpGet("by-session/{sessionId}")]
-        public IActionResult GetBySession(string sessionId)
+        public async Task<IActionResult> GetBySession(string sessionId)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -290,15 +374,26 @@ namespace ArcaneVaultAPI.Controllers
                 connection);
             cmd.Parameters.AddWithValue("@SessionId", sessionId);
 
-            using var reader = cmd.ExecuteReader();
-            if (!reader.Read()) return NotFound();
+            string cosmeticName;
+            decimal amount;
+            string currency, status;
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (!reader.Read()) return NotFound();
+                cosmeticName = reader["CosmeticName"].ToString();
+                amount = Convert.ToDecimal(reader["Amount"]);
+                currency = reader["Currency"].ToString();
+                status = reader["Status"].ToString();
+            }
+
+            status = await ReconcilePendingAsync(sessionId, status);
 
             return Ok(new
             {
-                cosmeticName = reader["CosmeticName"].ToString(),
-                amount = Convert.ToDecimal(reader["Amount"]),
-                currency = reader["Currency"].ToString(),
-                status = reader["Status"].ToString()
+                cosmeticName,
+                amount,
+                currency,
+                status
             });
         }
     }

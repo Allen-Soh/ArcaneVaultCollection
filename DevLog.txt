@@ -472,3 +472,11 @@ Fixed Tickets css styling
 
 [To Do]
 - Fix the bugs...
+
+===== DEV LOG (8/8/2026) =====
+[Done]
+- Implemented everything in implementation plan
+
+[To Do]
+- Rework dbSeeder
+- Maybe try to deploy

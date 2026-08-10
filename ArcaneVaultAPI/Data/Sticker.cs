@@ -5,7 +5,7 @@ namespace ArcaneVaultAPI.Data
     public class Sticker
     {
         [Key]
-        public string StickerCode { get; set; }
+        public string? StickerCode { get; set; }
         public string StickerName { get; set; }
         public string? ImagePath { get; set; }
         public string? ImagePublicId { get; set; }

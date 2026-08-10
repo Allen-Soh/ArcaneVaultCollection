@@ -5,7 +5,7 @@ namespace ArcaneVaultAPI.Data
     public class Frame
     {
         [Key]
-        public string FrameCode { get; set; }
+        public string? FrameCode { get; set; }
         public string FrameName { get; set; }
         public string? ImagePath { get; set; }
         public string? ImagePublicId { get; set; }

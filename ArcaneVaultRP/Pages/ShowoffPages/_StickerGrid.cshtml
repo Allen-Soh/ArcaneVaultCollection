@@ -1,21 +1,6 @@
 @model ArcaneVaultRP.Pages.Showoffs.IndexModel
 
 <div class="row row-cols-2 row-cols-md-4 g-3">
-    @if (Model.IsStaff && Model.StickerCurrentPage == 1)
-    {
-        <div class="col">
-            <div class="card h-100 text-center p-2" style="cursor:pointer;background:transparent;border:2px dashed var(--border-color,#30363d);"
-                 onclick="window.location.href='/ShowoffPages/Cosmetics/CreateSticker'"
-                 onmouseenter="this.style.borderColor='var(--color-teal,#2dd4bf)';"
-                 onmouseleave="this.style.borderColor='var(--border-color,#30363d)';">
-                <div style="height:100px;display:flex;align-items:center;justify-content:center;">
-                    <i class="bi bi-plus-circle" style="font-size:28px;color:var(--text-muted,#7d8590);"></i>
-                </div>
-                <div class="small fw-semibold mt-2 text-muted">Add New</div>
-            </div>
-        </div>
-    }
-
     @foreach (var sticker in Model.PagedStickers)
     {
         <div class="col">
@@ -50,7 +35,7 @@
         </div>
     }
 
-    @if (!Model.PagedStickers.Any() && !(Model.IsStaff && Model.StickerCurrentPage == 1))
+    @if (!Model.PagedStickers.Any())
     {
         <div class="col-12 text-center text-muted py-4">No items yet.</div>
     }

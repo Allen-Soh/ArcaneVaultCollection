@@ -48,9 +48,9 @@ namespace ArcaneVaultAPI.Services
             return SendAsync(toEmail, emailSubject, body);
         }
 
-        public Task SendPaymentReceiptAsync(string toEmail, string userName, string cosmeticName, decimal amount, string currency)
+        public Task SendPaymentReceiptAsync(string toEmail, string userName, string cosmeticName, decimal amount, string currency, int paymentId, string cosmeticId, int? copyNumber)
         {
-            var (emailSubject, body) = EmailTemplates.PaymentReceipt(userName, cosmeticName, amount, currency);
+            var (emailSubject, body) = EmailTemplates.PaymentReceipt(userName, cosmeticName, amount, currency, paymentId, cosmeticId, copyNumber);
             return SendAsync(toEmail, emailSubject, body);
         }
 
