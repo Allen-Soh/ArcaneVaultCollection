@@ -178,7 +178,7 @@
             btn.textContent = 'Create Sticker';
 
             if (res.ok) {
-                window.location.href = '/ShowoffPages/Index?tab=shop';
+                window.location.href = '/ShowoffPages/Index?tab=shop&created=true';
             } else {
                 const text = await res.text();
                 showError(`Failed to create sticker: ${text || 'Please try again.'}`);

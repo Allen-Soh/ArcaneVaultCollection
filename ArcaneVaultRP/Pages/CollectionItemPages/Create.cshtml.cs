@@ -114,6 +114,6 @@ public class CreateModel : PageModel
                 });
         }
 
-        return RedirectToPage("./Index");
+        return RedirectToPage("./Index", new { created = true });
     }
 }

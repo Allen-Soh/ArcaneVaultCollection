@@ -6,30 +6,26 @@
 
 <h1>Categories</h1>
 
-<!-- Search -->
-<form method="get">
-    <div class="row g-2 mb-3">
-        <!-- Replace existing text input in CategoryPages/Index.cshtml -->
-        <div class="col-md-6 position-relative">
-            <label class="form-label fw-semibold">Category Name</label>
-            <input type="text"
-                   name="SearchCategoryName"
-                   id="searchCategoryName"
-                   value="@Model.SearchCategoryName"
-                   class="form-control"
-                   placeholder="Search by category name..."
-                   autocomplete="off" />
-            <div id="categoryNameSuggestions"
-                 class="list-group position-absolute z-3"
-                 style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
-        </div>
+<div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
-        <div class="col-md-2 d-flex align-items-end gap-2">
-            <button type="submit" class="btn btn-primary">Search</button>
-            <a asp-page="./Index" class="btn btn-secondary">Clear</a>
-        </div>
+<!-- Search -->
+<div class="row g-2 mb-3">
+    <div class="col-md-6 position-relative">
+        <label class="form-label fw-semibold">Category Name</label>
+        <input type="text"
+               id="searchCategoryName"
+               class="form-control"
+               placeholder="Search by category name..."
+               autocomplete="off" />
+        <div id="categoryNameSuggestions"
+             class="list-group position-absolute z-3"
+             style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
     </div>
-</form>
+
+    <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+    </div>
+</div>
 
 <p>
     <a asp-page="Create" class="btn btn-success">Create New</a>
@@ -62,6 +58,24 @@
         // FIXED — named consistently as categories
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Category));
 
+        // ── Success confirmation after Create/Edit ──
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            let text = null;
+            if ((params.get('created') || '').toLowerCase() === 'true') text = 'Category created.';
+            else if ((params.get('updated') || '').toLowerCase() === 'true') text = 'Category updated.';
+            if (text) {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = text;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                params.delete('created');
+                params.delete('updated');
+                const remaining = params.toString();
+                history.replaceState(null, '', window.location.pathname + (remaining ? `?${remaining}` : ''));
+            }
+        })();
+
         function truncate(text) {
             if (!text) return '';
             return text.length <= 40 ? text : text.substring(0, 40) + '...';
@@ -71,6 +85,8 @@
         const categoryNameSuggestions = document.getElementById('categoryNameSuggestions');
 
         searchCategoryName.addEventListener('input', function () {
+            applyFilters();
+
             const query = this.value.trim().toLowerCase();
             categoryNameSuggestions.innerHTML = '';
 
@@ -106,7 +122,7 @@
                     searchCategoryName.value = cat.CategoryName;  // ← assign string not object
                     categoryNameSuggestions.innerHTML = '';
                     categoryNameSuggestions.style.display = 'none';
-                    document.querySelector('form').submit();
+                    applyFilters();
                 });
                 categoryNameSuggestions.appendChild(item);
             });
@@ -269,7 +285,21 @@
             input.dataset.clearEnabled = 'true';
         }
 
-        renderTable(categories);
+        // ── Live filtering (Category Name or Code) ──
+        function applyFilters() {
+            const query = searchCategoryName.value.trim().toLowerCase();
+            const filtered = !query ? categories : categories.filter(c =>
+                (c.CategoryName && c.CategoryName.toLowerCase().includes(query)) ||
+                (c.CategoryCode && c.CategoryCode.toLowerCase().includes(query)));
+            renderTable(filtered);
+        }
+
+        function clearFilters() {
+            searchCategoryName.value = '';
+            searchCategoryName.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        applyFilters();
         enableSearchClear('searchCategoryName');
     </script>
 }

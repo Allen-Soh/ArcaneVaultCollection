@@ -138,13 +138,6 @@ public class ShowoffController : ControllerBase
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        // Check max 3 showoffs per user (non-deleted)
-        var countCommand = new SqliteCommand(
-            "SELECT COUNT(*) FROM Showoffs WHERE UserName = @UserName AND IsDeleted = 0",
-            connection);
-        countCommand.Parameters.AddWithValue("@UserName", dto.UserName);
-        var count = Convert.ToInt32(countCommand.ExecuteScalar());
-
         var validationError = ValidateCosmeticEquip(connection, dto.UserName, dto.Orientation, dto.EquippedFrameCode, dto.StickerPlacements);
         if (validationError != null)
             return BadRequest(validationError);

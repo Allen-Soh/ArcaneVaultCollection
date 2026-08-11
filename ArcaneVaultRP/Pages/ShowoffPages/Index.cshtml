@@ -29,6 +29,8 @@
         </li>
     </ul>
 
+    <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
+
     @if (Model.ActiveTab == "feed")
     {
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -80,95 +82,7 @@
         </div>
 
         <div id="showoffGridContainer">
-
-            <div class="row row-cols-1 row-cols-md-4 g-3 mb-4">
-                @foreach (var showoff in Model.PagedShowoffs)
-                {
-                    <div class="col">
-                        <div class="showoff-card card border-0 shadow-sm h-100 position-relative" style="@(string.IsNullOrEmpty(showoff.BackgroundImagePath) ? $"background-color: {showoff.BackgroundColor};" : $"background-image: url('{showoff.BackgroundImagePath}'); background-size: cover; background-position: center;") cursor:pointer; overflow:hidden; border-radius:14px;" onclick="viewShowoff(@showoff.ShowoffId, '@showoff.UserName')">
-                            <div class="owner-overlay position-absolute top-0 start-0 p-2"
-                                 data-username="@showoff.UserName"
-                                 style="display:none; background:rgba(0,0,0,0.5); color:white; border-radius:6px; font-size:12px;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="owner-overlay-avatar" style="width:20px;height:20px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">
-                                        @(showoff.UserName?.Length > 0 ? showoff.UserName[0].ToString().ToUpper() : "?")
-                                    </div>
-                                    <span>@showoff.UserName</span>
-                                </div>
-                            </div>
-
-                            <div class="card-body d-flex justify-content-center align-items-center gap-2 p-3"
-                                 style="min-height:160px; position:relative;">
-                                @{
-                                    var items = showoff.Items.OrderBy(i => i.DisplayOrder).ToList();
-                                }
-                                @foreach (var item in items)
-                                {
-                                    <div class="showoff-item-cell text-center">
-                                        @if (!string.IsNullOrEmpty(item.ImagePath))
-                                        {
-                                            <img src="@item.ImagePath"
-                                                 alt="@item.ItemName"
-                                                 style="max-width:70px;max-height:70px;width:auto;height:auto;object-fit:contain;" />
-                                        }
-                                        else
-                                        {
-                                            <div style="width:70px;height:70px;background:rgba(255,255,255,0.3);border-radius:8px;"></div>
-                                        }
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(showoff.EquippedFrameImagePath))
-                                {
-                                    <img src="@showoff.EquippedFrameImagePath" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2;" />
-                                }
-                                @foreach (var sticker in showoff.StickerPlacements)
-                                {
-                                    <div style="position:absolute; left:@(sticker.X)%; top:@(sticker.Y)%; width:@(15 * sticker.Scale)%; transform: translate(-50%,-50%) rotate(@(sticker.Rotation)deg); z-index:3; pointer-events:none;">
-                                        <img src="@sticker.ImagePath" style="width:100%; display:block;" />
-                                    </div>
-                                }
-                            </div>
-
-                            <div class="card-footer d-flex justify-content-between align-items-center"
-                                 style="background: var(--bg-card, #161b22); border-top: 1px solid var(--border-color, #30363d) !important; border-radius: 0 0 14px 14px !important; margin: 0; width: 100%;">
-                                <span class="fw-semibold text-truncate" style="max-width:120px;">@showoff.ShowoffName</span>
-                                <span class="text-muted small">
-                                    <i class="bi bi-heart-fill text-danger"></i> @showoff.LikeCount
-                                    <i class="bi bi-eye-fill ms-2"></i> @showoff.ViewCount
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            @if (!Model.PagedShowoffs.Any())
-            {
-                <div class="text-center text-muted py-5">
-                    <p>No showoffs found.</p>
-                </div>
-            }
-
-            @if (Model.TotalPages > 1)
-            {
-                <nav>
-                    <ul class="pagination justify-content-center gap-2">
-                        @if (Model.CurrentPage > 1)
-                        {
-                            <li class="page-item">
-                                <a class="page-link ajax-page-link pagination-box" href="#" data-page="@(Model.CurrentPage - 1)">&lt;</a>
-                            </li>
-                        }
-                        @if (Model.CurrentPage < Model.TotalPages)
-                        {
-                            <li class="page-item">
-                                <a class="page-link ajax-page-link pagination-box" href="#" data-page="@(Model.CurrentPage + 1)">&gt;</a>
-                            </li>
-                        }
-                    </ul>
-                </nav>
-            }
-
+            @await Html.PartialAsync("_ShowoffGrid", Model)
         </div>
     }
     else if (Model.ActiveTab == "shop")
@@ -560,6 +474,20 @@
 
         const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
 
+        // ── Success confirmation after cosmetic Create ──
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if ((params.get('created') || '').toLowerCase() === 'true') {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = 'Cosmetic created.';
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                params.delete('created');
+                const remaining = params.toString();
+                history.replaceState(null, '', window.location.pathname + (remaining ? `?${remaining}` : ''));
+            }
+        })();
+
         // State
         let pendingDeleteId = null;
         let pendingDeleteName = null;
@@ -610,36 +538,40 @@
 
             const body = document.getElementById('viewShowoffBody');
 
-            // Same canvas layout as the Create page preview: flex cells, full image (object-fit:contain), dashed dividers
-            const itemCount = items.length;
-            const cellsHtml = items.map((item, idx) => {
-                const imgPath = item.imagePath || item.ImagePath;
-                const itemName = item.itemName || item.ItemName;
-                const borderStyle = idx === itemCount - 1 ? '' : 'border-right: 1px dashed rgba(166,177,225,0.15);';
-                return `
-                                        <div class="d-flex align-items-center justify-content-center p-2" style="flex:1; overflow:hidden; ${borderStyle}">
-                                            ${imgPath
-                        ? `<img src="${imgPath}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />`
-                        : `<span class="small text-muted text-center px-1" style="font-size:11px; word-break:break-all;">${itemName}</span>`}
-                                        </div>`;
-            }).join('');
+            const normalizedItems = items.map(item => ({
+                imagePath: item.imagePath || item.ImagePath,
+                itemName: item.itemName || item.ItemName
+            }));
+            const normalizedStickers = stickerPlacements.map(s => ({
+                x: s.x ?? s.X,
+                y: s.y ?? s.Y,
+                scale: s.scale ?? s.Scale ?? 1,
+                rotation: s.rotation ?? s.Rotation ?? 0,
+                imagePath: s.imagePath || s.ImagePath
+            }));
 
-            const overlayHtml = `
-                ${equippedFrameImagePath ? `<img src="${equippedFrameImagePath}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2;" />` : ''}
-                ${stickerPlacements.map(s => {
-                    const sx = s.x ?? s.X, sy = s.y ?? s.Y, sScale = s.scale ?? s.Scale ?? 1, sRotation = s.rotation ?? s.Rotation ?? 0;
-                    const sImg = s.imagePath || s.ImagePath;
-                    return `<div style="position:absolute; left:${sx}%; top:${sy}%; width:${15 * sScale}%; transform: translate(-50%,-50%) rotate(${sRotation}deg); z-index:3; pointer-events:none;">
-                                <img src="${sImg}" style="width:100%; display:block;" />
-                            </div>`;
-                }).join('')}`;
+            const canvas = document.createElement('div');
+            canvas.className = 'rounded-3 shadow-lg mx-auto';
+            canvas.style.width = '100%';
+            canvas.style.maxWidth = '640px';
+            canvas.style.aspectRatio = orientation === 'Portrait' ? '9/16' : '16/9';
+            canvas.style.display = 'flex';
+            canvas.style.alignItems = 'stretch';
+            canvas.style.overflow = 'hidden';
+            canvas.style.position = 'relative';
 
-            body.innerHTML = `
-                                    <div class="rounded-3 shadow-lg mx-auto"
-                                            style="${bgImagePath ? `background-image:url('${bgImagePath}');background-size:cover;background-position:center;` : `background-color:${bgColor};`} width:100%; max-width:640px; aspect-ratio:${orientation === 'Portrait' ? '9/16' : '16/9'}; display:flex; align-items:stretch; overflow:hidden; position:relative;">
-                                        ${cellsHtml}
-                                        ${overlayHtml}
-                                    </div>`;
+            ShowoffCanvas.renderCanvas(canvas, {
+                items: normalizedItems,
+                orientation,
+                backgroundColor: bgColor,
+                backgroundImagePath: bgImagePath,
+                frameImagePath: equippedFrameImagePath,
+                stickers: normalizedStickers,
+                editable: false
+            });
+
+            body.innerHTML = '';
+            body.appendChild(canvas);
 
             // Description
             const descEl = document.getElementById('viewDescription');

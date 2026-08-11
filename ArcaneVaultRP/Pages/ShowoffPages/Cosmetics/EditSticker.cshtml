@@ -186,7 +186,7 @@
             btn.textContent = 'Save Changes';
 
             if (res.ok) {
-                window.location.href = '/ShowoffPages/Cosmetics/ManageShop';
+                window.location.href = '/ShowoffPages/Cosmetics/ManageShop?updated=true';
             } else {
                 const text = await res.text();
                 showError(`Failed to save sticker: ${text || 'Please try again.'}`);

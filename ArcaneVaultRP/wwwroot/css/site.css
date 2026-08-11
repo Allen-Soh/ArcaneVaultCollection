@@ -752,6 +752,106 @@ a:hover {
     color: var(--bg-darkest) !important;
 }
 
+/* Showoff Create/Edit canvas — shared by both pages (consolidated from previously-duplicated
+   local <style> blocks). Used together with wwwroot/js/showoffCanvas.js. */
+.canvas-box {
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+
+.cosmetic-picker-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s;
+}
+
+.cosmetic-picker-thumb:hover {
+    border-color: var(--color-teal, #2dd4bf);
+}
+
+.cosmetic-picker-thumb.selected {
+    border-color: var(--color-teal, #2dd4bf);
+}
+
+.cosmetic-picker-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.showoff-sticker {
+    touch-action: none;
+}
+
+.showoff-sticker.selected > img {
+    outline: 2px dashed var(--color-teal, #2dd4bf);
+    outline-offset: 3px;
+}
+
+.sticker-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    z-index: 4;
+    touch-action: none;
+}
+
+.sticker-delete {
+    top: -10px;
+    right: -10px;
+    background: #dc3545;
+    color: #fff;
+    line-height: 1;
+}
+
+.sticker-rotate {
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-teal, #2dd4bf);
+    color: #0d1117;
+    cursor: grab;
+}
+
+.sticker-resize {
+    bottom: -10px;
+    right: -10px;
+    background: var(--color-teal, #2dd4bf);
+    cursor: nwse-resize;
+}
+
+.bg-mode-btn {
+    border: 1px solid var(--border-color, #30363d);
+    color: var(--text-muted, #7d8590);
+    background: transparent;
+    transition: all 0.15s;
+}
+
+.bg-mode-btn:hover {
+    border-color: var(--color-teal, #2dd4bf);
+    color: var(--color-teal, #2dd4bf);
+}
+
+.btn-check:checked + .bg-mode-btn {
+    background: var(--color-teal, #2dd4bf);
+    border-color: var(--color-teal, #2dd4bf);
+    color: var(--bg-darkest, #0d1117);
+}
+
 .btn-danger {
     background-color: rgba(255, 133, 145, 0.08) !important;
     border: 1px solid #ff8591 !important;

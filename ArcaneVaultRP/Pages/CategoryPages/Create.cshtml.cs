@@ -78,7 +78,7 @@ public class CreateModel : PageModel
         var response = await httpClient.PostAsJsonAsync("Category", Category);
 
         if (response.IsSuccessStatusCode)
-            return RedirectToPage("./Index");
+            return RedirectToPage("./Index", new { created = true });
 
         ModelState.AddModelError(string.Empty, "An error occurred while creating the category.");
         return Page();

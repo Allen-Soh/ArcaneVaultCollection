@@ -182,13 +182,38 @@
         <h5 class="fw-bold mb-0 text-white" id="fullscreenTitle">Fullscreen Preview</h5>
         <button type="button" class="btn btn-sm btn-secondary" onclick="toggleFullscreen(false)">Done</button>
     </div>
-    <div id="fullscreenCanvas" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; display: flex; align-items: stretch; transition: all 0.2s; box-shadow: 0 16px 48px rgba(0,0,0,0.8);">
+    <div id="fullscreenCanvas" class="canvas-box" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; display: flex; align-items: stretch; transition: all 0.2s; box-shadow: 0 16px 48px rgba(0,0,0,0.8);">
         <!-- Rendered dynamically same as showoffPreview but larger -->
+    </div>
+</div>
+
+<!-- Max Stickers Modal -->
+<div class="modal fade" id="maxStickersModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-exclamation-circle-fill text-warning fs-1 mb-3 d-block"></i>
+                <h5 class="fw-bold mb-2">Sticker Limit Reached</h5>
+                <p class="text-muted mb-4" style="font-size:14px;">
+                    You can only add up to 5 stickers per showoff.
+                </p>
+                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
+        // Fix — prevent aria-hidden focus warning when closing modals
+        document.querySelectorAll('.modal').forEach(modalEl => {
+            modalEl.addEventListener('hide.bs.modal', () => {
+                if (modalEl.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+            });
+        });
+
         const currentUser = '@loggedInUser?.UserName';
         const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
         const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
@@ -208,7 +233,13 @@
         let placedStickers = []; // [{ stickerCode, imagePath, x, y, scale, rotation }]
         let equippedFrameCode = null;
         let selectedStickerIdx = null;
-        let dragState = null;
+
+        ShowoffCanvas.activeController = ShowoffCanvas.createStickerController({
+            getStickers: () => placedStickers,
+            getSelectedIdx: () => selectedStickerIdx,
+            setSelectedIdx: (idx) => { selectedStickerIdx = idx; },
+            rerender: () => updatePreview()
+        });
 
         async function loadOwnedCosmetics() {
             const jwtToken = document.getElementById('jwtTokenInput')?.value;
@@ -269,7 +300,7 @@
 
         function addStickerPlacement(code) {
             if (placedStickers.length >= 5) {
-                alert('Maximum of 5 stickers allowed on a showoff.');
+                new bootstrap.Modal(document.getElementById('maxStickersModal')).show();
                 return;
             }
             const sticker = ownedStickers.find(s => s.code === code);
@@ -286,126 +317,8 @@
             updatePreview();
         }
 
-        function removeSticker(idx) {
-            placedStickers.splice(idx, 1);
-            selectedStickerIdx = null;
-            updatePreview();
-        }
-
-        function buildOverlayHtml() {
-            let html = '';
-            if (equippedFrameCode) {
-                const frame = ownedFrames.find(f => f.code === equippedFrameCode);
-                if (frame && frame.imagePath) {
-                    html += `<img src="${frame.imagePath}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2;" />`;
-                }
-            }
-            placedStickers.forEach((s, idx) => {
-                const selected = selectedStickerIdx === idx;
-                html += `
-                    <div class="showoff-sticker ${selected ? 'selected' : ''}" data-idx="${idx}"
-                         style="position:absolute; left:${s.x}%; top:${s.y}%; width:${15 * s.scale}%; transform: translate(-50%,-50%) rotate(${s.rotation}deg); z-index:3;"
-                         onpointerdown="onStickerPointerDown(event, ${idx})">
-                        <img src="${s.imagePath}" style="width:100%; display:block; pointer-events:none;" draggable="false" />
-                        ${selected ? `
-                            <div class="sticker-handle sticker-delete" onclick="removeSticker(${idx})" title="Delete">&times;</div>
-                            <div class="sticker-handle sticker-rotate" onpointerdown="onRotateHandleDown(event, ${idx})" title="Rotate"><i class="bi bi-arrow-clockwise"></i></div>
-                            <div class="sticker-handle sticker-resize" onpointerdown="onResizeHandleDown(event, ${idx})" title="Resize"></div>
-                        ` : ''}
-                    </div>`;
-            });
-            return html;
-        }
-
-        function onStickerPointerDown(event, idx) {
-            event.stopPropagation();
-            selectedStickerIdx = idx;
-            const canvasEl = event.currentTarget.closest('.canvas-box');
-            const rect = canvasEl.getBoundingClientRect();
-            dragState = {
-                type: 'move', idx,
-                startPointerX: event.clientX, startPointerY: event.clientY,
-                startX: placedStickers[idx].x, startY: placedStickers[idx].y,
-                canvasRect: rect
-            };
-            document.addEventListener('pointermove', onDragPointerMove);
-            document.addEventListener('pointerup', onDragPointerUp);
-            updatePreview();
-        }
-
-        function onResizeHandleDown(event, idx) {
-            event.stopPropagation();
-            const canvasEl = event.currentTarget.closest('.canvas-box');
-            const rect = canvasEl.getBoundingClientRect();
-            const s = placedStickers[idx];
-            const centerX = rect.left + (s.x / 100) * rect.width;
-            const centerY = rect.top + (s.y / 100) * rect.height;
-            dragState = {
-                type: 'resize', idx, centerX, centerY,
-                startDist: Math.max(1, Math.hypot(event.clientX - centerX, event.clientY - centerY)),
-                startScale: s.scale
-            };
-            document.addEventListener('pointermove', onDragPointerMove);
-            document.addEventListener('pointerup', onDragPointerUp);
-        }
-
-        function onRotateHandleDown(event, idx) {
-            event.stopPropagation();
-            const canvasEl = event.currentTarget.closest('.canvas-box');
-            const rect = canvasEl.getBoundingClientRect();
-            const s = placedStickers[idx];
-            const centerX = rect.left + (s.x / 100) * rect.width;
-            const centerY = rect.top + (s.y / 100) * rect.height;
-            dragState = {
-                type: 'rotate', idx, centerX, centerY,
-                startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI,
-                startRotation: s.rotation
-            };
-            document.addEventListener('pointermove', onDragPointerMove);
-            document.addEventListener('pointerup', onDragPointerUp);
-        }
-
-        function onDragPointerMove(event) {
-            if (!dragState) return;
-            const s = placedStickers[dragState.idx];
-            if (!s) return;
-
-            if (dragState.type === 'move') {
-                const dxPct = ((event.clientX - dragState.startPointerX) / dragState.canvasRect.width) * 100;
-                const dyPct = ((event.clientY - dragState.startPointerY) / dragState.canvasRect.height) * 100;
-                s.x = Math.min(100, Math.max(0, dragState.startX + dxPct));
-                s.y = Math.min(100, Math.max(0, dragState.startY + dyPct));
-            } else if (dragState.type === 'resize') {
-                const dist = Math.hypot(event.clientX - dragState.centerX, event.clientY - dragState.centerY);
-                s.scale = Math.min(3, Math.max(0.3, dragState.startScale * (dist / dragState.startDist)));
-            } else if (dragState.type === 'rotate') {
-                const angle = Math.atan2(event.clientY - dragState.centerY, event.clientX - dragState.centerX) * 180 / Math.PI;
-                s.rotation = dragState.startRotation + (angle - dragState.startAngle);
-            }
-
-            document.querySelectorAll(`.showoff-sticker[data-idx="${dragState.idx}"]`).forEach(el => {
-                el.style.left = s.x + '%';
-                el.style.top = s.y + '%';
-                el.style.width = (15 * s.scale) + '%';
-                el.style.transform = `translate(-50%,-50%) rotate(${s.rotation}deg)`;
-            });
-        }
-
-        function onDragPointerUp() {
-            dragState = null;
-            document.removeEventListener('pointermove', onDragPointerMove);
-            document.removeEventListener('pointerup', onDragPointerUp);
-        }
-
-        // Deselect when clicking empty canvas
-        document.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('.canvas-box') && !e.target.closest('.showoff-sticker')) {
-                if (selectedStickerIdx !== null) {
-                    selectedStickerIdx = null;
-                    updatePreview();
-                }
-            }
-        });
+        // Sticker select/move/resize/rotate/delete/deselect interaction now lives in
+        // ShowoffCanvas.activeController (wwwroot/js/showoffCanvas.js), shared with Edit.cshtml.
 
         function setBgMode(mode) {
             bgMode = mode;
@@ -831,51 +744,23 @@
                 fullCanvas.style.flexDirection = 'column';
             }
 
-            if (bgMode === 'image' && bgImagePath) {
-                mainCanvas.style.backgroundImage = `url('${bgImagePath}')`;
-                mainCanvas.style.backgroundSize = 'cover';
-                mainCanvas.style.backgroundPosition = 'center';
-                mainCanvas.style.backgroundColor = '';
-                fullCanvas.style.backgroundImage = `url('${bgImagePath}')`;
-                fullCanvas.style.backgroundSize = 'cover';
-                fullCanvas.style.backgroundPosition = 'center';
-                fullCanvas.style.backgroundColor = '';
-            } else {
-                mainCanvas.style.backgroundImage = '';
-                fullCanvas.style.backgroundImage = '';
-                mainCanvas.style.backgroundColor = color;
-                fullCanvas.style.backgroundColor = color;
-            }
+            const bgData = { backgroundColor: color, backgroundImagePath: (bgMode === 'image' && bgImagePath) ? bgImagePath : null };
+            ShowoffCanvas.applyBackground(mainCanvas, bgData);
+            ShowoffCanvas.applyBackground(fullCanvas, bgData);
 
-            // Generate canvas cells html
-            let html = '';
-            for (let i = 0; i < 3; i++) {
-                const item = selectedItems[i];
-                const borderStyle = isLandscape 
-                    ? 'border-right: 1px dashed rgba(166,177,225,0.15);' 
-                    : 'border-bottom: 1px dashed rgba(166,177,225,0.15);';
-                const finalBorder = (i === 2) ? '' : borderStyle;
+            // Generate canvas cells + overlay html via the shared renderer (same logic ViewShowoff
+            // and Edit.cshtml use) — always exactly 3 slots here, null ones render as "+" placeholders.
+            const itemSlots = [selectedItems[0] || null, selectedItems[1] || null, selectedItems[2] || null];
+            const cellsHtml = ShowoffCanvas.renderItemCells(itemSlots, isLandscape ? 'Landscape' : 'Portrait');
+            const equippedFrame = equippedFrameCode ? ownedFrames.find(f => f.code === equippedFrameCode) : null;
+            const overlayHtml = ShowoffCanvas.renderOverlay(
+                equippedFrame?.imagePath || null,
+                placedStickers,
+                { editable: true, selectedIdx: selectedStickerIdx }
+            );
 
-                if (item) {
-                    html += `
-                        <div class="d-flex align-items-center justify-content-center p-2" style="flex:1; overflow:hidden; ${finalBorder}">
-                            ${item.imagePath 
-                                ? `<img src="${item.imagePath}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />`
-                                : `<span class="small text-muted text-center px-1" style="font-size:11px; word-break:break-all;">${item.itemName}</span>`}
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="d-flex align-items-center justify-content-center" style="flex:1; ${finalBorder}">
-                            <i class="bi bi-plus-circle text-muted fs-5 opacity-50"></i>
-                        </div>
-                    `;
-                }
-            }
-
-            const overlayHtml = buildOverlayHtml();
-            mainCanvas.innerHTML = html + overlayHtml;
-            fullCanvas.innerHTML = html + overlayHtml;
+            mainCanvas.innerHTML = cellsHtml + overlayHtml;
+            fullCanvas.innerHTML = cellsHtml + overlayHtml;
         }
 
         // ── Save Showoff payload submission ──
@@ -946,102 +831,5 @@
     </script>
 }
 
-<style>
-    .canvas-box {
-        transition: all 0.2s ease-in-out;
-        position: relative;
-    }
+<!-- Canvas/sticker/picker CSS moved to wwwroot/css/site.css (shared with Edit.cshtml) -->
 
-    .cosmetic-picker-thumb {
-        width: 44px;
-        height: 44px;
-        border-radius: 8px;
-        cursor: pointer;
-        overflow: hidden;
-        background: rgba(255, 255, 255, 0.05);
-        border: 2px solid transparent;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: border-color 0.15s;
-    }
-
-    .cosmetic-picker-thumb:hover {
-        border-color: var(--color-teal, #2dd4bf);
-    }
-
-    .cosmetic-picker-thumb.selected {
-        border-color: var(--color-teal, #2dd4bf);
-    }
-
-    .cosmetic-picker-thumb img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-
-    .showoff-sticker {
-        touch-action: none;
-    }
-
-    .showoff-sticker.selected > img {
-        outline: 2px dashed var(--color-teal, #2dd4bf);
-        outline-offset: 3px;
-    }
-
-    .sticker-handle {
-        position: absolute;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        cursor: pointer;
-        z-index: 4;
-        touch-action: none;
-    }
-
-    .sticker-delete {
-        top: -10px;
-        right: -10px;
-        background: #dc3545;
-        color: #fff;
-        line-height: 1;
-    }
-
-    .sticker-rotate {
-        top: -28px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--color-teal, #2dd4bf);
-        color: #0d1117;
-        cursor: grab;
-    }
-
-    .sticker-resize {
-        bottom: -10px;
-        right: -10px;
-        background: var(--color-teal, #2dd4bf);
-        cursor: nwse-resize;
-    }
-
-    .bg-mode-btn {
-        border: 1px solid var(--border-color, #30363d);
-        color: var(--text-muted, #7d8590);
-        background: transparent;
-        transition: all 0.15s;
-    }
-
-    .bg-mode-btn:hover {
-        border-color: var(--color-teal, #2dd4bf);
-        color: var(--color-teal, #2dd4bf);
-    }
-
-    .btn-check:checked + .bg-mode-btn {
-        background: var(--color-teal, #2dd4bf);
-        border-color: var(--color-teal, #2dd4bf);
-        color: var(--bg-darkest, #0d1117);
-    }
-</style>

@@ -104,7 +104,7 @@ public class EditModel : PageModel
             var response = await httpClient.PostAsJsonAsync("Category", updatedCategory);
 
             if (response.IsSuccessStatusCode)
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index", new { updated = true });
 
             ModelState.AddModelError(string.Empty, "An error occurred while updating the category.");
             return Page();

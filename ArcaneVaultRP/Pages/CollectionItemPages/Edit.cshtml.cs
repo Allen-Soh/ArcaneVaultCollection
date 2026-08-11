@@ -139,6 +139,6 @@ public class EditModel : PageModel
                     CategoryCode = SelectedCategoryCode
                 });
 
-        return RedirectToPage("./Index");
+        return RedirectToPage("./Index", new { updated = true });
     }
 }

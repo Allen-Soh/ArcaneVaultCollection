@@ -7,58 +7,55 @@
 
 <h1>Collection Items</h1>
 
-<form method="get" id="searchForm">
-    <div class="row g-2 mb-3">
+<div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
-        <!-- Item Name smart search -->
-        <div class="col-md-4 position-relative">
-            <label class="form-label fw-semibold">Item Name</label>
-            <input type="text"
-                   name="SearchItemName"
-                   id="searchItemName"
-                   value="@Model.SearchItemName"
-                   class="form-control"
-                   placeholder="Search by item name..."
-                   autocomplete="off" />
-            <div id="itemNameSuggestions"
-                 class="list-group position-absolute z-3"
-                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
-        </div>
+<div class="row g-2 mb-3">
 
-        <!-- Category smart search dropdown -->
-        <div class="col-md-4 position-relative">
-            <label class="form-label fw-semibold">Category</label>
-            <input type="text"
-                   name="SearchCategory"
-                   id="searchCategory"
-                   value="@Model.SearchCategory"
-                   class="form-control"
-                   placeholder="Click to browse or type to search..."
-                   autocomplete="off" />
-            <div id="categorySuggestions"
-                 class="list-group position-absolute z-3"
-                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
-        </div>
-
-        <!-- Current Quantity -->
-        <div class="col-md-2">
-            <label class="form-label fw-semibold">Current Quantity</label>
-            <input type="number"
-                   name="SearchCurrentQuantity"
-                   value="@Model.SearchCurrentQuantity"
-                   class="form-control"
-                   min="0"
-                   placeholder="e.g. 3" />
-        </div>
-
-        <!-- Buttons -->
-        <div class="col-md-2 d-flex align-items-end gap-2">
-            <button type="submit" class="btn btn-primary">Search</button>
-            <a asp-page="./Index" class="btn btn-secondary">Clear</a>
-        </div>
-
+    <!-- Item Name smart search -->
+    <div class="col-md-4 position-relative">
+        <label class="form-label fw-semibold">Item Name</label>
+        <input type="text"
+               id="searchItemName"
+               class="form-control"
+               placeholder="Search by item name..."
+               autocomplete="off"
+               oninput="applyFilters()" />
+        <div id="itemNameSuggestions"
+             class="list-group position-absolute z-3"
+             style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
     </div>
-</form>
+
+    <!-- Category smart search dropdown -->
+    <div class="col-md-4 position-relative">
+        <label class="form-label fw-semibold">Category</label>
+        <input type="text"
+               id="searchCategory"
+               class="form-control"
+               placeholder="Click to browse or type to search..."
+               autocomplete="off"
+               oninput="applyFilters()" />
+        <div id="categorySuggestions"
+             class="list-group position-absolute z-3"
+             style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+    </div>
+
+    <!-- Current Quantity -->
+    <div class="col-md-2">
+        <label class="form-label fw-semibold">Current Quantity</label>
+        <input type="number"
+               id="searchCurrentQuantity"
+               class="form-control"
+               min="0"
+               placeholder="e.g. 3"
+               oninput="applyFilters()" />
+    </div>
+
+    <!-- Clear -->
+    <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+    </div>
+
+</div>
 
 <p>
     <a asp-page="Create" class="btn btn-success">Create New</a>
@@ -90,9 +87,26 @@
 @section Scripts {
     <script>
         const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllItems));
-        const displayItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CollectionItem));
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
         const isStaff = @isStaff.ToString().ToLower();
+
+        // ── Success confirmation after Create/Edit ──
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            let text = null;
+            if ((params.get('created') || '').toLowerCase() === 'true') text = 'Item created.';
+            else if ((params.get('updated') || '').toLowerCase() === 'true') text = 'Item updated.';
+            if (text) {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = text;
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                params.delete('created');
+                params.delete('updated');
+                const remaining = params.toString();
+                history.replaceState(null, '', window.location.pathname + (remaining ? `?${remaining}` : ''));
+            }
+        })();
 
         function truncate(text) {
             if (!text) return '';
@@ -127,7 +141,7 @@
                     e.preventDefault();
                     searchItemName.value = name;
                     itemNameSuggestions.style.display = 'none';
-                    document.getElementById('searchForm').submit();
+                    applyFilters();
                 });
                 itemNameSuggestions.appendChild(item);
             });
@@ -180,7 +194,7 @@
                     e.preventDefault();
                     searchCategory.value = cat.CategoryName;
                     categorySuggestions.style.display = 'none';
-                    document.getElementById('searchForm').submit();
+                    applyFilters();
                 });
                 categorySuggestions.appendChild(item);
             });
@@ -374,7 +388,31 @@
             input.dataset.clearEnabled = 'true';
         }
 
-        renderTable(displayItems);
+        // ── Live filtering (Item Name / Category / Current Quantity) ──
+        function applyFilters() {
+            const nameQuery = searchItemName.value.trim().toLowerCase();
+            const categoryQuery = searchCategory.value.trim().toLowerCase();
+            const qtyRaw = document.getElementById('searchCurrentQuantity').value;
+            const qty = qtyRaw === '' ? null : parseInt(qtyRaw, 10);
+
+            const filtered = allItems.filter(item => {
+                const nameMatch = !nameQuery || (item.ItemName && item.ItemName.toLowerCase().includes(nameQuery));
+                const categoryMatch = !categoryQuery || (item.CategoryName && item.CategoryName.toLowerCase().includes(categoryQuery));
+                const qtyMatch = qty === null || item.CurrentQuantity === qty;
+                return nameMatch && categoryMatch && qtyMatch;
+            });
+
+            renderTable(filtered);
+        }
+
+        function clearFilters() {
+            searchItemName.value = '';
+            searchCategory.value = '';
+            document.getElementById('searchCurrentQuantity').value = '';
+            searchItemName.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        applyFilters();
         enableSearchClear('searchItemName');
         enableSearchClear('searchCategory');
     </script>

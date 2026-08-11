@@ -50,9 +50,6 @@
                                 <li class="nav-item">
                                     <a class="nav-link @NavActiveClass("/CategoryPages")" asp-page="/CategoryPages/Index">Categories</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link @NavActiveClass("/ShowoffPages/Cosmetics/ManageShop")" asp-page="/ShowoffPages/Cosmetics/ManageShop">Manage Shop</a>
-                                </li>
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Reports") + NavActiveClass("/SupportPages/Staff"))"
                                        href="#"
@@ -86,7 +83,7 @@
                             @if (Context.Session.GetString(SessionKeys.UserRole) == "1")
                             {
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Index") + NavActiveClass("/ShowoffPages/CosmeticLog") + NavActiveClass("/ShowoffPages/PaymentLog"))"
+                                    <a class="nav-link dropdown-toggle no-caret @(NavActiveClass("/ShowoffPages/Index") + NavActiveClass("/ShowoffPages/Cosmetics/ManageShop") + NavActiveClass("/ShowoffPages/CosmeticLog") + NavActiveClass("/ShowoffPages/PaymentLog"))"
                                        href="#"
                                        id="showoffsDropdownToggle"
                                        role="button"
@@ -99,6 +96,11 @@
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/Index">
                                                 <i class="bi bi-eye"></i> Public View
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center gap-2" asp-page="/ShowoffPages/Cosmetics/ManageShop">
+                                                <i class="bi bi-shop"></i> Manage Shop
                                             </a>
                                         </li>
                                         <li>
@@ -243,6 +245,7 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/showoffCanvas.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 

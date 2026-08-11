@@ -318,7 +318,7 @@
                         }
                     }
                 }
-                window.location.href = '/ShowoffPages/Cosmetics/ManageShop';
+                window.location.href = '/ShowoffPages/Cosmetics/ManageShop?updated=true';
             } else {
                 const text = await res.text();
                 showError(`Failed to save frame: ${text || 'Please try again.'}`);

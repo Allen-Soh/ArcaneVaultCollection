@@ -480,3 +480,13 @@ Fixed Tickets css styling
 [To Do]
 - Rework dbSeeder
 - Maybe try to deploy
+
+===== DEV LOG (11/8/2026) =====
+[Done]
+- Fixed font colour
+- Fixed some of showoff issues
+
+[To Do]
+- Fix other showoff bugs
+- Rework dbSeeder
+- Maybe try to deploy

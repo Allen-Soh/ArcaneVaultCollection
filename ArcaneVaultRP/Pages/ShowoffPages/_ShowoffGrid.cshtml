@@ -36,10 +36,8 @@
                             }
                         </div>
                     }
-                    @if (!string.IsNullOrEmpty(showoff.EquippedFrameImagePath))
-                    {
-                        <img src="@showoff.EquippedFrameImagePath" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2;" />
-                    }
+                    @* Frames are intentionally not shown on Feed grid cards (ViewShowoff/profile views still show them) — see ShowoffCanvas.renderOverlay in showoffCanvas.js for the shared logic used elsewhere. *@
+                    @* Sticker placement formula (x/y/scale/rotation → left/top/width/rotate) mirrors ShowoffCanvas.renderOverlay() in wwwroot/js/showoffCanvas.js. Keep both in sync if this formula ever changes — cannot be literally shared across C#/JS. *@
                     @foreach (var sticker in showoff.StickerPlacements)
                     {
                         <div style="position:absolute; left:@(sticker.X)%; top:@(sticker.Y)%; width:@(15 * sticker.Scale)%; transform: translate(-50%,-50%) rotate(@(sticker.Rotation)deg); z-index:3; pointer-events:none;">

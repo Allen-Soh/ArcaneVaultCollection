@@ -19,15 +19,6 @@ public class IndexModel : PageModel
     public IList<Category> Categories { get; set; } = default!;
     public IList<CollectionItemCategory> AllItems { get; set; } = default!;
 
-    [BindProperty(SupportsGet = true)]
-    public string? SearchItemName { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public string? SearchCategory { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? SearchCurrentQuantity { get; set; }
-
     public async Task<IActionResult> OnGetAsync()
     {
         if (HttpContext.Session.Get(SessionKeys.LoggedInUser) == null)
@@ -60,44 +51,8 @@ public class IndexModel : PageModel
 
         AllItems = collectionItems.OrderBy(c => c.ItemName).ToList();
 
-        // LINQ — smart search by Item Name
-        if (!string.IsNullOrEmpty(SearchItemName))
-        {
-            SearchItemName = SearchItemName.Trim();
-            if (SearchItemName.Length > 100)
-                SearchItemName = SearchItemName.Substring(0, 100);
-
-            collectionItems = collectionItems
-                .Where(c => c.ItemName != null &&
-                       c.ItemName.Contains(SearchItemName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        // LINQ — smart search by Category (name)
-        if (!string.IsNullOrEmpty(SearchCategory))
-        {
-            SearchCategory = SearchCategory.Trim();
-
-            collectionItems = collectionItems
-                .Where(c =>
-                    (c.CategoryName != null && c.CategoryName.Contains(SearchCategory, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
-
-        // LINQ — filter by Current Quantity
-        if (SearchCurrentQuantity.HasValue)
-        {
-            collectionItems = collectionItems
-                .Where(c => c.CurrentQuantity == SearchCurrentQuantity.Value)
-                .ToList();
-        }
-
-        // LINQ — sort by ItemName ascending
-        collectionItems = collectionItems
-            .OrderBy(c => c.ItemName)
-            .ToList();
-
-        CollectionItem = collectionItems;
+        // Filtering now happens client-side (live, as-you-type) — see applyFilters() in the view.
+        CollectionItem = AllItems;
         return Page();
     }
 

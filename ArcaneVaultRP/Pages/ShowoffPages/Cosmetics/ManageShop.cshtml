@@ -5,6 +5,8 @@
 }
 
 <div class="container mt-4 mb-5">
+    <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
+
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h4 class="fw-bold mb-0">Manage Shop</h4>
         <div class="d-flex align-items-center gap-2">
@@ -139,6 +141,20 @@
     <script>
         const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
         let pendingToggle = null; // { type, code, delist }
+
+        // ── Success confirmation after cosmetic Edit ──
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if ((params.get('updated') || '').toLowerCase() === 'true') {
+                const msg = document.getElementById('actionMessage');
+                msg.textContent = 'Cosmetic updated.';
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 4000);
+                params.delete('updated');
+                const remaining = params.toString();
+                history.replaceState(null, '', window.location.pathname + (remaining ? `?${remaining}` : ''));
+            }
+        })();
 
         function switchType() {
             const type = document.getElementById('typeSelect').value;

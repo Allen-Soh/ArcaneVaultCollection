@@ -559,14 +559,32 @@
             }).join('');
         }
 
+        // ════════════════════════════════════════════════
         // Adds a clear ("×") button to a search input; shows only when it has text.
-        // Dispatches a native 'input' event on clear so existing input listeners re-run automatically.
+        // Wraps the input in its own dedicated box (rather than reusing a shared flex-row
+        // parent that might also contain a <select> etc.), so the button always sits
+        // against the input itself, never a sibling control.
         function enableSearchClear(inputId) {
             const input = document.getElementById(inputId);
-            if (!input) return;
+            if (!input || input.dataset.clearEnabled) return;
 
-            const wrapper = input.parentElement;
-            wrapper.classList.add('search-clear-wrapper');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-clear-wrapper';
+
+            if (input.style.flex) {
+                wrapper.style.flex = input.style.flex;
+                input.style.flex = '';
+            } else {
+                wrapper.style.width = '100%';
+            }
+            if (input.style.minWidth) {
+                wrapper.style.minWidth = input.style.minWidth;
+                input.style.minWidth = '';
+            }
+            input.style.width = '100%';
+
+            input.parentElement.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
 
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -588,6 +606,8 @@
                 toggleBtn();
                 input.focus();
             });
+
+            input.dataset.clearEnabled = 'true';
         }
 
         enableSearchClear('nameInput');
