@@ -1,4 +1,8 @@
-﻿using System.Net;
+﻿//Name: Allen Soh Jun Hong
+//AdminNo: 241309M
+//Tut Group: IT2814 07
+
+using System.Net;
 using System.Net.Mail;
 
 namespace ArcaneVaultAPI.Services

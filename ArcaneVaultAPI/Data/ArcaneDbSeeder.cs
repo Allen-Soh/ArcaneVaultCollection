@@ -1,3 +1,7 @@
+//Name: Allen Soh Jun Hong
+//AdminNo: 241309M
+//Tut Group: IT2814 07
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 

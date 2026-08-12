@@ -1,4 +1,8 @@
-﻿namespace ArcaneVaultRP.Models
+﻿//Name: Allen Soh Jun Hong
+//AdminNo: 241309M
+//Tut Group: IT2814 07
+
+namespace ArcaneVaultRP.Models
 {
     public class Frame
     {

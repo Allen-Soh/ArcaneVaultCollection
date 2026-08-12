@@ -498,3 +498,10 @@ Fixed Tickets css styling
 
 [To Do]
 - Try to make it be able to deploy in IIS
+
+===== DEV LOG (12/8/2026)  - Part 2=====
+[Done]
+- Added name, adminno & module tutorial grp
+
+[To Do]
+- Locate and fix Report error

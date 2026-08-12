@@ -1,4 +1,8 @@
-﻿using CloudinaryDotNet;
+﻿//Name: Allen Soh Jun Hong
+//AdminNo: 241309M
+//Tut Group: IT2814 07
+
+using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Mvc;
 
