@@ -1,0 +1,63 @@
+@model ArcaneVaultRP.Pages.CollectionItemPages.IndexModel
+
+<div class="border rounded overflow-hidden" style="position:relative;">
+    <div style="overflow-y:auto;">
+        <table class="table mb-0" style="width:100%;">
+            <thead class="table-light" style="position:sticky; top:0; z-index:2;">
+                <tr>
+                    <th style="padding:12px;">Item Name</th>
+                    <th style="padding:12px;">Category</th>
+                    <th style="padding:12px;">Current Quantity</th>
+                    <th style="padding:12px; width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.PagedItems)
+                {
+                    var categoryDisplay = item.CategoryName != null
+                        ? (Model.IsStaff ? $"{Model.Truncate(item.CategoryName)} ({item.CategoryCode})" : Model.Truncate(item.CategoryName))
+                        : "No Category";
+
+                    <tr style="border-top:1px solid var(--border-color);">
+                        <td style="padding:12px;">@Model.Truncate(item.ItemName)</td>
+                        <td style="padding:12px;">@categoryDisplay</td>
+                        <td style="padding:12px;">@item.CurrentQuantity</td>
+                        <td style="padding:12px; white-space:nowrap;">
+                            <div class="d-inline-flex gap-1">
+                                <a href="/CollectionItemPages/Edit?itemid=@item.ItemId" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="/CollectionItemPages/Details?itemid=@item.ItemId" class="btn btn-info btn-sm">View</a>
+                                <a href="/CollectionItemPages/Delete?itemid=@item.ItemId" class="btn btn-danger btn-sm">Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (!Model.PagedItems.Any())
+    {
+        <div class="text-center text-muted py-4">
+            No items match your search.
+        </div>
+    }
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-2">
+        <ul class="pagination justify-content-center gap-2">
+            @if (Model.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link ajax-page-link pagination-box" href="#" data-page="@(Model.CurrentPage - 1)">&lt;</a>
+                </li>
+            }
+            @if (Model.CurrentPage < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link ajax-page-link pagination-box" href="#" data-page="@(Model.CurrentPage + 1)">&gt;</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

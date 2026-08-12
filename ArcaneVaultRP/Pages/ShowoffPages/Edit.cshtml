@@ -393,7 +393,7 @@
                 }
             }
 
-            window.addEventListener('DOMContentLoaded', () => {
+            window.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('showoffName').value = existingShowoff.ShowoffName || '';
                 document.getElementById('showoffDescription').value = existingShowoff.Description || '';
                 document.getElementById('bgColor').value = existingShowoff.BackgroundColor || '#1c2128';
@@ -435,7 +435,7 @@
                     rotation: p.Rotation
                 }));
 
-                loadOwnedCosmetics();
+                await loadOwnedCosmetics();
 
                 if (selectedItems.length === 0) {
                     addItemSlot();
@@ -790,9 +790,9 @@
                 ShowoffCanvas.applyBackground(fullCanvas, bgData);
 
                 // Generate canvas cells + overlay html via the shared renderer (same logic ViewShowoff
-                // and Create.cshtml use) — always exactly 3 slots here, null ones render as "+" placeholders.
-                const itemSlots = [selectedItems[0] || null, selectedItems[1] || null, selectedItems[2] || null];
-                const cellsHtml = ShowoffCanvas.renderItemCells(itemSlots, isLandscape ? 'Landscape' : 'Portrait');
+                // and Create.cshtml use) — only active (filled) items, matching ViewShowoff's layout.
+                const activeCanvasItems = selectedItems.filter(i => i.itemId !== null);
+                const cellsHtml = ShowoffCanvas.renderItemCells(activeCanvasItems, isLandscape ? 'Landscape' : 'Portrait');
                 const equippedFrame = equippedFrameCode ? ownedFrames.find(f => f.code === equippedFrameCode) : null;
                 const overlayHtml = ShowoffCanvas.renderOverlay(
                     equippedFrame?.imagePath || null,

@@ -20,15 +20,22 @@
         </div>
     </div>
 
+    <!-- Name search -->
+    <div class="mb-3 position-relative" style="max-width:320px;">
+        <input type="text" id="cosmeticNameSearch" class="form-control form-control-sm"
+               placeholder="Search by name..." autocomplete="off" oninput="applyNameFilter()" />
+    </div>
+
     <!-- Sticker list -->
     <div id="stickerList">
         @if (!Model.AllStickers.Any())
         {
             <div class="text-center text-muted py-4">No stickers yet.</div>
         }
+        <div id="stickerSearchEmpty" style="display:none;" class="text-center text-muted py-4">No stickers match your search.</div>
         @foreach (var sticker in Model.AllStickers)
         {
-            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" style="@(sticker.IsDelisted ? "opacity:0.55;" : "")">
+            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" data-name="@sticker.StickerName" style="@(sticker.IsDelisted ? "opacity:0.55;" : "")">
                 <div style="width:56px;height:56px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:8px;">
                     @if (!string.IsNullOrEmpty(sticker.ImagePath))
                     {
@@ -74,9 +81,10 @@
         {
             <div class="text-center text-muted py-4">No frames yet.</div>
         }
+        <div id="frameSearchEmpty" style="display:none;" class="text-center text-muted py-4">No frames match your search.</div>
         @foreach (var frame in Model.AllFrames)
         {
-            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" style="@(frame.IsDelisted ? "opacity:0.55;" : "")">
+            <div class="card mb-2 p-2 d-flex flex-row align-items-center gap-3" data-name="@frame.FrameName" style="@(frame.IsDelisted ? "opacity:0.55;" : "")">
                 <div style="width:56px;height:56px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border-radius:8px;">
                     @if (!string.IsNullOrEmpty(frame.ImagePath))
                     {
@@ -165,6 +173,61 @@
                 : '/ShowoffPages/Cosmetics/CreateSticker';
         }
 
+        // ── Name search (live filter over the server-rendered cards) ──
+        function applyNameFilter() {
+            const query = document.getElementById('cosmeticNameSearch').value.trim().toLowerCase();
+
+            ['stickerList', 'frameList'].forEach(listId => {
+                const cards = document.querySelectorAll(`#${listId} .card[data-name]`);
+                let visibleCount = 0;
+                cards.forEach(card => {
+                    const match = !query || card.dataset.name.toLowerCase().includes(query);
+                    card.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+
+                const emptyEl = document.getElementById(`${listId === 'stickerList' ? 'sticker' : 'frame'}SearchEmpty`);
+                emptyEl.style.display = (query && cards.length > 0 && visibleCount === 0) ? 'block' : 'none';
+            });
+        }
+
+        // Adds a clear ("×") button to a search input; shows only when it has text.
+        function enableSearchClear(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input || input.dataset.clearEnabled) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-clear-wrapper';
+            wrapper.style.width = '100%';
+            input.style.width = '100%';
+
+            input.parentElement.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-clear-btn';
+            btn.innerHTML = '&times;';
+            btn.setAttribute('aria-label', 'Clear search');
+            wrapper.appendChild(btn);
+
+            function toggleBtn() {
+                btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', toggleBtn);
+            toggleBtn();
+
+            btn.addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                toggleBtn();
+                input.focus();
+            });
+
+            input.dataset.clearEnabled = 'true';
+        }
+
         function confirmToggle(type, code, name, delist) {
             pendingToggle = { type, code, delist };
             document.getElementById('toggleConfirmTitle').textContent = delist ? 'Delist item' : 'Relist item';
@@ -195,5 +258,7 @@
                 alert('Failed to update item. Please try again.');
             }
         }
+
+        enableSearchClear('cosmeticNameSearch');
     </script>
 }

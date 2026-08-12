@@ -77,7 +77,7 @@ window.ShowoffCanvas = (function () {
                      onpointerdown="ShowoffCanvas.activeController.onStickerPointerDown(event, ${idx})">
                     <img src="${s.imagePath}" style="width:100%; display:block; pointer-events:none;" draggable="false" />
                     ${selected ? `
-                        <div class="sticker-handle sticker-delete" onclick="ShowoffCanvas.activeController.removeSticker(${idx})" title="Delete">&times;</div>
+                        <div class="sticker-handle sticker-delete" onpointerdown="event.stopPropagation()" onclick="ShowoffCanvas.activeController.removeSticker(${idx})" title="Delete">&times;</div>
                         <div class="sticker-handle sticker-rotate" onpointerdown="ShowoffCanvas.activeController.onRotateHandleDown(event, ${idx})" title="Rotate"><i class="bi bi-arrow-clockwise"></i></div>
                         <div class="sticker-handle sticker-resize" onpointerdown="ShowoffCanvas.activeController.onResizeHandleDown(event, ${idx})" title="Resize"></div>
                     ` : ''}

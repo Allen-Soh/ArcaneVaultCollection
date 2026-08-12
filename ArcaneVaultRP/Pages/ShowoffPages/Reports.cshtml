@@ -443,43 +443,67 @@
             updateIndicator();
         }
 
-        // View showoff in modal
+        // View showoff in modal — uses the shared ShowoffCanvas renderer (same as Index.cshtml's
+        // Feed viewer) so the full current visual (background image, frame, stickers) always shows,
+        // not just a flat background color + bare item images.
         async function viewShowoff(showoffId) {
             const res = await fetch(`${apiBase}/Showoff/${showoffId}`);
             if (!res.ok) { alert('Could not load showoff.'); return; }
             const showoff = await res.json();
 
             document.getElementById('viewShowoffName').textContent = showoff.showoffName || showoff.ShowoffName;
-            const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
-            const items = showoff.items || showoff.Items || [];
 
-            const itemCount = items.length;
-            const imageSize = itemCount === 1 ? 260 : itemCount === 2 ? 190 : 140;
-            const cellWidth = itemCount === 1 ? 280 : itemCount === 2 ? 210 : 160;
+            const bgColor = showoff.backgroundColor || showoff.BackgroundColor;
+            const bgImagePath = showoff.backgroundImagePath || showoff.BackgroundImagePath;
+            const items = showoff.items || showoff.Items || [];
+            const orientation = showoff.orientation || showoff.Orientation || 'Landscape';
+            const equippedFrameImagePath = showoff.equippedFrameImagePath || showoff.EquippedFrameImagePath;
+            const stickerPlacements = showoff.stickerPlacements || showoff.StickerPlacements || [];
+
+            const normalizedItems = items.map(item => ({
+                imagePath: item.imagePath || item.ImagePath,
+                itemName: item.itemName || item.ItemName
+            }));
+            const normalizedStickers = stickerPlacements.map(s => ({
+                x: s.x ?? s.X,
+                y: s.y ?? s.Y,
+                scale: s.scale ?? s.Scale ?? 1,
+                rotation: s.rotation ?? s.Rotation ?? 0,
+                imagePath: s.imagePath || s.ImagePath
+            }));
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex flex-column align-items-center w-100';
+
+            const canvas = document.createElement('div');
+            canvas.className = 'rounded-3 shadow-lg mx-auto';
+            canvas.style.width = '100%';
+            canvas.style.maxWidth = '640px';
+            canvas.style.aspectRatio = orientation === 'Portrait' ? '9/16' : '16/9';
+            canvas.style.display = 'flex';
+            canvas.style.alignItems = 'stretch';
+            canvas.style.overflow = 'hidden';
+            canvas.style.position = 'relative';
+
+            ShowoffCanvas.renderCanvas(canvas, {
+                items: normalizedItems,
+                orientation,
+                backgroundColor: bgColor,
+                backgroundImagePath: bgImagePath,
+                frameImagePath: equippedFrameImagePath,
+                stickers: normalizedStickers,
+                editable: false
+            });
+            wrapper.appendChild(canvas);
+
+            const ownerLine = document.createElement('div');
+            ownerLine.className = 'mt-3 text-center';
+            ownerLine.innerHTML = `<span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>`;
+            wrapper.appendChild(ownerLine);
 
             const body = document.getElementById('viewShowoffBody');
-            body.innerHTML = `
-                                <div class="rounded-3 p-4 d-flex flex-column align-items-center justify-content-center w-100 h-100"
-                                     style="background-color:${bgColor}; min-height:60vh;">
-                                    <div class="d-flex justify-content-center align-items-start flex-wrap gap-4 w-100">
-                                        ${items.map(item => {
-                const imgPath = item.imagePath || item.ImagePath;
-                const itemName = item.itemName || item.ItemName;
-                const catName = item.categoryName || item.CategoryName;
-                return `
-                                                <div class="text-center d-flex flex-column align-items-center" style="width:${cellWidth}px;">
-                                                    ${imgPath
-                        ? `<img src="${imgPath}" style="width:${imageSize}px;height:${imageSize}px;object-fit:cover;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />`
-                        : `<div style="width:${imageSize}px;height:${imageSize}px;background:rgba(255,255,255,0.3);border-radius:14px;"></div>`}
-                                                    <div class="mt-3 fw-bold fs-5 text-center" style="width:100%;word-wrap:break-word;">${itemName || ''}</div>
-                                                    ${catName ? `<div class="text-muted fs-6 text-center" style="width:100%;word-wrap:break-word;">${catName}</div>` : ''}
-                                                </div>`;
-            }).join('')}
-                                    </div>
-                                    <div class="mt-4 text-center">
-                                        <span class="text-muted fs-6">By <strong>${showoff.userName || showoff.UserName}</strong></span>
-                                    </div>
-                                </div>`;
+            body.innerHTML = '';
+            body.appendChild(wrapper);
 
             new bootstrap.Modal(document.getElementById('viewShowoffModal')).show();
         }

@@ -2,93 +2,80 @@
 @model ArcaneVaultRP.Pages.CollectionItemPages.IndexModel
 @{
     ViewData["Title"] = "Collection Items";
-    var isStaff = HttpContext.Session.GetString(SessionKeys.UserRole) == "1";
 }
 
-<h1>Collection Items</h1>
+<div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+    <h1>Collection Items</h1>
+    <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+            data-bs-toggle="collapse" data-bs-target="#itemFiltersPanel"
+            aria-expanded="false" aria-controls="itemFiltersPanel">
+        <i class="bi bi-funnel"></i> Filters
+        <span class="filters-badge" id="itemFiltersBadge" style="display:none;"></span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+</div>
 
 <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
-<div class="row g-2 mb-3">
+<div class="collapse filters-panel" id="itemFiltersPanel">
+    <div class="row g-2 mb-3">
 
-    <!-- Item Name smart search -->
-    <div class="col-md-4 position-relative">
-        <label class="form-label fw-semibold">Item Name</label>
-        <input type="text"
-               id="searchItemName"
-               class="form-control"
-               placeholder="Search by item name..."
-               autocomplete="off"
-               oninput="applyFilters()" />
-        <div id="itemNameSuggestions"
-             class="list-group position-absolute z-3"
-             style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+        <!-- Item Name smart search -->
+        <div class="col-md-4 position-relative">
+            <label class="form-label fw-semibold">Item Name</label>
+            <input type="text"
+                   id="searchItemName"
+                   class="form-control"
+                   placeholder="Search by item name..."
+                   autocomplete="off"
+                   value="@Model.SearchItemName" />
+            <div id="itemNameSuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+        </div>
+
+        <!-- Category smart search dropdown -->
+        <div class="col-md-4 position-relative">
+            <label class="form-label fw-semibold">Category</label>
+            <input type="text"
+                   id="searchCategory"
+                   class="form-control"
+                   placeholder="Click to browse or type to search..."
+                   autocomplete="off"
+                   value="@Model.SearchCategory" />
+            <div id="categorySuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
+        </div>
+
+        <!-- Current Quantity -->
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Current Quantity</label>
+            <input type="number"
+                   id="searchCurrentQuantity"
+                   class="form-control"
+                   min="0"
+                   placeholder="e.g. 3"
+                   value="@Model.SearchCurrentQuantity" />
+        </div>
     </div>
-
-    <!-- Category smart search dropdown -->
-    <div class="col-md-4 position-relative">
-        <label class="form-label fw-semibold">Category</label>
-        <input type="text"
-               id="searchCategory"
-               class="form-control"
-               placeholder="Click to browse or type to search..."
-               autocomplete="off"
-               oninput="applyFilters()" />
-        <div id="categorySuggestions"
-             class="list-group position-absolute z-3"
-             style="width:100%;height:200px;overflow-y:auto;display:none;"></div>
-    </div>
-
-    <!-- Current Quantity -->
-    <div class="col-md-2">
-        <label class="form-label fw-semibold">Current Quantity</label>
-        <input type="number"
-               id="searchCurrentQuantity"
-               class="form-control"
-               min="0"
-               placeholder="e.g. 3"
-               oninput="applyFilters()" />
-    </div>
-
-    <!-- Clear -->
-    <div class="col-md-2 d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-    </div>
-
 </div>
 
 <p>
     <a asp-page="Create" class="btn btn-success">Create New</a>
 </p>
 
-<div class="border rounded overflow-hidden" style="position:relative;">
-    <div id="itemTableWrapper" style="overflow-y:auto;">
-        <table class="table mb-0" style="width:100%;">
-            <thead class="table-light" style="position:sticky; top:0; z-index:2;">
-                <tr>
-                    <th style="padding:12px;">Item Name</th>
-                    <th style="padding:12px;">Category</th>
-                    <th style="padding:12px;">Current Quantity</th>
-                    <th style="padding:12px; width: 1%;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="itemTableBody"></tbody>
-        </table>
-    </div>
-    <div id="tableEmpty" style="display:none;" class="text-center text-muted py-4">
-        No items match your search.
-    </div>
-</div>
-<div class="d-flex justify-content-between mt-2 mb-4" id="itemTableIndicatorRow">
-    <p class="text-muted mb-0" id="itemScrollIndicator" style="font-size:12px;"></p>
-    <p class="text-muted mb-0" id="itemScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+<div id="itemTableContainer">
+    @await Html.PartialAsync("_CollectionItemTable", Model)
 </div>
 
 @section Scripts {
     <script>
+        // Full item/category lists — power the name/category suggestion dropdowns only (actual
+        // filtering/paging happens server-side via the Filter handler, same pattern as the Showoff feed).
         const allItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllItems));
         const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
-        const isStaff = @isStaff.ToString().ToLower();
+        const isStaff = @Model.IsStaff.ToString().ToLower();
 
         // ── Success confirmation after Create/Edit ──
         (function () {
@@ -119,6 +106,65 @@
                 : truncate(cat.CategoryName);
         }
 
+        // ── AJAX Filtering (no page reload) — mirrors the Showoff feed's refreshGrid() pattern ──
+        let currentFilters = {
+            searchItemName: '@Model.SearchItemName' || '',
+            searchCategory: '@Model.SearchCategory' || '',
+            searchCurrentQuantity: '@Model.SearchCurrentQuantity' || '',
+            page: 1
+        };
+
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
+        async function refreshTable(newFilters = {}) {
+            Object.assign(currentFilters, newFilters);
+
+            updateFiltersBadge('itemFiltersBadge',
+                (currentFilters.searchItemName ? 1 : 0) +
+                (currentFilters.searchCategory ? 1 : 0) +
+                (currentFilters.searchCurrentQuantity !== '' ? 1 : 0));
+
+            const params = new URLSearchParams({
+                page: currentFilters.page,
+                searchItemName: currentFilters.searchItemName,
+                searchCategory: currentFilters.searchCategory,
+                searchCurrentQuantity: currentFilters.searchCurrentQuantity
+            });
+
+            const res = await fetch(`?handler=Filter&${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (!res.ok) {
+                console.error('Failed to refresh item table');
+                return;
+            }
+
+            const html = await res.text();
+            document.getElementById('itemTableContainer').innerHTML = html;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('page', currentFilters.page);
+            currentFilters.searchItemName ? urlParams.set('searchItemName', currentFilters.searchItemName) : urlParams.delete('searchItemName');
+            currentFilters.searchCategory ? urlParams.set('searchCategory', currentFilters.searchCategory) : urlParams.delete('searchCategory');
+            currentFilters.searchCurrentQuantity !== '' ? urlParams.set('searchCurrentQuantity', currentFilters.searchCurrentQuantity) : urlParams.delete('searchCurrentQuantity');
+            history.replaceState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+        }
+
+        // Pagination — delegated on `document`, scoped to #itemTableContainer.
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.ajax-page-link');
+            if (!link) return;
+            if (!link.closest('#itemTableContainer')) return;
+            e.preventDefault();
+            refreshTable({ page: parseInt(link.dataset.page) });
+        });
+
         // ── Item Name smart search ──
         const searchItemName = document.getElementById('searchItemName');
         const itemNameSuggestions = document.getElementById('itemNameSuggestions');
@@ -141,7 +187,7 @@
                     e.preventDefault();
                     searchItemName.value = name;
                     itemNameSuggestions.style.display = 'none';
-                    applyFilters();
+                    refreshTable({ searchItemName: name, page: 1 });
                 });
                 itemNameSuggestions.appendChild(item);
             });
@@ -162,14 +208,28 @@
                     .map(item => item.ItemName)
                     .filter((name, index, self) => self.indexOf(name) === index);
                 renderItemNames(allNames);
-                return;
+            } else {
+                const matches = allItems
+                    .filter(item => item.ItemName && item.ItemName.toLowerCase().includes(query))
+                    .map(item => item.ItemName)
+                    .filter((name, index, self) => self.indexOf(name) === index)
+                    .slice(0, 5);
+                renderItemNames(matches);
             }
-            const matches = allItems
-                .filter(item => item.ItemName && item.ItemName.toLowerCase().includes(query))
-                .map(item => item.ItemName)
-                .filter((name, index, self) => self.indexOf(name) === index)
-                .slice(0, 5);
-            renderItemNames(matches);
+
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => {
+                refreshTable({ searchItemName: this.value.trim(), page: 1 });
+            }, 500);
+        });
+
+        searchItemName.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(this._searchTimer);
+                itemNameSuggestions.style.display = 'none';
+                refreshTable({ searchItemName: this.value.trim(), page: 1 });
+            }
         });
 
         // ── Category smart search ──
@@ -194,31 +254,43 @@
                     e.preventDefault();
                     searchCategory.value = cat.CategoryName;
                     categorySuggestions.style.display = 'none';
-                    applyFilters();
+                    refreshTable({ searchCategory: cat.CategoryName, page: 1 });
                 });
                 categorySuggestions.appendChild(item);
             });
         }
 
-        // Show all on focus
         searchCategory.addEventListener('focus', function () {
             renderCategories(categories);
             categorySuggestions.style.display = 'block';
         });
 
-        // Filter on input
         searchCategory.addEventListener('input', function () {
             const query = this.value.trim().toLowerCase();
             if (query.length === 0) {
                 renderCategories(categories);
-                return;
+            } else {
+                const filtered = categories.filter(c => {
+                    const nameMatch = c.CategoryName && c.CategoryName.toLowerCase().includes(query);
+                    const codeMatch = isStaff && c.CategoryCode && c.CategoryCode.toLowerCase().includes(query);
+                    return nameMatch || codeMatch;
+                });
+                renderCategories(filtered);
             }
-            const filtered = categories.filter(c => {
-                const nameMatch = c.CategoryName && c.CategoryName.toLowerCase().includes(query);
-                const codeMatch = isStaff && c.CategoryCode && c.CategoryCode.toLowerCase().includes(query);
-                return nameMatch || codeMatch;
-            });
-            renderCategories(filtered);
+
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => {
+                refreshTable({ searchCategory: this.value.trim(), page: 1 });
+            }, 500);
+        });
+
+        searchCategory.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(this._searchTimer);
+                categorySuggestions.style.display = 'none';
+                refreshTable({ searchCategory: this.value.trim(), page: 1 });
+            }
         });
 
         // Close on outside click
@@ -231,122 +303,14 @@
             }
         });
 
-        // ── Virtual Scroll Table Implementation (Copied from Insights) ──
-        const ROW_HEIGHT = 60;
-        const BUFFER = 5;
-        const THRESHOLD = 7;
-
-        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
-            const wrapper = document.getElementById(wrapperId);
-            const tbody = document.getElementById(tbodyId);
-            if (!wrapper || !tbody) return;
-
-            if (data.length <= THRESHOLD) {
-                wrapper.style.height = '';
-                wrapper.style.maxHeight = '';
-                wrapper.onscroll = null;
-                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
-                return;
-            }
-
-            const visibleHeight = ROW_HEIGHT * THRESHOLD + 18;
-            wrapper.style.height = `${visibleHeight}px`;
-            wrapper.style.maxHeight = `${visibleHeight}px`;
-            wrapper.style.overflowY = 'auto';
-
-            function render() {
-                const scrollTop = wrapper.scrollTop;
-                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
-                const endIdx = Math.min(
-                    data.length,
-                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
-                );
-
-                const topPad = startIdx * ROW_HEIGHT;
-                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
-
-                const topSpacer = topPad > 0
-                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
-                    : '';
-                const bottomSpacer = bottomPad > 0
-                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
-                    : '';
-
-                tbody.innerHTML =
-                    topSpacer +
-                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
-                    bottomSpacer;
-            }
-
-            let ticking = false;
-            wrapper.onscroll = () => {
-                if (!ticking) {
-                    requestAnimationFrame(() => { render(); ticking = false; });
-                    ticking = true;
-                }
-            };
-
-            wrapper.scrollTop = 0;
-            render();
-        }
-
-        function renderTable(data) {
-            const empty = document.getElementById('tableEmpty');
-            const wrapper = document.getElementById('itemTableWrapper');
-            const indicatorRow = document.getElementById('itemTableIndicatorRow');
-            const moreText = document.getElementById('itemScrollMoreText');
-
-            if (data.length === 0) {
-                empty.style.display = 'block';
-                document.getElementById('itemTableBody').innerHTML = '';
-                wrapper.style.height = '';
-                wrapper.style.maxHeight = '';
-                wrapper.onscroll = null;
-                indicatorRow.style.display = 'none';
-                return;
-            }
-
-            empty.style.display = 'none';
-            indicatorRow.style.removeProperty('display');
-            moreText.style.display = data.length > THRESHOLD ? 'block' : 'none';
-
-            function updateIndicator() {
-                const scrollTop = wrapper.scrollTop;
-                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
-                const visEnd = Math.min(data.length, visStart + THRESHOLD - 2);
-                document.getElementById('itemScrollIndicator').textContent =
-                    data.length > THRESHOLD
-                        ? `Showing ${visStart}–${visEnd} of ${data.length}`
-                        : `${data.length} item${data.length === 1 ? '' : 's'}`;
-            }
-
-            wrapper.removeEventListener('scroll', updateIndicator);
-            wrapper.addEventListener('scroll', updateIndicator);
-
-            createVirtualTable('itemTableWrapper', 'itemTableBody', data, (item, idx) => {
-                const border = idx > 0 ? 'border-top:1px solid var(--border-color);' : '';
-                const categoryDisplay = item.CategoryName != null
-                    ? (isStaff
-                        ? truncate(item.CategoryName) + " (" + item.CategoryCode + ")"
-                        : truncate(item.CategoryName))
-                    : "No Category";
-
-                return `
-                            <tr style="${border}height:${ROW_HEIGHT}px;">
-                                <td style="padding:12px;">${truncate(item.ItemName)}</td>
-                                <td style="padding:12px;">${categoryDisplay}</td>
-                                <td style="padding:12px;">${item.CurrentQuantity}</td>
-                                <td style="padding:12px; white-space:nowrap;">
-                                    <div class="d-inline-flex gap-1">
-                                        <a href="/CollectionItemPages/Edit?itemid=${item.ItemId}" class="btn btn-warning btn-sm">Edit</a>
-                                        <a href="/CollectionItemPages/Details?itemid=${item.ItemId}" class="btn btn-info btn-sm">View</a>
-                                        <a href="/CollectionItemPages/Delete?itemid=${item.ItemId}" class="btn btn-danger btn-sm">Delete</a>
-                                    </div>
-                                </td>
-                            </tr>`;
-            });
-            updateIndicator();
-        }
+        // ── Current Quantity — live, debounced ──
+        const searchCurrentQuantity = document.getElementById('searchCurrentQuantity');
+        searchCurrentQuantity.addEventListener('input', function () {
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => {
+                refreshTable({ searchCurrentQuantity: this.value, page: 1 });
+            }, 500);
+        });
 
         // Adds a clear ("×") button to a search input; shows only when it has text.
         // Wraps the input in its own dedicated box (rather than reusing input.parentElement,
@@ -388,31 +352,6 @@
             input.dataset.clearEnabled = 'true';
         }
 
-        // ── Live filtering (Item Name / Category / Current Quantity) ──
-        function applyFilters() {
-            const nameQuery = searchItemName.value.trim().toLowerCase();
-            const categoryQuery = searchCategory.value.trim().toLowerCase();
-            const qtyRaw = document.getElementById('searchCurrentQuantity').value;
-            const qty = qtyRaw === '' ? null : parseInt(qtyRaw, 10);
-
-            const filtered = allItems.filter(item => {
-                const nameMatch = !nameQuery || (item.ItemName && item.ItemName.toLowerCase().includes(nameQuery));
-                const categoryMatch = !categoryQuery || (item.CategoryName && item.CategoryName.toLowerCase().includes(categoryQuery));
-                const qtyMatch = qty === null || item.CurrentQuantity === qty;
-                return nameMatch && categoryMatch && qtyMatch;
-            });
-
-            renderTable(filtered);
-        }
-
-        function clearFilters() {
-            searchItemName.value = '';
-            searchCategory.value = '';
-            document.getElementById('searchCurrentQuantity').value = '';
-            searchItemName.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-
-        applyFilters();
         enableSearchClear('searchItemName');
         enableSearchClear('searchCategory');
     </script>

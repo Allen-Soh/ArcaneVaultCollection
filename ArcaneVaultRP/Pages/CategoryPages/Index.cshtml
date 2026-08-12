@@ -4,26 +4,34 @@
     ViewData["Title"] = "Categories";
 }
 
-<h1>Categories</h1>
+<div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+    <h1>Categories</h1>
+    <button class="btn btn-outline-secondary btn-sm filters-toggle-btn" type="button"
+            data-bs-toggle="collapse" data-bs-target="#categoryFiltersPanel"
+            aria-expanded="false" aria-controls="categoryFiltersPanel">
+        <i class="bi bi-funnel"></i> Filters
+        <span class="filters-badge" id="categoryFiltersBadge" style="display:none;"></span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+</div>
 
 <div id="actionMessage" class="alert alert-success" style="display:none;"></div>
 
 <!-- Search -->
-<div class="row g-2 mb-3">
-    <div class="col-md-6 position-relative">
-        <label class="form-label fw-semibold">Category Name</label>
-        <input type="text"
-               id="searchCategoryName"
-               class="form-control"
-               placeholder="Search by category name..."
-               autocomplete="off" />
-        <div id="categoryNameSuggestions"
-             class="list-group position-absolute z-3"
-             style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
-    </div>
-
-    <div class="col-md-2 d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+<div class="collapse filters-panel" id="categoryFiltersPanel">
+    <div class="row g-2 mb-3">
+        <div class="col-md-6 position-relative">
+            <label class="form-label fw-semibold">Category Name</label>
+            <input type="text"
+                   id="searchCategoryName"
+                   class="form-control"
+                   placeholder="Search by category name..."
+                   autocomplete="off"
+                   value="@Model.SearchCategoryName" />
+            <div id="categoryNameSuggestions"
+                 class="list-group position-absolute z-3"
+                 style="width:100%;max-height:200px;overflow-y:auto;display:none;"></div>
+        </div>
     </div>
 </div>
 
@@ -31,32 +39,15 @@
     <a asp-page="Create" class="btn btn-success">Create New</a>
 </p>
 
-<div class="border rounded overflow-hidden" style="position:relative;">
-    <div id="categoryTableWrapper" style="overflow-y:auto;">
-        <table class="table mb-0" style="width:100%;">
-            <thead class="table-light" style="position:sticky; top:0; z-index:2;">
-                <tr>
-                    <th style="padding:12px;">Category Code</th>
-                    <th style="padding:12px;">Category Name</th>
-                    <th style="padding:12px; width: 1%;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="categoryTableBody"></tbody>
-        </table>
-    </div>
-    <div id="tableEmpty" style="display:none;" class="text-center text-muted py-4">
-        No categories match your search.
-    </div>
-</div>
-<div class="d-flex justify-content-between mt-2 mb-4" id="categoryTableIndicatorRow">
-    <p class="text-muted mb-0" id="categoryScrollIndicator" style="font-size:12px;"></p>
-    <p class="text-muted mb-0" id="categoryScrollMoreText" style="font-size:12px;">Scroll to load more</p>
+<div id="categoryTableContainer">
+    @await Html.PartialAsync("_CategoryTable", Model)
 </div>
 
 @section Scripts {
     <script>
-        // FIXED — named consistently as categories
-        const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Category));
+        // Full category list — powers the name-suggestion dropdown only (actual filtering/paging
+        // happens server-side via the Filter handler, same pattern as the Showoff feed).
+        const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllCategories));
 
         // ── Success confirmation after Create/Edit ──
         (function () {
@@ -81,22 +72,61 @@
             return text.length <= 40 ? text : text.substring(0, 40) + '...';
         }
 
+        // ── AJAX Filtering (no page reload) — mirrors the Showoff feed's refreshGrid() pattern ──
+        let currentFilters = {
+            searchCategoryName: '@Model.SearchCategoryName' || '',
+            page: 1
+        };
+
+        function updateFiltersBadge(badgeId, activeCount) {
+            const badge = document.getElementById(badgeId);
+            if (!badge) return;
+            badge.textContent = activeCount;
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+
+        async function refreshTable(newFilters = {}) {
+            Object.assign(currentFilters, newFilters);
+
+            updateFiltersBadge('categoryFiltersBadge', currentFilters.searchCategoryName ? 1 : 0);
+
+            const params = new URLSearchParams({
+                page: currentFilters.page,
+                searchCategoryName: currentFilters.searchCategoryName
+            });
+
+            const res = await fetch(`?handler=Filter&${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (!res.ok) {
+                console.error('Failed to refresh category table');
+                return;
+            }
+
+            const html = await res.text();
+            document.getElementById('categoryTableContainer').innerHTML = html;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('page', currentFilters.page);
+            currentFilters.searchCategoryName ? urlParams.set('searchCategoryName', currentFilters.searchCategoryName) : urlParams.delete('searchCategoryName');
+            history.replaceState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+        }
+
+        // Pagination — delegated on `document`, scoped to #categoryTableContainer.
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.ajax-page-link');
+            if (!link) return;
+            if (!link.closest('#categoryTableContainer')) return;
+            e.preventDefault();
+            refreshTable({ page: parseInt(link.dataset.page) });
+        });
+
         const searchCategoryName = document.getElementById('searchCategoryName');
         const categoryNameSuggestions = document.getElementById('categoryNameSuggestions');
 
-        searchCategoryName.addEventListener('input', function () {
-            applyFilters();
-
-            const query = this.value.trim().toLowerCase();
+        function renderCategorySuggestions(query) {
             categoryNameSuggestions.innerHTML = '';
-
-            // Fix — box previously had no default display:none, so it rendered as an empty
-            // bordered box under the input at all times. Now it's hidden whenever there's
-            // no query or no matches, shown only while there are suggestions to display.
-            if (query.length === 0) {
-                categoryNameSuggestions.style.display = 'none';
-                return;
-            }
 
             const matches = categories
                 .filter(c =>
@@ -111,7 +141,6 @@
 
             categoryNameSuggestions.style.display = 'block';
 
-            // FIXED — cat is the object, use cat.CategoryName and cat.CategoryCode
             matches.forEach(cat => {
                 const item = document.createElement('a');
                 item.href = '#';
@@ -119,136 +148,50 @@
                 item.textContent = truncate(cat.CategoryName) + ' (' + cat.CategoryCode + ')';
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
-                    searchCategoryName.value = cat.CategoryName;  // ← assign string not object
+                    searchCategoryName.value = cat.CategoryName;
                     categoryNameSuggestions.innerHTML = '';
                     categoryNameSuggestions.style.display = 'none';
-                    applyFilters();
+                    refreshTable({ searchCategoryName: cat.CategoryName, page: 1 });
                 });
                 categoryNameSuggestions.appendChild(item);
             });
+        }
+
+        searchCategoryName.addEventListener('focus', function () {
+            renderCategorySuggestions(this.value.trim().toLowerCase());
+        });
+
+        searchCategoryName.addEventListener('input', function () {
+            const query = this.value.trim();
+            if (query.length === 0) {
+                categoryNameSuggestions.style.display = 'none';
+            } else {
+                renderCategorySuggestions(query.toLowerCase());
+            }
+
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => {
+                refreshTable({ searchCategoryName: query, page: 1 });
+            }, 500);
+        });
+
+        searchCategoryName.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(this._searchTimer);
+                categoryNameSuggestions.style.display = 'none';
+                refreshTable({ searchCategoryName: this.value.trim(), page: 1 });
+            }
         });
 
         document.addEventListener('click', function (e) {
-            if (!searchCategoryName.contains(e.target)) {
+            if (!searchCategoryName.contains(e.target) && !categoryNameSuggestions.contains(e.target)) {
                 categoryNameSuggestions.innerHTML = '';
                 categoryNameSuggestions.style.display = 'none';
             }
         });
 
-        // ── Virtual Scroll Table Implementation (Copied from Insights) ──
-        const ROW_HEIGHT = 60;
-        const BUFFER = 5;
-        const THRESHOLD = 7;
-
-        function createVirtualTable(wrapperId, tbodyId, data, renderRowFn) {
-            const wrapper = document.getElementById(wrapperId);
-            const tbody = document.getElementById(tbodyId);
-            if (!wrapper || !tbody) return;
-
-            if (data.length <= THRESHOLD) {
-                wrapper.style.height = '';
-                wrapper.style.maxHeight = '';
-                wrapper.onscroll = null;
-                tbody.innerHTML = data.map((row, i) => renderRowFn(row, i)).join('');
-                return;
-            }
-
-            const visibleHeight = ROW_HEIGHT * THRESHOLD + 15;
-            wrapper.style.height = `${visibleHeight}px`;
-            wrapper.style.maxHeight = `${visibleHeight}px`;
-            wrapper.style.overflowY = 'auto';
-
-            function render() {
-                const scrollTop = wrapper.scrollTop;
-                const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
-                const endIdx = Math.min(
-                    data.length,
-                    Math.ceil((scrollTop + visibleHeight) / ROW_HEIGHT) + BUFFER
-                );
-
-                const topPad = startIdx * ROW_HEIGHT;
-                const bottomPad = (data.length - endIdx) * ROW_HEIGHT;
-
-                const topSpacer = topPad > 0
-                    ? `<tr style="height:${topPad}px;"><td colspan="10"></td></tr>`
-                    : '';
-                const bottomSpacer = bottomPad > 0
-                    ? `<tr style="height:${bottomPad}px;"><td colspan="10"></td></tr>`
-                    : '';
-
-                tbody.innerHTML =
-                    topSpacer +
-                    data.slice(startIdx, endIdx).map((row, i) => renderRowFn(row, startIdx + i)).join('') +
-                    bottomSpacer;
-            }
-
-            let ticking = false;
-            wrapper.onscroll = () => {
-                if (!ticking) {
-                    requestAnimationFrame(() => { render(); ticking = false; });
-                    ticking = true;
-                }
-            };
-
-            wrapper.scrollTop = 0;
-            render();
-        }
-
-        function renderTable(data) {
-            const empty = document.getElementById('tableEmpty');
-            const wrapper = document.getElementById('categoryTableWrapper');
-            const indicatorRow = document.getElementById('categoryTableIndicatorRow');
-            const moreText = document.getElementById('categoryScrollMoreText');
-
-            if (data.length === 0) {
-                empty.style.display = 'block';
-                document.getElementById('categoryTableBody').innerHTML = '';
-                wrapper.style.height = '';
-                wrapper.style.maxHeight = '';
-                wrapper.onscroll = null;
-                indicatorRow.style.display = 'none';
-                return;
-            }
-
-            empty.style.display = 'none';
-            indicatorRow.style.removeProperty('display');
-            moreText.style.display = data.length > THRESHOLD ? 'block' : 'none';
-
-            function updateIndicator() {
-                const scrollTop = wrapper.scrollTop;
-                const visStart = Math.max(1, Math.floor(scrollTop / ROW_HEIGHT) + 1);
-                const visEnd = Math.min(data.length, visStart + THRESHOLD - 2);
-                document.getElementById('categoryScrollIndicator').textContent =
-                    data.length > THRESHOLD
-                        ? `Showing ${visStart}–${visEnd} of ${data.length}`
-                        : `${data.length} categor${data.length === 1 ? 'y' : 'ies'}`;
-            }
-
-            wrapper.removeEventListener('scroll', updateIndicator);
-            wrapper.addEventListener('scroll', updateIndicator);
-
-            createVirtualTable('categoryTableWrapper', 'categoryTableBody', data, (cat, idx) => {
-                const border = idx > 0 ? 'border-top:1px solid var(--border-color);' : '';
-                return `
-                            <tr style="${border}height:${ROW_HEIGHT}px;">
-                                <td style="padding:12px;">${cat.CategoryCode}</td>
-                                <td style="padding:12px;">${truncate(cat.CategoryName)}</td>
-                                <td style="padding:12px; white-space:nowrap;">
-                                    <div class="d-inline-flex gap-1">
-                                        <a href="/CategoryPages/Edit?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-warning btn-sm">Edit</a>
-                                        <a href="/CategoryPages/Details?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-info btn-sm">View</a>
-                                        <a href="/CategoryPages/Delete?categorycode=${encodeURIComponent(cat.CategoryCode)}" class="btn btn-danger btn-sm">Delete</a>
-                                    </div>
-                                </td>
-                            </tr>`;
-            });
-            updateIndicator();
-        }
-
         // Adds a clear ("×") button to a search input; shows only when it has text.
-        // Wraps the input in its own dedicated box (rather than reusing input.parentElement,
-        // which on this page is the whole label+input+suggestions column) so the × is
-        // always centered against the input itself, matching the Insights pages behavior.
         function enableSearchClear(inputId) {
             const input = document.getElementById(inputId);
             if (!input || input.dataset.clearEnabled) return;
@@ -285,21 +228,6 @@
             input.dataset.clearEnabled = 'true';
         }
 
-        // ── Live filtering (Category Name or Code) ──
-        function applyFilters() {
-            const query = searchCategoryName.value.trim().toLowerCase();
-            const filtered = !query ? categories : categories.filter(c =>
-                (c.CategoryName && c.CategoryName.toLowerCase().includes(query)) ||
-                (c.CategoryCode && c.CategoryCode.toLowerCase().includes(query)));
-            renderTable(filtered);
-        }
-
-        function clearFilters() {
-            searchCategoryName.value = '';
-            searchCategoryName.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-
-        applyFilters();
         enableSearchClear('searchCategoryName');
     </script>
 }

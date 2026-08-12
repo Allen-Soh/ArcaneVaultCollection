@@ -490,3 +490,11 @@ Fixed Tickets css styling
 - Fix other showoff bugs
 - Rework dbSeeder
 - Maybe try to deploy
+
+===== DEV LOG (12/8/2026) =====
+[Done]
+- Fixed styling issues
+- Reworked dbseeder to be an updated version
+
+[To Do]
+- Try to make it be able to deploy in IIS
