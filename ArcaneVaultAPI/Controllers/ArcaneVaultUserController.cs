@@ -548,6 +548,12 @@ public class ArcaneVaultUserController : ControllerBase
         var rows = command.ExecuteNonQuery();
 
         if (rows == 0) return NotFound();
+
+        // Coming active picks up whatever reports piled up in the "loading bay" while no
+        // staff were available — see ShowoffReportController.PostReport/AssignPendingReports.
+        if (dto.IsActive)
+            ShowoffReportController.AssignPendingReports(_connectionString);
+
         return NoContent();
     }
 

@@ -505,3 +505,10 @@ Fixed Tickets css styling
 
 [To Do]
 - Locate and fix Report error
+
+===== DEV LOG (14/8/2026) =====
+[Done]
+- Made reports sent to be pending if no staffs are active to receive assignments
+
+[To Do]
+- Think about what to do next

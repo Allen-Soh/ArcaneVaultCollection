@@ -380,7 +380,11 @@ Tut Group: IT2814 07
 
                 // Determine if current staff is assigned (use first report's assignment for the showoff)
                 const isAssigned = group.reports.some(r => r.AssignedStaffUserName === currentStaff);
-                const assignedStaff = group.AssignedStaffUserName || group.reports[0]?.AssignedStaffUserName || 'Unknown';
+                // Empty string = sitting in the "loading bay" (no staff were active when it was
+                // filed) — see ShowoffReportController.PostReport/AssignPendingReports.
+                const rawAssignedStaff = group.AssignedStaffUserName || group.reports[0]?.AssignedStaffUserName || '';
+                const isPending = !rawAssignedStaff;
+                const assignedStaff = isPending ? 'Pending assignment' : rawAssignedStaff;
                 const latestDateStr = group.reports[0]?.CreatedAt
                     ? new Date(group.reports[0].CreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                     : '';
@@ -430,8 +434,8 @@ Tut Group: IT2814 07
                                             <div style="max-height:90px;overflow-y:auto;">
                                                 ${reportsHtml}
                                             </div>
-                                            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
-                                                Assigned to <strong>${assignedStaff}</strong>${latestDateStr ? ` · ${latestDateStr}` : ''}
+                                            <div style="font-size:11px;color:${isPending ? '#ffc107' : 'var(--text-muted)'};margin-top:8px;">
+                                                ${isPending ? '⏳ Waiting for a staff member to become active' : `Assigned to <strong>${assignedStaff}</strong>`}${latestDateStr ? ` · ${latestDateStr}` : ''}
                                             </div>
                                         </td>
                                         <td style="padding:16px;vertical-align:top;text-align:right;">
