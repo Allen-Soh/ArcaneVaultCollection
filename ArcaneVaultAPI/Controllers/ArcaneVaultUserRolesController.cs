@@ -2,6 +2,7 @@
 //AdminNo: 241309M
 //Tut Group: IT2814 07
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ArcaneVaultAPI.Data;
@@ -39,6 +40,7 @@ public class ArcaneVaultUserRolesController : ControllerBase
 
     // PUT: api/ArcaneVaultUserRoles/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [Authorize(Roles = "Staff")]
     [HttpPut("{roleid}")]
     public async Task<IActionResult> PutArcaneVaultUserRoles(int? roleid, ArcaneVaultUserRoles arcanevaultuserroles)
     {
@@ -70,6 +72,7 @@ public class ArcaneVaultUserRolesController : ControllerBase
 
     // POST: api/ArcaneVaultUserRoles
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [Authorize(Roles = "Staff")]
     [HttpPost]
     public async Task<ActionResult<ArcaneVaultUserRoles>> PostArcaneVaultUserRoles(ArcaneVaultUserRoles arcanevaultuserroles)
     {
@@ -80,6 +83,7 @@ public class ArcaneVaultUserRolesController : ControllerBase
     }
 
     // DELETE: api/ArcaneVaultUserRoles/5
+    [Authorize(Roles = "Staff")]
     [HttpDelete("{roleid}")]
     public async Task<IActionResult> DeleteArcaneVaultUserRoles(int? roleid)
     {

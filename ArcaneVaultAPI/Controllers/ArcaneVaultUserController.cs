@@ -5,6 +5,7 @@
 using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.DataTransferObject;
 using ArcaneVaultAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 
@@ -534,6 +535,7 @@ public class ArcaneVaultUserController : ControllerBase
     }
 
     // PATCH: api/ArcaneVaultUser/{username}/active-status — staff only
+    [Authorize(Roles = "Staff")]
     [HttpPatch("{username}/active-status")]
     public IActionResult UpdateActiveStatus(string username, UpdateActiveStatusDTO dto)
     {

@@ -2,6 +2,7 @@
 //AdminNo: 241309M
 //Tut Group: IT2814 07
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.Data;
@@ -363,6 +364,7 @@ public class ShowoffController : ControllerBase
     }
 
     // PUT: api/Showoff/{id}/disable — staff disables a showoff
+    [Authorize(Roles = "Staff")]
     [HttpPut("{id}/disable")]
     public IActionResult DisableShowoff(int id)
     {
@@ -385,6 +387,7 @@ public class ShowoffController : ControllerBase
     }
 
     // PUT: api/Showoff/{id}/enable — staff re-enables a showoff (also serves as "approve appeal")
+    [Authorize(Roles = "Staff")]
     [HttpPut("{id}/enable")]
     public async Task<IActionResult> EnableShowoff(int id, [FromBody] AppealDecisionDTO? dto = null)
     {
@@ -410,6 +413,7 @@ public class ShowoffController : ControllerBase
     }
 
     // PUT: api/Showoff/{id}/deny-appeal — staff keeps a showoff disabled, but formally responds to the appeal
+    [Authorize(Roles = "Staff")]
     [HttpPut("{id}/deny-appeal")]
     public async Task<IActionResult> DenyAppeal(int id, [FromBody] AppealDecisionDTO? dto = null)
     {

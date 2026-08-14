@@ -221,7 +221,8 @@ Tut Group: IT2814 07
         });
 
         const currentUser = '@loggedInUser?.UserName';
-        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
         const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
         const categoriesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories.Select(c => c.CategoryName)));
 

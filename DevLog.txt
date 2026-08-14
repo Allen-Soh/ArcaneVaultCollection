@@ -512,3 +512,10 @@ Fixed Tickets css styling
 
 [To Do]
 - Think about what to do next
+
+===== DEV LOG (15/8/2026) =====
+[Done]
+- Fixed logged in page to show the same page as logged in when link is copied and pasted
+
+[To Do]
+- Think about what else..

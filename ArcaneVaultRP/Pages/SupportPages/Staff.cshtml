@@ -121,7 +121,8 @@ Tut Group: IT2814 07
 
 @section Scripts {
     <script>
-        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
         const currentStaff = '@Model.CurrentStaffUserName';
         const activeTab = '@Model.ActiveTab';
         let allTickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveTab == "my" ? Model.MyTickets : Model.AllTickets));
@@ -322,9 +323,10 @@ Tut Group: IT2814 07
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Sending...`;
 
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
             const res = await fetch(`${apiBase}/SupportTicket/${pendingReplyTicketId}/reply`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
                 body: JSON.stringify({ message })
             });
 
@@ -351,7 +353,11 @@ Tut Group: IT2814 07
         }
 
         async function reopenTicket(ticketId) {
-            const res = await fetch(`${apiBase}/SupportTicket/${ticketId}/unresolve`, { method: 'PATCH' });
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
+            const res = await fetch(`${apiBase}/SupportTicket/${ticketId}/unresolve`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
+            });
 
             if (res.ok) {
                 allTickets.forEach(t => {

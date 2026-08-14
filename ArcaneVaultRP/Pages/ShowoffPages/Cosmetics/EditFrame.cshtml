@@ -137,7 +137,8 @@ Tut Group: IT2814 07
 
 @section Scripts {
     <script>
-        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
         let imagePath = @Html.Raw(string.IsNullOrEmpty(Model.FrameData?.ImagePath) ? "null" : System.Text.Json.JsonSerializer.Serialize(Model.FrameData.ImagePath));
         let imagePublicId = @Html.Raw(string.IsNullOrEmpty(Model.FrameData?.ImagePublicId) ? "null" : System.Text.Json.JsonSerializer.Serialize(Model.FrameData.ImagePublicId));
         let lastImageDims = null;

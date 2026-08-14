@@ -22,10 +22,6 @@ namespace ArcaneVaultAPI.Controllers
         private readonly IEmailService _emailService;
         private readonly ILogger<PaymentController> _logger;
 
-        // Dev-only base URL for the Razor Pages front end — matches the CORS
-        // origin already hardcoded for it in Program.cs.
-        private const string RpBaseUrl = "https://localhost:7051";
-
         public PaymentController(IConfiguration config, IEmailService emailService, ILogger<PaymentController> logger)
         {
             _config = config;
@@ -166,8 +162,8 @@ namespace ArcaneVaultAPI.Controllers
                         }
                     }
                 },
-                SuccessUrl = $"{RpBaseUrl}/PaymentPages/Success?session_id={{CHECKOUT_SESSION_ID}}",
-                CancelUrl = $"{RpBaseUrl}/PaymentPages/Failed",
+                SuccessUrl = $"{_config["RpSettings:BaseUrl"]}/PaymentPages/Success?session_id={{CHECKOUT_SESSION_ID}}",
+                CancelUrl = $"{_config["RpSettings:BaseUrl"]}/PaymentPages/Failed",
                 Metadata = new Dictionary<string, string>
                 {
                     { "UserName", userName },

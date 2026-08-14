@@ -12,7 +12,6 @@ Tut Group: IT2814 07
     var user     = Model.CurrentUser;
     var flag     = ArcaneVaultRP.Helpers.CountryHelper.GetFlag(user.Country ?? "");
     var initial  = user.UserName.Length > 0 ? user.UserName[0].ToString().ToUpper() : "?";
-    var apiBase  = "https://localhost:7040/api";
 }
 
 <div class="container mt-4 animate-fade-in" style="max-width:600px;">
@@ -525,7 +524,8 @@ Tut Group: IT2814 07
 @section Scripts {
 <script>
     // ── Constants ──
-    const apiBase   = '@apiBase';
+    const apiBase   = document.getElementById('apiBaseInput')?.value;
+    if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
     const userName  = '@user.UserName';
     const countries = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllCountries));
     const flagMap   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
@@ -1107,9 +1107,10 @@ Tut Group: IT2814 07
     }
 
     async function toggleStaffActive(isActive) {
+        const jwtToken = document.getElementById('jwtTokenInput')?.value;
         const res = await fetch(`${apiBase}/ArcaneVaultUser/${userName}/active-status`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
             body: JSON.stringify({ IsActive: isActive })
         });
         if (!res.ok) {

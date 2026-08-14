@@ -21,8 +21,11 @@ namespace ArcaneVaultRP
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddTransient<JwtAuthHandler>();
 
+            var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+                ?? throw new InvalidOperationException("ApiSettings:BaseUrl is not configured.");
+
             builder.Services.AddHttpClient("ArcaneVaultAPI",
-                client => { client.BaseAddress = new Uri("https://localhost:7040/api/"); }).AddHttpMessageHandler<JwtAuthHandler>();
+                client => { client.BaseAddress = new Uri(apiBaseUrl.TrimEnd('/') + "/"); }).AddHttpMessageHandler<JwtAuthHandler>();
 
             builder.Services.AddDistributedMemoryCache();
 

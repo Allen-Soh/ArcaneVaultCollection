@@ -76,6 +76,7 @@ public class CategoryController : ControllerBase
     }
 
     // PUT: api/Category/5
+    [Authorize(Roles = "Staff")]
     [HttpPut("{categorycode}")]
     public IActionResult PutCategory(string? categorycode, Category category)
     {
@@ -114,6 +115,7 @@ public class CategoryController : ControllerBase
     }
 
     // POST: api/Category
+    [Authorize(Roles = "Staff")]
     [HttpPost]
     public ActionResult<Category> PostCategory(Category category)
     {
@@ -133,6 +135,7 @@ public class CategoryController : ControllerBase
     }
 
     // DELETE: api/Category/5
+    [Authorize(Roles = "Staff")]
     [HttpDelete("{categorycode}")]
     public IActionResult DeleteCategory(string? categorycode)
     {

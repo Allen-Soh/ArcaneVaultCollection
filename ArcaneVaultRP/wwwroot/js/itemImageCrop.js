@@ -138,8 +138,8 @@ async function saveItemCrop() {
         const formData = new FormData();
         formData.append('file', blob, 'item.jpg');
 
-        const apiBase = document.getElementById('apiBaseInput')?.value
-            || 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
 
         const uploadRes = await fetch(`${apiBase}/ImageUpload`, {
             method: 'POST', body: formData

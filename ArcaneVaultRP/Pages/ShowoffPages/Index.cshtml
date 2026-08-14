@@ -475,7 +475,8 @@ Tut Group: IT2814 07
         // Data from server
         // Fix 5 — normalize currentUser to null when empty, so ownership/like checks behave correctly
         const currentUser = '@loggedInUser?.UserName' === '' ? null : '@loggedInUser?.UserName';
-        const apiBase = 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
         const userCollectionItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserCollectionItems));
 
         const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));

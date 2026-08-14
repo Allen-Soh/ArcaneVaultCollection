@@ -2,6 +2,7 @@
 //AdminNo: 241309M
 //Tut Group: IT2814 07
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.DataTransferObject;
@@ -20,6 +21,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // GET: api/SupportTicket — ALL tickets, unfiltered by staff assignment/active status
+    [Authorize(Roles = "Staff")]
     [HttpGet]
     public ActionResult<IEnumerable<SupportTicketDTO>> GetTickets()
     {
@@ -36,6 +38,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // GET: api/SupportTicket/{id} — for the Review modal
+    [Authorize(Roles = "Staff")]
     [HttpGet("{id}")]
     public ActionResult<SupportTicketDTO> GetTicket(int id)
     {
@@ -100,6 +103,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // PATCH: api/SupportTicket/{id}/resolve
+    [Authorize(Roles = "Staff")]
     [HttpPatch("{id}/resolve")]
     public IActionResult ResolveTicket(int id)
     {
@@ -107,6 +111,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // PATCH: api/SupportTicket/{id}/unresolve
+    [Authorize(Roles = "Staff")]
     [HttpPatch("{id}/unresolve")]
     public IActionResult UnresolveTicket(int id)
     {
@@ -184,6 +189,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // GET: api/SupportTicket/staff/{username} — tickets assigned to a specific staff member
+    [Authorize(Roles = "Staff")]
     [HttpGet("staff/{username}")]
     public ActionResult<IEnumerable<SupportTicketDTO>> GetStaffTickets(string username)
     {
@@ -202,6 +208,7 @@ public class SupportTicketController : ControllerBase
     }
 
     // POST: api/SupportTicket/{id}/reply — staff replies via centralized email, marks resolved
+    [Authorize(Roles = "Staff")]
     [HttpPost("{id}/reply")]
     public async Task<IActionResult> ReplyToTicket(int id, [FromBody] ReplyToTicketDTO dto)
     {

@@ -4,6 +4,7 @@ AdminNo: 241309M
 Tut Group: IT2814 07
  *@
 
+@inject IConfiguration Configuration
 @{
     string NavActiveClass(string pagePath) =>
         Context.Request.Path.Equals(pagePath, StringComparison.OrdinalIgnoreCase)
@@ -257,7 +258,7 @@ Tut Group: IT2814 07
 
     @await RenderSectionAsync("Scripts", required: false)
     <!-- API base for shared JS — hidden -->
-    <input type="hidden" id="apiBaseInput" value="https://localhost:7040/api" />
+    <input type="hidden" id="apiBaseInput" value="@Configuration["ApiSettings:BaseUrl"]" />
     <!-- Session JWT for client-side fetch calls to [Authorize]'d API endpoints — hidden -->
     <input type="hidden" id="jwtTokenInput" value="@Context.Session.GetString(SessionKeys.JwtToken)" />
 
@@ -265,7 +266,8 @@ Tut Group: IT2814 07
     {
         <script>
             (function () {
-                const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+                const apiBase = document.getElementById('apiBaseInput')?.value;
+                if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
                 const jwtToken = document.getElementById('jwtTokenInput')?.value || '';
                 const authHeaders = { 'Authorization': `Bearer ${jwtToken}` };
 

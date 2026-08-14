@@ -162,7 +162,8 @@ Tut Group: IT2814 07
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Saving...`;
 
-            const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+            const apiBase = document.getElementById('apiBaseInput')?.value;
+            if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
             const payload = {
                 stickerName: stickerName,
                 imagePath: document.getElementById('stickerImageUrl').value || null,

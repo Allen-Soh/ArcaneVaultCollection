@@ -8,7 +8,7 @@ using Microsoft.Data.Sqlite;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Staff")]
 public class InsightsController : ControllerBase
 {
     private readonly string _connectionString = "Data Source=ArcaneVault.db";
@@ -719,9 +719,7 @@ public class InsightsController : ControllerBase
         });
     }
 
-    // GET: api/Insights/financeandsales/detail — staff-only (handles real money data,
-    // so it's locked down tighter than this controller's other bare-[Authorize] endpoints)
-    [Authorize(Roles = "Staff")]
+    // GET: api/Insights/financeandsales/detail — handles real money data
     [HttpGet("financeandsales/detail")]
     public ActionResult GetFinanceAndSalesDetail()
     {

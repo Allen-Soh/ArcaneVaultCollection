@@ -104,6 +104,7 @@ public class FrameController : ControllerBase
     }
 
     // PUT: api/Frame/5
+    [Authorize(Roles = "Staff")]
     [HttpPut("{framecode}")]
     public IActionResult PutFrame(string? framecode, Frame frame)
     {
@@ -152,6 +153,7 @@ public class FrameController : ControllerBase
     }
 
     // POST: api/Frame
+    [Authorize(Roles = "Staff")]
     [HttpPost]
     public ActionResult<Frame> PostFrame(Frame frame)
     {
@@ -182,6 +184,7 @@ public class FrameController : ControllerBase
     }
 
     // PUT: api/Frame/5/delist
+    [Authorize(Roles = "Staff")]
     [HttpPut("{framecode}/delist")]
     public IActionResult DelistFrame(string framecode)
     {
@@ -189,6 +192,7 @@ public class FrameController : ControllerBase
     }
 
     // PUT: api/Frame/5/relist
+    [Authorize(Roles = "Staff")]
     [HttpPut("{framecode}/relist")]
     public IActionResult RelistFrame(string framecode)
     {
@@ -223,6 +227,7 @@ public class FrameController : ControllerBase
     }
 
     // DELETE: api/Frame/5
+    [Authorize(Roles = "Staff")]
     [HttpDelete("{framecode}")]
     public IActionResult DeleteFrame(string? framecode)
     {

@@ -2,6 +2,7 @@
 //AdminNo: 241309M
 //Tut Group: IT2814 07
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ArcaneVaultAPI.DataTransferObject;
@@ -13,6 +14,7 @@ public class ShowoffReportController : ControllerBase
     private readonly string _connectionString = "Data Source=ArcaneVault.db";
 
     // GET: api/ShowoffReport — all reports (staff use), grouped by showoff
+    [Authorize(Roles = "Staff")]
     [HttpGet]
     public ActionResult GetAllReports()
     {
@@ -24,6 +26,7 @@ public class ShowoffReportController : ControllerBase
     }
 
     // GET: api/ShowoffReport/staff/{username} — reports assigned to a specific staff
+    [Authorize(Roles = "Staff")]
     [HttpGet("staff/{username}")]
     public ActionResult GetStaffReports(string username)
     {
@@ -70,6 +73,7 @@ public class ShowoffReportController : ControllerBase
     }
 
     // PATCH: api/ShowoffReport/{showoffId}/resolve — marks ALL reports for this showoff as resolved
+    [Authorize(Roles = "Staff")]
     [HttpPatch("{showoffId}/resolve")]
     public IActionResult ResolveReports(int showoffId)
     {
@@ -86,6 +90,7 @@ public class ShowoffReportController : ControllerBase
     }
 
     // PATCH: api/ShowoffReport/{showoffId}/unresolve — reopens ALL reports for this showoff
+    [Authorize(Roles = "Staff")]
     [HttpPatch("{showoffId}/unresolve")]
     public IActionResult UnresolveReports(int showoffId)
     {

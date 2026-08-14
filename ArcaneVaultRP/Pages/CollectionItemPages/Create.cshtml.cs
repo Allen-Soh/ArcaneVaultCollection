@@ -2,7 +2,6 @@
 //AdminNo: 241309M
 //Tut Group: IT2814 07
 
-using ArcaneVaultAPI.DataTransferObject;
 using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -81,7 +80,7 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        var dto = new CollectionItemDTO
+        var dto = new CollectionItem
         {
             ItemName = trimmedName,
             IsDeleted = false,

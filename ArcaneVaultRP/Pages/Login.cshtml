@@ -207,7 +207,8 @@ Tut Group: IT2814 07
     }
 
     <script>
-        const apiBase = 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
 
         const togglePassword = document.getElementById("togglePassword");
         const passwordInput = document.getElementById("Input_Password");

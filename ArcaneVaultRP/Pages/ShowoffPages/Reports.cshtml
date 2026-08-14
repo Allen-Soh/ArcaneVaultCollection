@@ -173,7 +173,8 @@ Tut Group: IT2814 07
 @section Scripts {
     <script>
         const currentStaff = '@Model.CurrentStaffUserName';
-        const apiBase = document.getElementById('apiBaseInput')?.value || 'https://localhost:7040/api';
+        const apiBase = document.getElementById('apiBaseInput')?.value;
+        if (!apiBase) console.error('apiBaseInput is missing its value — ApiSettings:BaseUrl may not be configured.');
 
         const allReports = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveTab == "my" ? Model.MyReports : Model.AllReports));
         const activeTab = '@Model.ActiveTab';
@@ -562,9 +563,10 @@ Tut Group: IT2814 07
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Processing...`;
 
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
             const res = await fetch(`${apiBase}/Showoff/${pendingToggleShowoffId}/${action}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
                 body: JSON.stringify({ staffNote: noteInput.value.trim() || null })
             });
 
@@ -605,9 +607,10 @@ Tut Group: IT2814 07
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Sending...`;
 
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
             const res = await fetch(`${apiBase}/Showoff/${pendingDenyShowoffId}/deny-appeal`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
                 body: JSON.stringify({ staffNote: noteInput.value.trim() || null })
             });
 
@@ -653,7 +656,11 @@ Tut Group: IT2814 07
 
         async function confirmResolveToggle() {
             const action = pendingResolveIsResolved ? 'unresolve' : 'resolve';
-            const res = await fetch(`${apiBase}/ShowoffReport/${pendingResolveShowoffId}/${action}`, { method: 'PATCH' });
+            const jwtToken = document.getElementById('jwtTokenInput')?.value;
+            const res = await fetch(`${apiBase}/ShowoffReport/${pendingResolveShowoffId}/${action}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${jwtToken}` }
+            });
 
             bootstrap.Modal.getInstance(document.getElementById('resolveConfirmModal'))?.hide();
 

@@ -34,11 +34,14 @@ namespace ArcaneVaultAPI
             StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
             // CORS — allow RP to communicate with API
+            var rpBaseUrl = builder.Configuration["RpSettings:BaseUrl"]
+                ?? throw new InvalidOperationException("RpSettings:BaseUrl is not configured.");
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
                 {
-                    policy.WithOrigins("https://localhost:7051")
+                    policy.WithOrigins(rpBaseUrl)
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();

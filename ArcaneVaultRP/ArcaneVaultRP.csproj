@@ -20,8 +20,5 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ArcaneVaultAPI\ArcaneVaultAPI.csproj" />
-  </ItemGroup>
 
 </Project>

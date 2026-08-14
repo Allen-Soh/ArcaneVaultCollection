@@ -103,6 +103,7 @@ public class StickerController : ControllerBase
     }
 
     // PUT: api/Sticker/5
+    [Authorize(Roles = "Staff")]
     [HttpPut("{stickercode}")]
     public IActionResult PutSticker(string? stickercode, Sticker sticker)
     {
@@ -149,6 +150,7 @@ public class StickerController : ControllerBase
     }
 
     // POST: api/Sticker
+    [Authorize(Roles = "Staff")]
     [HttpPost]
     public ActionResult<Sticker> PostSticker(Sticker sticker)
     {
@@ -178,6 +180,7 @@ public class StickerController : ControllerBase
     }
 
     // PUT: api/Sticker/5/delist
+    [Authorize(Roles = "Staff")]
     [HttpPut("{stickercode}/delist")]
     public IActionResult DelistSticker(string stickercode)
     {
@@ -185,6 +188,7 @@ public class StickerController : ControllerBase
     }
 
     // PUT: api/Sticker/5/relist
+    [Authorize(Roles = "Staff")]
     [HttpPut("{stickercode}/relist")]
     public IActionResult RelistSticker(string stickercode)
     {
@@ -219,6 +223,7 @@ public class StickerController : ControllerBase
     }
 
     // DELETE: api/Sticker/5
+    [Authorize(Roles = "Staff")]
     [HttpDelete("{stickercode}")]
     public IActionResult DeleteSticker(string? stickercode)
     {
