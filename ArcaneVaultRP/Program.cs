@@ -3,6 +3,7 @@
 //Tut Group: IT2814 07
 
 using ArcaneVaultRP.Helpers;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace ArcaneVaultRP
 {
@@ -43,6 +44,16 @@ namespace ArcaneVaultRP
             });
 
             var app = builder.Build();
+
+            // Behind a hosting proxy (e.g. Render) TLS ends at the proxy, so trust its
+            // X-Forwarded-Proto/For headers — otherwise the app thinks every request is plain HTTP.
+            var forwardedOptions = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            };
+            forwardedOptions.KnownIPNetworks.Clear();
+            forwardedOptions.KnownProxies.Clear();
+            app.UseForwardedHeaders(forwardedOptions);
 
             if (!app.Environment.IsDevelopment())
             {

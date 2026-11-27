@@ -6,6 +6,7 @@ using ArcaneVaultAPI.Data;
 using ArcaneVaultAPI.Services;
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
@@ -80,6 +81,16 @@ namespace ArcaneVaultAPI
             builder.Services.AddScoped<IEmailService, EmailService>();
 
             var app = builder.Build();
+
+            // Behind a hosting proxy (e.g. Render) TLS ends at the proxy, so trust its
+            // X-Forwarded-Proto/For headers — otherwise the app thinks every request is plain HTTP.
+            var forwardedOptions = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            };
+            forwardedOptions.KnownIPNetworks.Clear();
+            forwardedOptions.KnownProxies.Clear();
+            app.UseForwardedHeaders(forwardedOptions);
 
             // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())

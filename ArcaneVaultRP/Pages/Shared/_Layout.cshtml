@@ -250,6 +250,12 @@ Tut Group: IT2814 07
         </div>
     </footer>
 
+    <!-- API base for shared JS — hidden. Must come BEFORE any script (including the page's
+         Scripts section), because inline scripts read these the moment they are parsed. -->
+    <input type="hidden" id="apiBaseInput" value="@Configuration["ApiSettings:BaseUrl"]" />
+    <!-- Session JWT for client-side fetch calls to [Authorize]'d API endpoints — hidden -->
+    <input type="hidden" id="jwtTokenInput" value="@Context.Session.GetString(SessionKeys.JwtToken)" />
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/showoffCanvas.js" asp-append-version="true"></script>
@@ -257,10 +263,6 @@ Tut Group: IT2814 07
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
-    <!-- API base for shared JS — hidden -->
-    <input type="hidden" id="apiBaseInput" value="@Configuration["ApiSettings:BaseUrl"]" />
-    <!-- Session JWT for client-side fetch calls to [Authorize]'d API endpoints — hidden -->
-    <input type="hidden" id="jwtTokenInput" value="@Context.Session.GetString(SessionKeys.JwtToken)" />
 
     @if (Context.Session.GetString(SessionKeys.LoggedInUser) != null)
     {
