@@ -7,6 +7,7 @@ using ArcaneVaultRP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 
 namespace ArcaneVaultRP.Pages
@@ -62,60 +63,69 @@ namespace ArcaneVaultRP.Pages
 
             HttpClient httpClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
 
-            // Attach JWT token from session
-            var token = HttpContext.Session.GetString(SessionKeys.JwtToken);
-            HttpClientHelper.AttachJwtToken(httpClient, token);
+            ArcaneVaultUser? user;
+            string? jwt;
 
-            var users = await httpClient.GetFromJsonAsync<List<ArcaneVaultUser>>("ArcaneVaultUser");
+            try
+            {
+                // ════════════════════════════════════════════
+                // VERIFY CREDENTIALS ON THE API AND GET A JWT
+                // The API checks the password itself; the RP never sees stored passwords.
+                // ════════════════════════════════════════════
+                var tokenRes = await httpClient.PostAsJsonAsync("JwtToken", new
+                {
+                    UserName = Input.Username,
+                    Password = Input.Password
+                });
 
-            if (users == null)
+                if (tokenRes.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid username or password.");
+                    return Page();
+                }
+
+                if (tokenRes.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    // Correct password, but the account is disabled — offer to re-enable it
+                    TempData["DisabledUser"] = Input.Username;
+                    return Page();
+                }
+
+                tokenRes.EnsureSuccessStatusCode();
+                jwt = (await tokenRes.Content.ReadFromJsonAsync<JwtTokenResponse>())?.Token;
+
+                // Profile details for the session (the API no longer returns passwords)
+                user = await httpClient.GetFromJsonAsync<ArcaneVaultUser>(
+                    $"ArcaneVaultUser/{Uri.EscapeDataString(Input.Username)}");
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                // API down, asleep, misconfigured URL, or returned something unexpected
+                ModelState.AddModelError(string.Empty, "Unable to connect to the server.");
+                return Page();
+            }
+
+            if (user == null || string.IsNullOrEmpty(jwt))
             {
                 ModelState.AddModelError(string.Empty, "Unable to connect to the server.");
                 return Page();
             }
 
-            var user = users.FirstOrDefault(u =>
-                u.UserName == Input.Username &&
-                u.Password == Input.Password);
-
-            if (user == null)
-            {
-                ModelState.AddModelError(string.Empty, "Invalid username or password.");
-                return Page();
-            }
-
-            if (user.IsDeleted)
-            {
-                TempData["DisabledUser"] = user.UserName;
-                return Page();
-            }
-
-            // Store user in session
+            // Store user and JWT in session
             HttpContext.Session.SetString(SessionKeys.LoggedInUser,
                 JsonSerializer.Serialize(user));
             HttpContext.Session.SetString(SessionKeys.UserRole,
                 user.RoleId.ToString());
+            HttpContext.Session.SetString(SessionKeys.JwtToken, jwt);
 
-            // ════════════════════════════════════════════
-            // REQUEST AND CACHE JWT TOKEN IN SESSION
-            // ════════════════════════════════════════════
-            var tokenRes = await httpClient.PostAsJsonAsync("JwtToken", new
+            // Record login — best effort; a logging failure shouldn't block a successful login
+            try
             {
-                UserName = user.UserName,
-                Password = Input.Password
-            });
-
-            if (tokenRes.IsSuccessStatusCode)
-            {
-                var tokenData = await tokenRes.Content.ReadFromJsonAsync<JwtTokenResponse>();
-                if (tokenData?.Token != null)
-                {
-                    HttpContext.Session.SetString(SessionKeys.JwtToken, tokenData.Token);
-                }
+                var authedClient = _httpClientFactory.CreateClient("ArcaneVaultAPI");
+                HttpClientHelper.AttachJwtToken(authedClient, jwt);
+                await authedClient.PostAsJsonAsync("LoginLog", user.UserName);
             }
-
-            // Record login
-            await httpClient.PostAsJsonAsync("LoginLog", user.UserName);
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { }
 
             return RedirectToPage("/Index");
         }

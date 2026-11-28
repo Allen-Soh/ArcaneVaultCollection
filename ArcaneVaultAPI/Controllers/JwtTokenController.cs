@@ -54,8 +54,10 @@ public class JwtTokenController : ControllerBase
         if (userName == null)
             return Unauthorized("Invalid username or password.");
 
+        // 403 (not 401) so the caller can tell "right password, disabled account" apart
+        // from "wrong credentials" and offer to re-enable the account.
         if (isDeleted)
-            return Unauthorized("Account is disabled.");
+            return StatusCode(StatusCodes.Status403Forbidden, "Account is disabled.");
 
         // Map RoleId to role name
         var roleName = roleId == 1 ? "Staff" : "User";

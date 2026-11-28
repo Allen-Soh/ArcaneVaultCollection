@@ -31,7 +31,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers",
+            "SELECT UserName, Email, IsDeleted, RoleId, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers",
             connection);
 
         using var reader = command.ExecuteReader();
@@ -43,7 +43,6 @@ public class ArcaneVaultUserController : ControllerBase
                 Email = reader["Email"].ToString(),
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 RoleId = Convert.ToInt32(reader["RoleId"]),
-                Password = reader["Password"].ToString(),
                 Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
                 AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString(),
                 IsActive = Convert.ToBoolean(reader["IsActive"])
@@ -64,7 +63,7 @@ public class ArcaneVaultUserController : ControllerBase
         connection.Open();
 
         var command = new SqliteCommand(
-            "SELECT UserName, Email, IsDeleted, RoleId, Password, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers WHERE UserName = @UserName",
+            "SELECT UserName, Email, IsDeleted, RoleId, Country, AvatarUrl, IsActive FROM ArcaneVaultUsers WHERE UserName = @UserName",
             connection);
         command.Parameters.AddWithValue("@UserName", username);
 
@@ -79,7 +78,6 @@ public class ArcaneVaultUserController : ControllerBase
                 Email = reader["Email"].ToString(),
                 IsDeleted = Convert.ToBoolean(reader["IsDeleted"]),
                 RoleId = Convert.ToInt32(reader["RoleId"]),
-                Password = reader["Password"].ToString(),
                 Country = reader["Country"] == DBNull.Value ? null : reader["Country"].ToString(),
                 AvatarUrl = reader["AvatarUrl"] == DBNull.Value ? null : reader["AvatarUrl"].ToString(),
                 IsActive = Convert.ToBoolean(reader["IsActive"])
